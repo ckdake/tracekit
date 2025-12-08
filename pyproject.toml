@@ -27,7 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pylint==3.3.9",
-    "ruff==0.14.6",
+    "ruff==0.14.8",
     "mypy==1.18.2",
     "pytest==8.4.2",
     "pytest-cov==7.0.0",
