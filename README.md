@@ -2,7 +2,7 @@
 
 tracekit is a Python toolkit for aggregating, syncing, and analyzing your fitness activity data from multiple sources (Strava, RideWithGPS, spreadsheets, and local files). It is designed to be self-contained, non-destructive, and extensible.
 
-🌐 **Website**: [tracekit.net](https://tracekit.net)
+🌐 **Website**: [tracekit.app](https://tracekit.app)
 📦 **PyPI**: [pypi.org/project/tracekit](https://pypi.org/project/tracekit/)
 📚 **Source**: [github.com/ckdake/tracekit](https://github.com/ckdake/tracekit)[CAUTION: This is under active development. Do not use it without reading every line of code!]
 
@@ -21,7 +21,7 @@ tracekit is a Python toolkit for aggregating, syncing, and analyzing your fitnes
 - Command-line interface for authentication and data management
 - **Web dashboard** for viewing configuration and database status (`./dev.sh`)
 - Modular provider and file format architecture for easy extension
-- Static website with documentation at [tracekit.net](https://tracekit.net)
+- Static website with documentation at [tracekit.app](https://tracekit.app)
 
 ---
 
@@ -312,7 +312,7 @@ The development container automatically configures VS Code with:
 
 ### Website Development
 
-The website at [tracekit.net](https://tracekit.net) automatically includes content from this README.md file:
+The website at [tracekit.app](https://tracekit.app) automatically includes content from this README.md file:
 
 1. Start development server: `cd site && npm run dev`
 2. Edit files in `site/src/` or update README.md

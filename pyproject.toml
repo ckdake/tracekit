@@ -36,7 +36,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://tracekit.net"
+Homepage = "https://tracekit.app"
 Repository = "https://github.com/ckdake/tracekit"
 Issues = "https://github.com/ckdake/tracekit/issues"
 

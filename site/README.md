@@ -1,6 +1,6 @@
 # tracekit Website
 
-Static website for [tracekit.net](https://tracekit.net), automatically built from the main README.md.
+Static website for [tracekit.app](https://tracekit.app), automatically built from the main README.md.
 
 ## Development
 
@@ -46,7 +46,7 @@ The deployment workflow is defined in `.github/workflows/deploy-site.yml`.
 
 ## Custom Domain
 
-The site is served at `tracekit.net` via the `CNAME` file in `public/`.
+The site is served at `tracekit.app` via the `CNAME` file in `public/`.
 
 ## Files
 

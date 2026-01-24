@@ -105,7 +105,7 @@ The web app automatically:
 
 ## Future Plans
 
-This local development app will eventually be deployed to `app.tracekit.net` for remote access to tracekit status and management.
+This local development app will eventually be deployed to `app.tracekit.app` for remote access to tracekit status and management.
 
 ## Requirements
 
