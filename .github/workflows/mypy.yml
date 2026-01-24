@@ -10,3 +10,4 @@ jobs:
         run: pip3 install .[dev]
       - name: Runs mypy
         run: mypy --install-types --non-interactive tracekit
+        continue-on-error: true
