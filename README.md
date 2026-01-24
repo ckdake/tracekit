@@ -237,17 +237,19 @@ The dashboard provides a quick way to verify your tracekit setup without running
 
 ### Running via Docker
 
-We provide a Docker image that runs the web dashboard. Build locally and run with a mounted config:
+A pre-built image is available on GitHub Container Registry: `ghcr.io/ckdake/tracekit:latest`.
+
+Pull and run the published image:
 
 ```bash
-# Build image locally
-docker build -t tracekit:local .
+# Pull the latest published image
+docker pull ghcr.io/ckdake/tracekit:latest
 
-# Run and mount your tracekit_config.json into the container
-docker run --rm -p 5000:5000 -v $(pwd)/tracekit_config.json:/app/tracekit_config.json tracekit:local
+# Run with your local config mounted
+docker run --rm -p 5000:5000 -v $(pwd)/tracekit_config.json:/app/tracekit_config.json ghcr.io/ckdake/tracekit:latest
 
 # Or pass a host config path via CONFIG_PATH env var
-docker run --rm -p 5000:5000 -e CONFIG_PATH=/host/config/tracekit_config.json -v /host/config:/host/config tracekit:local
+docker run --rm -p 5000:5000 -e CONFIG_PATH=/host/config/tracekit_config.json -v /host/config:/host/config ghcr.io/ckdake/tracekit:latest
 
 # Verify health
 curl http://localhost:5000/health

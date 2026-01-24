@@ -12,11 +12,8 @@
 		"ghcr.io/devcontainers/features/git:1": {
 			"ppa": false
 		},
-		"ghcr.io/devcontainers/features/docker:1": {
-			"version": "20.10.24"
-		},
-		"ghcr.io/devcontainers/features/docker-compose:1": {
-			"version": "2.18.1"
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"version": "latest"
 		}
 	},
 
