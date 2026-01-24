@@ -1,6 +1,6 @@
 import argparse
 
-from tracekit.core import tracekit
+from tracekit.core import tracekit as tracekit_class
 from tracekit.provider_sync import ProviderSync
 
 
@@ -16,7 +16,7 @@ def run(args=None):
     parsed_args = parser.parse_args(args)
     year_month = parsed_args.date
 
-    with tracekit() as tracekit:
+    with tracekit_class() as tracekit:
         enabled_providers = tracekit.enabled_providers
         if not enabled_providers:
             print("No providers are enabled. Check your configuration.")

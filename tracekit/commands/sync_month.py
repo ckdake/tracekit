@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from tabulate import tabulate
 
-from tracekit.core import tracekit
+from tracekit.core import tracekit as tracekit_class
 
 
 class ChangeType(Enum):
@@ -206,7 +206,7 @@ def convert_activity_to_spreadsheet_format(source_activity: dict, grouped_activi
 
 
 def run(year_month):
-    with tracekit() as tracekit:
+    with tracekit_class() as tracekit:
         # Use the new pull_activities method to get provider-specific activities
         activities = tracekit.pull_activities(year_month)
 

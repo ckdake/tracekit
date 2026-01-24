@@ -2,7 +2,7 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
-from tracekit.core import tracekit
+from tracekit.core import tracekit as tracekit_class
 
 
 class TesttracekitCore:
@@ -32,7 +32,7 @@ class TesttracekitCore:
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                tracekit = tracekit()
+                tracekit = tracekit_class()
 
                 assert tracekit.config["home_timezone"] == "US/Pacific"
                 assert not tracekit.config["debug"]
@@ -52,7 +52,7 @@ class TesttracekitCore:
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                tracekit = tracekit()
+                tracekit = tracekit_class()
 
                 # Should set defaults but NOT create providers section
                 assert not tracekit.config["debug"]
@@ -83,7 +83,7 @@ class TesttracekitCore:
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                tracekit = tracekit()
+                tracekit = tracekit_class()
 
                 # No providers should be enabled
                 assert tracekit.enabled_providers == []
@@ -111,7 +111,7 @@ class TesttracekitCore:
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                tracekit = tracekit()
+                tracekit = tracekit_class()
 
                 # Should detect spreadsheet provider
                 assert "spreadsheet" in tracekit.enabled_providers
@@ -149,7 +149,7 @@ class TesttracekitCore:
             mock_db.connect.return_value = None
             mock_db.is_connection_usable.return_value = True
 
-            tracekit = tracekit()
+            tracekit = tracekit_class()
 
             # Should detect strava provider due to env vars and enabled config
             assert "strava" in tracekit.enabled_providers
@@ -187,7 +187,7 @@ class TesttracekitCore:
             mock_db.connect.return_value = None
             mock_db.is_connection_usable.return_value = True
 
-            tracekit = tracekit()
+            tracekit = tracekit_class()
 
             # Should NOT detect strava provider because it's disabled in config
             assert "strava" not in tracekit.enabled_providers
@@ -207,7 +207,7 @@ class TesttracekitCore:
                 mock_db.close.return_value = None
                 mock_get_db.return_value = mock_db
 
-                tracekit = tracekit()
+                tracekit = tracekit_class()
 
                 # Test cleanup directly
                 with patch("tracekit.core.get_db", return_value=mock_db):
@@ -231,7 +231,7 @@ class TesttracekitCore:
                 mock_get_db.return_value = mock_db
 
                 with patch("tracekit.core.get_db", return_value=mock_db):
-                    with tracekit() as tracekit:
+                    with tracekit_class() as tracekit:
                         assert tracekit is not None
 
                     # Should have called cleanup
@@ -253,7 +253,7 @@ class TesttracekitCore:
             mock_db.connect.return_value = None
             mock_db.is_connection_usable.return_value = True
 
-            tracekit = tracekit()
+            tracekit = tracekit_class()
 
             # Mock a provider that raises an exception
             mock_provider = MagicMock()

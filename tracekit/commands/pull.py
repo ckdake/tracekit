@@ -1,7 +1,7 @@
 import argparse
 import datetime
 
-from tracekit.core import tracekit
+from tracekit.core import tracekit as tracekit_class
 
 
 def print_activities(provider_name, activities, id_field, home_tz):
@@ -55,7 +55,7 @@ def run(args=None):
     parsed_args = parser.parse_args(args)
     year_month = parsed_args.date
 
-    with tracekit() as tracekit:
+    with tracekit_class() as tracekit:
         enabled_providers = tracekit.enabled_providers
         if not enabled_providers:
             print("No providers are enabled. Check your configuration.")
