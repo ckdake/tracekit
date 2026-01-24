@@ -32,7 +32,6 @@ ignore = [
     "N802",  # Function name should be lowercase (allow _YYYY_MM_to_unixtime_range)
     "SIM115", # Use context manager for opening files (complex cases)
     "SIM117", # Use single with statement (readability preference)
-    "UP038", # Use X | Y in isinstance (Python 3.10+ syntax, keeping compatible)
     "E402",  # Module level import not at top (test fixtures)
     "B904",  # Within except clause, raise from err (legacy compatibility)
 ]

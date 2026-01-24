@@ -48,7 +48,9 @@ class GarminProvider(FitnessProvider):
                 self.client = garminconnect.Garmin()
                 self.client.login(self.tokenstore)
             except Exception as e:
-                raise Exception(f"Garmin authentication failed: {e}. Please run 'python -m tracekit auth-garmin' first.")
+                raise Exception(
+                    f"Garmin authentication failed: {e}. Please run 'python -m tracekit auth-garmin' first."
+                )
         return self.client
 
     def pull_activities(self, date_filter: str | None = None) -> list[GarminActivity]:
