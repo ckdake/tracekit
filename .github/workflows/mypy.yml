@@ -3,6 +3,8 @@ on: [push]
 jobs:
   run-mypy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
