@@ -19,7 +19,7 @@ from .providers.stravajson import StravaJsonProvider
 CONFIG_PATH = Path("tracekit_config.json")
 
 
-class tracekit:
+class Tracekit:
     """Main tracekit class that handles configuration and provider management."""
 
     def __init__(self):
@@ -226,3 +226,9 @@ class tracekit:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.cleanup()
+
+
+# Backwards compatible alias: many files import `tracekit` from this module
+# expecting a class/constructor. Keep `tracekit` pointing to the class
+# but use `Tracekit` as the proper CapWords class name to satisfy Ruff.
+tracekit = Tracekit
