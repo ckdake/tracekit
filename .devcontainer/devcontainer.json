@@ -11,6 +11,12 @@
 		},
 		"ghcr.io/devcontainers/features/git:1": {
 			"ppa": false
+		},
+		"ghcr.io/devcontainers/features/docker:1": {
+			"version": "20.10.24"
+		},
+		"ghcr.io/devcontainers/features/docker-compose:1": {
+			"version": "2.18.1"
 		}
 	},
 
@@ -73,7 +79,7 @@
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [3000],
+	"forwardPorts": [3000, 5000],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": ".devcontainer/install.sh && .devcontainer/verify.sh",
@@ -91,13 +97,13 @@
 		"PYTHONPATH": "/workspaces/tracekit",
 		"tracekit_CONFIG_PATH": "/workspaces/tracekit/tracekit_config.json"
 	},
-	// "customizations": {},
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 
 	"mounts": [
-		"source=${localEnv:HOME}/Documents,target=/home/vscode/Documents,type=bind,consistency=cached"
+		"source=${localEnv:HOME}/Documents,target=/home/vscode/Documents,type=bind,consistency=cached",
+		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
 	],
 
 	// Configure lifecycle commands for better development experience

@@ -223,8 +223,8 @@ tracekit/
 For local development, tracekit includes a simple web dashboard to view configuration and database status:
 
 ```bash
-# Start the web dashboard
-./dev.sh
+# Start the web dashboard (development script moved to `scripts/run-dev.sh`)
+./scripts/run-dev.sh
 ```
 
 Visit http://localhost:5000 to see:
@@ -234,6 +234,24 @@ Visit http://localhost:5000 to see:
 - 🔗 **API endpoints** for programmatic access
 
 The dashboard provides a quick way to verify your tracekit setup without running CLI commands.
+
+### Running via Docker
+
+We provide a Docker image that runs the web dashboard. Build locally and run with a mounted config:
+
+```bash
+# Build image locally
+docker build -t tracekit:local .
+
+# Run and mount your tracekit_config.json into the container
+docker run --rm -p 5000:5000 -v $(pwd)/tracekit_config.json:/app/tracekit_config.json tracekit:local
+
+# Or pass a host config path via CONFIG_PATH env var
+docker run --rm -p 5000:5000 -e CONFIG_PATH=/host/config/tracekit_config.json -v /host/config:/host/config tracekit:local
+
+# Verify health
+curl http://localhost:5000/health
+```
 
 ### Development Tools
 
