@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 from garminconnect import GarminConnectConnectionError
 
-from fitler.providers.garmin.garmin_provider import GarminProvider
+from tracekit.providers.garmin.garmin_provider import GarminProvider
 
 
 class TestGarminProviderCore:
@@ -87,7 +87,7 @@ class TestGarminProviderAuthentication:
             provider._get_client()
 
         assert "Garmin authentication failed" in str(exc_info.value)
-        assert "Please run 'python -m fitler auth-garmin' first" in str(exc_info.value)
+        assert "Please run 'python -m tracekit auth-garmin' first" in str(exc_info.value)
 
 
 class TestGarminProviderPullActivities:
@@ -102,7 +102,7 @@ class TestGarminProviderPullActivities:
         # Should return empty list for None date_filter
         assert result == []
 
-    @patch("fitler.providers.garmin.garmin_provider.ProviderSync")
+    @patch("tracekit.providers.garmin.garmin_provider.ProviderSync")
     def test_pull_activities_already_synced(self, mock_provider_sync):
         """Test pull_activities when month is already synced."""
         provider = GarminProvider()
@@ -123,7 +123,7 @@ class TestGarminProviderPullActivities:
         provider._get_garmin_activities_for_month.assert_called_once_with("2021-01")
 
     @pytest.mark.skip(reason="Complex mocking of GarminActivity instantiation in real execution flow")
-    @patch("fitler.providers.garmin.garmin_provider.ProviderSync")
+    @patch("tracekit.providers.garmin.garmin_provider.ProviderSync")
     def test_pull_activities_new_month(self, mock_provider_sync):
         """Test pull_activities for a new month."""
         provider = GarminProvider()
@@ -146,11 +146,11 @@ class TestGarminProviderPullActivities:
         provider._get_garmin_activities_for_month = Mock(return_value=mock_final_activities)
 
         # Mock GarminActivity.get_or_none to return None (no duplicates)
-        with patch("fitler.providers.garmin.garmin_activity.GarminActivity.get_or_none") as mock_get_or_none:
+        with patch("tracekit.providers.garmin.garmin_activity.GarminActivity.get_or_none") as mock_get_or_none:
             mock_get_or_none.return_value = None
 
             # Mock GarminActivity constructor and save
-            with patch("fitler.providers.garmin.garmin_activity.GarminActivity") as mock_garmin_activity_class:
+            with patch("tracekit.providers.garmin.garmin_activity.GarminActivity") as mock_garmin_activity_class:
                 mock_activity = Mock()
                 mock_garmin_activity_class.return_value = mock_activity
 
@@ -165,7 +165,7 @@ class TestGarminProviderPullActivities:
                 # Check that GarminActivity was instantiated
                 mock_garmin_activity_class.assert_called_once()
 
-    @patch("fitler.providers.garmin.garmin_provider.ProviderSync")
+    @patch("tracekit.providers.garmin.garmin_provider.ProviderSync")
     def test_pull_activities_with_duplicate_activity(self, mock_provider_sync):
         """Test pull_activities when encountering duplicate activity."""
         provider = GarminProvider()
@@ -182,12 +182,12 @@ class TestGarminProviderPullActivities:
         provider._get_garmin_activities_for_month = Mock(return_value=mock_final_activities)
 
         # Mock GarminActivity.get_or_none to return existing activity (duplicate)
-        with patch("fitler.providers.garmin.garmin_activity.GarminActivity.get_or_none") as mock_get_or_none:
+        with patch("tracekit.providers.garmin.garmin_activity.GarminActivity.get_or_none") as mock_get_or_none:
             mock_existing_activity = Mock()
             mock_get_or_none.return_value = mock_existing_activity
 
             # Mock GarminActivity constructor
-            with patch("fitler.providers.garmin.garmin_activity.GarminActivity") as mock_garmin_activity_class:
+            with patch("tracekit.providers.garmin.garmin_activity.GarminActivity") as mock_garmin_activity_class:
                 mock_activity = Mock()
                 mock_garmin_activity_class.return_value = mock_activity
 
@@ -311,7 +311,7 @@ class TestGarminProviderCreateActivity:
 class TestGarminProviderGetActivitiesForMonth:
     """Test Garmin provider _get_garmin_activities_for_month method."""
 
-    @patch("fitler.providers.garmin.garmin_provider.GarminActivity")
+    @patch("tracekit.providers.garmin.garmin_provider.GarminActivity")
     def test_get_garmin_activities_for_month(self, mock_garmin_activity_class):
         """Test getting activities for a specific month."""
         provider = GarminProvider()
@@ -338,7 +338,7 @@ class TestGarminProviderGetActivitiesForMonth:
         assert mock_activity3 in result
         assert mock_activity2 not in result
 
-    @patch("fitler.providers.garmin.garmin_provider.GarminActivity")
+    @patch("tracekit.providers.garmin.garmin_provider.GarminActivity")
     def test_get_garmin_activities_for_month_invalid_timestamps(self, mock_garmin_activity_class):
         """Test getting activities with invalid timestamps."""
         provider = GarminProvider()

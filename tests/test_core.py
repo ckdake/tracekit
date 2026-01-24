@@ -2,14 +2,14 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
-from fitler.core import Fitler
+from tracekit.core import tracekit
 
 
-class TestFitlerCore:
-    """Test the core Fitler class functionality."""
+class TesttracekitCore:
+    """Test the core tracekit class functionality."""
 
-    def test_fitler_init_loads_config(self, tmp_path):
-        """Test that Fitler initializes and loads config correctly."""
+    def test_tracekit_init_loads_config(self, tmp_path):
+        """Test that tracekit initializes and loads config correctly."""
         # Create a temporary config file with new format
         config_data = {
             "home_timezone": "US/Pacific",
@@ -22,43 +22,43 @@ class TestFitlerCore:
             },
         }
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                fitler = Fitler()
+                tracekit = tracekit()
 
-                assert fitler.config["home_timezone"] == "US/Pacific"
-                assert not fitler.config["debug"]
+                assert tracekit.config["home_timezone"] == "US/Pacific"
+                assert not tracekit.config["debug"]
 
-    def test_fitler_config_defaults(self, tmp_path):
-        """Test that Fitler sets default config values."""
+    def test_tracekit_config_defaults(self, tmp_path):
+        """Test that tracekit sets default config values."""
         # Create minimal config
         config_data = {"spreadsheet_path": "/tmp/test.xlsx"}
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                fitler = Fitler()
+                tracekit = tracekit()
 
                 # Should set defaults but NOT create providers section
-                assert not fitler.config["debug"]
-                assert fitler.config["provider_priority"] == "spreadsheet,ridewithgps,strava,garmin"
+                assert not tracekit.config["debug"]
+                assert tracekit.config["provider_priority"] == "spreadsheet,ridewithgps,strava,garmin"
                 # No longer creates providers section automatically
-                assert "providers" not in fitler.config
+                assert "providers" not in tracekit.config
 
     def test_enabled_providers_empty(self, tmp_path):
         """Test enabled_providers when no providers are enabled."""
@@ -73,20 +73,20 @@ class TestFitlerCore:
             }
         }
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                fitler = Fitler()
+                tracekit = tracekit()
 
                 # No providers should be enabled
-                assert fitler.enabled_providers == []
+                assert tracekit.enabled_providers == []
 
     def test_enabled_providers_with_spreadsheet(self, tmp_path):
         """Test enabled_providers when spreadsheet is configured and enabled."""
@@ -101,20 +101,20 @@ class TestFitlerCore:
             }
         }
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
                 mock_get_db.return_value = mock_db
 
-                fitler = Fitler()
+                tracekit = tracekit()
 
                 # Should detect spreadsheet provider
-                assert "spreadsheet" in fitler.enabled_providers
+                assert "spreadsheet" in tracekit.enabled_providers
 
     @patch.dict(
         os.environ,
@@ -137,11 +137,11 @@ class TestFitlerCore:
             }
         }
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
@@ -149,10 +149,10 @@ class TestFitlerCore:
             mock_db.connect.return_value = None
             mock_db.is_connection_usable.return_value = True
 
-            fitler = Fitler()
+            tracekit = tracekit()
 
             # Should detect strava provider due to env vars and enabled config
-            assert "strava" in fitler.enabled_providers
+            assert "strava" in tracekit.enabled_providers
 
     @patch.dict(
         os.environ,
@@ -175,11 +175,11 @@ class TestFitlerCore:
             }
         }
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
@@ -187,52 +187,52 @@ class TestFitlerCore:
             mock_db.connect.return_value = None
             mock_db.is_connection_usable.return_value = True
 
-            fitler = Fitler()
+            tracekit = tracekit()
 
             # Should NOT detect strava provider because it's disabled in config
-            assert "strava" not in fitler.enabled_providers
+            assert "strava" not in tracekit.enabled_providers
 
     def test_cleanup_closes_db(self, tmp_path):
         """Test that cleanup properly closes database connection."""
         config_data = {}
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
                 mock_db.close.return_value = None
                 mock_get_db.return_value = mock_db
 
-                fitler = Fitler()
+                tracekit = tracekit()
 
                 # Test cleanup directly
-                with patch("fitler.core.get_db", return_value=mock_db):
-                    fitler.cleanup()
+                with patch("tracekit.core.get_db", return_value=mock_db):
+                    tracekit.cleanup()
 
                 mock_db.close.assert_called_once()
 
     def test_context_manager(self, tmp_path):
-        """Test that Fitler works as a context manager."""
+        """Test that tracekit works as a context manager."""
         config_data = {}
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
                 mock_db.close.return_value = None
                 mock_get_db.return_value = mock_db
 
-                with patch("fitler.core.get_db", return_value=mock_db):
-                    with Fitler() as fitler:
-                        assert fitler is not None
+                with patch("tracekit.core.get_db", return_value=mock_db):
+                    with tracekit() as tracekit:
+                        assert tracekit is not None
 
                     # Should have called cleanup
                     mock_db.close.assert_called_once()
@@ -241,11 +241,11 @@ class TestFitlerCore:
         """Test that pull_activities handles provider errors gracefully."""
         config_data = {"providers": {"spreadsheet": {"enabled": True, "path": "/tmp/test.xlsx"}}}
 
-        config_file = tmp_path / "fitler_config.json"
+        config_file = tmp_path / "tracekit_config.json"
         config_file.write_text(json.dumps(config_data))
 
-        with patch("fitler.core.CONFIG_PATH", config_file), patch("fitler.db.configure_db"):
-            with patch("fitler.db.get_db") as mock_get_db:
+        with patch("tracekit.core.CONFIG_PATH", config_file), patch("tracekit.db.configure_db"):
+            with patch("tracekit.db.get_db") as mock_get_db:
                 mock_db = MagicMock()
                 mock_db.connect.return_value = None
                 mock_db.is_connection_usable.return_value = True
@@ -253,14 +253,14 @@ class TestFitlerCore:
             mock_db.connect.return_value = None
             mock_db.is_connection_usable.return_value = True
 
-            fitler = Fitler()
+            tracekit = tracekit()
 
             # Mock a provider that raises an exception
             mock_provider = MagicMock()
             mock_provider.pull_activities.side_effect = Exception("Test error")
-            fitler._spreadsheet = mock_provider
+            tracekit._spreadsheet = mock_provider
 
-            result = fitler.pull_activities("2024-01")
+            result = tracekit.pull_activities("2024-01")
 
             # Should handle error gracefully and return empty list
             assert result["spreadsheet"] == []

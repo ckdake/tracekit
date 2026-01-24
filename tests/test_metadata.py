@@ -1,4 +1,4 @@
-from fitler.activity import Activity
+from tracekit.activity import Activity
 
 
 def test_activity_creation_with_data():

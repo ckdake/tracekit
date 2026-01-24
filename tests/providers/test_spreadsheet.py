@@ -2,8 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fitler.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
-from fitler.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
+from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+from tracekit.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
 
 
 @pytest.fixture(autouse=True)
@@ -16,7 +16,7 @@ def clean_spreadsheet_activities():
 
 import datetime
 
-from fitler.providers.base_provider_activity import BaseProviderActivity
+from tracekit.providers.base_provider_activity import BaseProviderActivity
 
 
 def seconds_to_hms(seconds):
@@ -82,8 +82,8 @@ def mock_sheet():
     )
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_pull_activities(mock_path, mock_load_workbook, mock_sheet):
     """Test pull_activities method with proper database mocking."""
     mock_wb = MagicMock()
@@ -105,8 +105,8 @@ def test_pull_activities(mock_path, mock_load_workbook, mock_sheet):
     assert activities[0].spreadsheet_id == "2"  # Row 2 (first data row after header, as string)
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_get_activity_by_id(mock_path, mock_load_workbook, mock_sheet):
     mock_wb = MagicMock()
     mock_wb.active = mock_sheet
@@ -115,7 +115,7 @@ def test_get_activity_by_id(mock_path, mock_load_workbook, mock_sheet):
 
     provider = SpreadsheetProvider("fake.xlsx", config={"home_timezone": "US/Eastern", "test_mode": True})
     # Insert a mock activity into the test DB
-    from fitler.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+    from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
 
     SpreadsheetActivity.create(
         start_time="2024-06-01T10:00:00Z",
@@ -129,8 +129,8 @@ def test_get_activity_by_id(mock_path, mock_load_workbook, mock_sheet):
     assert activity.spreadsheet_id == "3"
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_create_activity(mock_path, mock_load_workbook):
     mock_wb = MagicMock()
     mock_sheet = MagicMock()
@@ -202,8 +202,8 @@ def test_create_activity(mock_path, mock_load_workbook):
     assert result == "51"  # max_row + 1 = 50 + 1 = 51
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_set_gear(mock_path, mock_load_workbook):
     mock_wb = MagicMock()
     mock_sheet = MagicMock()
@@ -219,9 +219,9 @@ def test_set_gear(mock_path, mock_load_workbook):
     assert result is True
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
-@patch("fitler.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.get")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.get")
 def test_update_activity(mock_get, mock_path, mock_load_workbook):
     """Test updating activity via provider update_activity method."""
     mock_activity = MagicMock()
@@ -254,8 +254,8 @@ def test_update_activity(mock_get, mock_path, mock_load_workbook):
     assert result == mock_activity
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_get_all_gear(mock_path, mock_load_workbook, mock_sheet):
     mock_wb = MagicMock()
     # Simulate two rows with different equipment
@@ -386,7 +386,7 @@ def test_spreadsheet_provider_config_access():
     assert provider.config.get("nonexistent", "default") == "default"
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.FitnessProvider.__init__")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.FitnessProvider.__init__")
 def test_spreadsheet_provider_calls_super_with_config(mock_super_init):
     """Test that SpreadsheetProvider calls super().__init__(config)."""
     config = {"home_timezone": "US/Pacific", "enabled": True}
@@ -456,7 +456,7 @@ def test_spreadsheet_provider_timezone_access():
 def test_convert_to_gmt_timestamp_date_only_eastern():
     """Test _convert_to_gmt_timestamp with date-only string and US/Eastern timezone."""
 
-    from fitler.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
+    from tracekit.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
 
     # Feb 3, 2025 in US/Eastern should be 2025-02-03 00:00:00-05:00
     # Which is 2025-02-03 05:00:00 UTC
@@ -471,8 +471,8 @@ def test_convert_to_gmt_timestamp_date_only_eastern():
     assert ts == 1738558800  # 2025-02-03 05:00:00 UTC = 1738568400
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_create_activity_with_duration_hms(mock_path, mock_load_workbook):
     """Test that create_activity correctly converts duration to HH:MM:SS format."""
     mock_wb = MagicMock()
@@ -509,8 +509,8 @@ def test_create_activity_with_duration_hms(mock_path, mock_load_workbook):
     assert append_args[20] == "Test ride"  # notes
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_create_activity_with_zero_duration(mock_path, mock_load_workbook):
     """Test that create_activity handles zero duration correctly."""
     mock_wb = MagicMock()
@@ -535,8 +535,8 @@ def test_create_activity_with_zero_duration(mock_path, mock_load_workbook):
     assert append_args[7] == "0:00:00"  # Zero duration
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_create_activity_with_no_duration(mock_path, mock_load_workbook):
     """Test that create_activity handles missing duration correctly."""
     mock_wb = MagicMock()
@@ -561,9 +561,9 @@ def test_create_activity_with_no_duration(mock_path, mock_load_workbook):
     assert append_args[7] == ""  # Empty string for missing duration
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
-@patch("fitler.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.get")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.get")
 def test_update_activity_with_duration_hms(mock_get, mock_path, mock_load_workbook):
     """Test that update_activity correctly updates duration_hms in Excel file."""
     mock_activity = MagicMock()
@@ -597,9 +597,9 @@ def test_update_activity_with_duration_hms(mock_get, mock_path, mock_load_workbo
     mock_wb.save.assert_called_once()
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
-@patch("fitler.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.get")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.get")
 def test_update_activity_with_notes_and_duration_hms(mock_get, mock_path, mock_load_workbook):
     """Test that update_activity correctly updates both notes and duration_hms."""
     mock_activity = MagicMock()
@@ -660,7 +660,7 @@ def test_update_activity_with_notes_and_duration_hms(mock_get, mock_path, mock_l
 
 def test_seconds_to_hms_conversion():
     """Test the _seconds_to_hms static method."""
-    from fitler.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
+    from tracekit.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
 
     # Test various durations
     assert SpreadsheetProvider._seconds_to_hms(3661) == "1:01:01"
@@ -675,7 +675,7 @@ def test_seconds_to_hms_conversion():
 
 def test_hms_to_seconds_conversion():
     """Test the _hms_to_seconds static method."""
-    from fitler.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
+    from tracekit.providers.spreadsheet.spreadsheet_provider import SpreadsheetProvider
 
     # Test various HMS formats
     assert SpreadsheetProvider._hms_to_seconds("1:01:01") == 3661
@@ -693,8 +693,8 @@ def test_hms_to_seconds_conversion():
     assert SpreadsheetProvider._hms_to_seconds(3661.5) == 3661.5
 
 
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
-@patch("fitler.providers.spreadsheet.spreadsheet_provider.Path")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.openpyxl.load_workbook")
+@patch("tracekit.providers.spreadsheet.spreadsheet_provider.Path")
 def test_create_activity_stores_duration_hms_in_database(mock_path, mock_load_workbook):
     """Test that create_activity stores duration_hms in the database record."""
     mock_wb = MagicMock()
@@ -717,7 +717,7 @@ def test_create_activity_stores_duration_hms_in_database(mock_path, mock_load_wo
     }
 
     # Mock the database operations
-    with patch("fitler.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.create") as mock_create:
+    with patch("tracekit.providers.spreadsheet.spreadsheet_activity.SpreadsheetActivity.create") as mock_create:
         mock_activity = MagicMock()
         mock_create.return_value = mock_activity
 

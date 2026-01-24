@@ -26,7 +26,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "echo 'Running ruff check...' && ruff check fitler/ tests/ && echo 'All Python linting passed!'"
+                "echo 'Running ruff check...' && ruff check tracekit/ tests/ && echo 'All Python linting passed!'"
             ],
             "group": "build",
             "presentation": {
@@ -54,7 +54,7 @@
             "label": "Python: Format Code",
             "type": "shell",
             "command": "ruff",
-            "args": ["format", "fitler/", "tests/"],
+            "args": ["format", "tracekit/", "tests/"],
             "group": "build",
             "presentation": {
                 "echo": true,

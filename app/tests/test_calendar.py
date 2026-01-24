@@ -1,4 +1,4 @@
-"""Tests for calendar functionality in the Fitler web application."""
+"""Tests for calendar functionality in the tracekit web application."""
 
 import json
 import os
@@ -16,7 +16,7 @@ from main import (
     app,
     get_current_date_in_timezone,
     get_sync_calendar_data,
-    load_fitler_config,
+    load_tracekit_config,
 )
 
 
@@ -123,7 +123,7 @@ class TestSyncCalendar:
     def test_get_sync_calendar_data_valid_db(self, temp_database, temp_config):
         """Test getting sync calendar data from a valid database."""
         _temp_file, _config_data = temp_config
-        config = load_fitler_config()  # This will use the default config
+        config = load_tracekit_config()  # This will use the default config
 
         calendar_data = get_sync_calendar_data(temp_database, config)
 
@@ -274,7 +274,7 @@ class TestTimezone:
             json.dump(config_data, f)
 
         with patch("main.CONFIG_PATH", Path(temp_file)):
-            config = load_fitler_config()
+            config = load_tracekit_config()
             calendar_data = get_sync_calendar_data(temp_database, config)
 
             # Should successfully load calendar data

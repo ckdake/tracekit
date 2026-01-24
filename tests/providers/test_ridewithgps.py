@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from fitler.providers.ridewithgps import RideWithGPSProvider
+from tracekit.providers.ridewithgps import RideWithGPSProvider
 
 
 @pytest.fixture

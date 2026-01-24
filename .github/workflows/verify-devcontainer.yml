@@ -89,7 +89,7 @@ jobs:
         echo "✅ Testing key development commands..."
 
         # Test Python CLI
-        python -m fitler --help > /dev/null || (echo "❌ Fitler CLI not working" && exit 1)
+        python -m tracekit --help > /dev/null || (echo "❌ tracekit CLI not working" && exit 1)
 
         # Test that tests can be discovered
         python -m pytest --co -q > /dev/null || (echo "❌ Pytest test discovery failed" && exit 1)

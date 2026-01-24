@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from fitler.providers.strava.strava_provider import StravaProvider
+from tracekit.providers.strava.strava_provider import StravaProvider
 
 
 @pytest.mark.parametrize(
@@ -309,7 +309,7 @@ class TestStravaProviderCore:
         result = StravaProvider._normalize_strava_gear_name("Test Bike 2023")
         assert result == "2023 Test Bike"
 
-    @patch("fitler.providers.strava.strava_provider.ProviderSync")
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_get_strava_activities_for_month(self, mock_provider_sync):
         """Test getting activities for a specific month."""
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -322,7 +322,7 @@ class TestStravaProviderCore:
         mock_activity3 = Mock()
         mock_activity3.start_time = "1609545600"  # Jan 2, 2021
 
-        with patch("fitler.providers.strava.strava_activity.StravaActivity.select") as mock_select:
+        with patch("tracekit.providers.strava.strava_activity.StravaActivity.select") as mock_select:
             mock_select.return_value = [mock_activity1, mock_activity2, mock_activity3]
 
             result = provider._get_strava_activities_for_month("2021-01")
@@ -333,7 +333,7 @@ class TestStravaProviderCore:
             assert mock_activity3 in result
             assert mock_activity2 not in result
 
-    @patch("fitler.providers.strava.strava_provider.ProviderSync")
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_get_strava_activities_for_month_invalid_timestamps(self, mock_provider_sync):
         """Test getting activities with invalid timestamps."""
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -342,7 +342,7 @@ class TestStravaProviderCore:
         mock_activity = Mock()
         mock_activity.start_time = "invalid"
 
-        with patch("fitler.providers.strava.strava_activity.StravaActivity.select") as mock_select:
+        with patch("tracekit.providers.strava.strava_activity.StravaActivity.select") as mock_select:
             mock_select.return_value = [mock_activity]
 
             result = provider._get_strava_activities_for_month("2021-01")
@@ -405,7 +405,7 @@ class TestStravaProviderCore:
         mock_full_activity.gear.name = "Test Bike"
         provider.client.get_activity = Mock(return_value=mock_full_activity)
 
-        with patch("fitler.providers.strava.strava_activity.StravaActivity") as mock_strava_activity_class:
+        with patch("tracekit.providers.strava.strava_activity.StravaActivity") as mock_strava_activity_class:
             mock_strava_activity = Mock()
             mock_strava_activity_class.return_value = mock_strava_activity
 
@@ -421,7 +421,7 @@ class TestStravaProviderCore:
 class TestStravaProviderPullActivities:
     """Test Strava provider pull_activities method."""
 
-    @patch("fitler.providers.strava.strava_provider.ProviderSync")
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_none_date_filter(self, mock_provider_sync):
         """Test pull_activities with None date_filter."""
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -431,7 +431,7 @@ class TestStravaProviderPullActivities:
         # Should return empty list for None date_filter
         assert result == []
 
-    @patch("fitler.providers.strava.strava_provider.ProviderSync")
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_already_synced(self, mock_provider_sync):
         """Test pull_activities when month is already synced."""
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -451,7 +451,7 @@ class TestStravaProviderPullActivities:
         mock_provider_sync.get_or_none.assert_called_once_with("2021-01", "strava")
         provider._get_strava_activities_for_month.assert_called_once_with("2021-01")
 
-    @patch("fitler.providers.strava.strava_provider.ProviderSync")
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_new_month(self, mock_provider_sync):
         """Test pull_activities for a new month."""
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -476,7 +476,7 @@ class TestStravaProviderPullActivities:
         provider._get_strava_activities_for_month = Mock(return_value=mock_final_activities)
 
         # Mock StravaActivity.get_or_none to return None (no duplicates)
-        with patch("fitler.providers.strava.strava_activity.StravaActivity.get_or_none") as mock_get_or_none:
+        with patch("tracekit.providers.strava.strava_activity.StravaActivity.get_or_none") as mock_get_or_none:
             mock_get_or_none.return_value = None
 
             result = provider.pull_activities(date_filter="2021-01")
@@ -487,7 +487,7 @@ class TestStravaProviderPullActivities:
             provider._fetch_strava_activities_for_month.assert_called_once_with("2021-01")
             mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava")
 
-    @patch("fitler.providers.strava.strava_provider.ProviderSync")
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_with_duplicate_activity(self, mock_provider_sync):
         """Test pull_activities when encountering duplicate activity."""
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -509,7 +509,7 @@ class TestStravaProviderPullActivities:
         provider._get_strava_activities_for_month = Mock(return_value=mock_final_activities)
 
         # Mock StravaActivity.get_or_none to return existing activity (duplicate)
-        with patch("fitler.providers.strava.strava_activity.StravaActivity.get_or_none") as mock_get_or_none:
+        with patch("tracekit.providers.strava.strava_activity.StravaActivity.get_or_none") as mock_get_or_none:
             mock_existing_activity = Mock()
             mock_get_or_none.return_value = mock_existing_activity
 
@@ -519,7 +519,7 @@ class TestStravaProviderPullActivities:
             mock_converted_activity.save.assert_not_called()
             mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava")
 
-    @patch("fitler.providers.strava.strava_provider.ProviderSync")
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_with_error(self, mock_provider_sync):
         """Test pull_activities when processing error occurs."""
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -554,7 +554,7 @@ class TestStravaProviderCreateActivity:
 
         activity_data = {"strava_id": "12345", "name": "Test Activity"}
 
-        with patch("fitler.providers.strava.strava_activity.StravaActivity.create") as mock_create:
+        with patch("tracekit.providers.strava.strava_activity.StravaActivity.create") as mock_create:
             mock_activity = Mock()
             mock_create.return_value = mock_activity
 

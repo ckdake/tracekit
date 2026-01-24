@@ -1,4 +1,4 @@
-"""Simple Flask web application to view Fitler configuration and database status."""
+"""Simple Flask web application to view tracekit configuration and database status."""
 
 import json
 import os
@@ -16,18 +16,18 @@ app_dir = Path(__file__).parent
 app = Flask(__name__, template_folder=str(app_dir / "templates"))
 
 # Look for config file in current directory, then parent directory
-CONFIG_PATH = Path("fitler_config.json")
+CONFIG_PATH = Path("tracekit_config.json")
 if not CONFIG_PATH.exists():
-    CONFIG_PATH = Path("../fitler_config.json")
+    CONFIG_PATH = Path("../tracekit_config.json")
 
 
-def load_fitler_config() -> dict[str, Any]:
-    """Load Fitler configuration from fitler_config.json."""
+def load_tracekit_config() -> dict[str, Any]:
+    """Load tracekit configuration from tracekit_config.json."""
     try:
         with open(CONFIG_PATH) as f:
             return json.load(f)
     except FileNotFoundError:
-        return {"error": "fitler_config.json not found"}
+        return {"error": "tracekit_config.json not found"}
     except json.JSONDecodeError as e:
         return {"error": f"Invalid JSON: {e}"}
 
@@ -203,7 +203,7 @@ def get_sync_calendar_data(db_path: str, config: dict[str, Any]) -> dict[str, An
 @app.route("/calendar")
 def calendar():
     """Sync calendar page."""
-    config = load_fitler_config()
+    config = load_tracekit_config()
 
     calendar_data = {}
     if "metadata_db" in config and not config.get("error"):
@@ -243,7 +243,7 @@ def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]
 @app.route("/")
 def index():
     """Main dashboard page."""
-    config = load_fitler_config()
+    config = load_tracekit_config()
 
     # Sort providers if they exist
     sorted_providers = []
@@ -261,13 +261,13 @@ def index():
 @app.route("/api/config")
 def api_config():
     """API endpoint for configuration data."""
-    return jsonify(load_fitler_config())
+    return jsonify(load_tracekit_config())
 
 
 @app.route("/api/database")
 def api_database():
     """API endpoint for database information."""
-    config = load_fitler_config()
+    config = load_tracekit_config()
     if "metadata_db" in config and not config.get("error"):
         db_path = config["metadata_db"]
         return jsonify(get_database_info(db_path))
@@ -277,15 +277,15 @@ def api_database():
 @app.route("/health")
 def health():
     """Health check endpoint."""
-    return jsonify({"status": "healthy", "app": "fitler-web"})
+    return jsonify({"status": "healthy", "app": "tracekit-web"})
 
 
 if __name__ == "__main__":
-    print("🚀 Starting Fitler Web App...")
+    print("🚀 Starting tracekit Web App...")
 
     # Test that everything works before starting server
     print("� Testing configuration...")
-    config = load_fitler_config()
+    config = load_tracekit_config()
     if config.get("error"):
         print(f"❌ Config error: {config['error']}")
         exit(1)

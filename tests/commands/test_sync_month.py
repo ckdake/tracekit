@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from fitler.commands.sync_month import (
+from tracekit.commands.sync_month import (
     convert_activity_to_spreadsheet_format,
     generate_correlation_key,
 )

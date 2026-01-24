@@ -1,11 +1,11 @@
-# Fitler Development Container
+# tracekit Development Container
 
-This development container provides a complete, reproducible development environment for the Fitler project with all necessary tools and dependencies pre-installed.
+This development container provides a complete, reproducible development environment for the tracekit project with all necessary tools and dependencies pre-installed.
 
 ## What's Included
 
 ### Core Development Environment
-- **Python 3.13** with Fitler package installed in development mode
+- **Python 3.13** with tracekit package installed in development mode
 - **Node.js 18** for static site development
 - **Git** with proper configuration
 
@@ -40,7 +40,7 @@ This development container provides a complete, reproducible development environ
 ### Python Development
 ```bash
 # Run the main CLI
-python -m fitler --help
+python -m tracekit --help
 
 # Run tests
 python -m pytest
@@ -48,9 +48,9 @@ python -m pytest -v                    # Verbose output
 python -m pytest tests/specific_test.py # Run specific test
 
 # Code quality
-ruff check fitler/ tests/               # Lint code
-ruff format fitler/ tests/              # Format code
-ruff check --fix fitler/ tests/         # Auto-fix issues
+ruff check tracekit/ tests/               # Lint code
+ruff format tracekit/ tests/              # Format code
+ruff check --fix tracekit/ tests/         # Auto-fix issues
 
 # Pre-commit hooks
 pre-commit run --all-files              # Run all hooks
@@ -83,18 +83,18 @@ npm run format
 sqlite3 metadata.sqlite3
 
 # Reset database
-python -m fitler reset
+python -m tracekit reset
 ```
 
 ## Directory Structure
 
 ```
-/workspaces/fitler/
+/workspaces/tracekit/
 ├── .devcontainer/
 │   ├── devcontainer.json          # Container configuration
 │   ├── install.sh                 # Setup script
 │   └── README.md                  # This file
-├── fitler/                        # Python package
+├── tracekit/                        # Python package
 ├── tests/                         # Test suite
 ├── site/                          # Static website
 ├── .github/workflows/             # CI/CD pipelines
@@ -158,8 +158,8 @@ pip install --user -e .[dev] --force-reinstall
 ## Environment Variables
 
 The container sets up these environment variables:
-- `PYTHONPATH`: Set to `/workspaces/fitler`
-- `FITLER_CONFIG_PATH`: Points to config file location
+- `PYTHONPATH`: Set to `/workspaces/tracekit`
+- `tracekit_CONFIG_PATH`: Points to config file location
 
 ## VS Code Settings
 

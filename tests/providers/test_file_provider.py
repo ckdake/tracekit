@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fitler.providers.file.file_provider import FileProvider
+from tracekit.providers.file.file_provider import FileProvider
 
 
 def create_sample_gpx_file(tmpdir):
@@ -26,11 +26,11 @@ def create_sample_gpx_file(tmpdir):
     return gpx_path
 
 
-@patch("fitler.provider_sync.ProviderSync.create")
-@patch("fitler.provider_sync.ProviderSync.get_or_none")
-@patch("fitler.providers.file.file_activity.FileActivity.select")
-@patch("fitler.providers.file.file_activity.FileActivity.get")
-@patch("fitler.providers.file.file_activity.FileActivity.create")
+@patch("tracekit.provider_sync.ProviderSync.create")
+@patch("tracekit.provider_sync.ProviderSync.get_or_none")
+@patch("tracekit.providers.file.file_activity.FileActivity.select")
+@patch("tracekit.providers.file.file_activity.FileActivity.get")
+@patch("tracekit.providers.file.file_activity.FileActivity.create")
 def test_file_provider_parses_gpx(mock_create, mock_get, mock_select, mock_sync_get, mock_sync_create, tmp_path):
     """Test that FileProvider can parse GPX files."""
     from peewee import DoesNotExist
@@ -70,11 +70,11 @@ def test_file_provider_parses_gpx(mock_create, mock_get, mock_select, mock_sync_
     assert activities[0] == mock_activity  # Should return the created FileActivity
 
 
-@patch("fitler.provider_sync.ProviderSync.create")
-@patch("fitler.provider_sync.ProviderSync.get_or_none")
-@patch("fitler.providers.file.file_activity.FileActivity.select")
-@patch("fitler.providers.file.file_activity.FileActivity.get")
-@patch("fitler.providers.file.file_activity.FileActivity.create")
+@patch("tracekit.provider_sync.ProviderSync.create")
+@patch("tracekit.provider_sync.ProviderSync.get_or_none")
+@patch("tracekit.providers.file.file_activity.FileActivity.select")
+@patch("tracekit.providers.file.file_activity.FileActivity.get")
+@patch("tracekit.providers.file.file_activity.FileActivity.create")
 def test_file_provider_processes_multiple_files(
     mock_create, mock_get, mock_select, mock_sync_get, mock_sync_create, tmp_path
 ):
@@ -142,10 +142,10 @@ def test_activity_file_determines_format():
     assert is_gzipped is True
 
 
-@patch("fitler.provider_sync.ProviderSync.create")
-@patch("fitler.provider_sync.ProviderSync.get_or_none")
-@patch("fitler.providers.file.file_activity.FileActivity.get")
-@patch("fitler.providers.file.file_activity.FileActivity.create")
+@patch("tracekit.provider_sync.ProviderSync.create")
+@patch("tracekit.provider_sync.ProviderSync.get_or_none")
+@patch("tracekit.providers.file.file_activity.FileActivity.get")
+@patch("tracekit.providers.file.file_activity.FileActivity.create")
 def test_file_provider_handles_gzipped(mock_create, mock_get, mock_sync_get, mock_sync_create, tmp_path):
     """Test that gzipped files are properly handled."""
     from peewee import DoesNotExist
@@ -228,7 +228,7 @@ def test_file_provider_readonly_methods():
         provider.set_gear("bike", "1")
 
 
-@patch("fitler.providers.file.file_activity.FileActivity.get")
+@patch("tracekit.providers.file.file_activity.FileActivity.get")
 def test_file_provider_get_activity_by_id(mock_get):
     """Test getting activity by ID works."""
     mock_activity = MagicMock()
@@ -242,7 +242,7 @@ def test_file_provider_get_activity_by_id(mock_get):
     mock_get.assert_called_once()
 
 
-@patch("fitler.providers.file.file_activity.FileActivity.select")
+@patch("tracekit.providers.file.file_activity.FileActivity.select")
 def test_file_provider_get_all_gear(mock_select):
     """Test getting gear from file activities."""
     # Mock activities with equipment

@@ -3,14 +3,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from fitler.commands.sync_month import (
+from tracekit.commands.sync_month import (
     ActivityChange,
     ChangeType,
     process_activity_for_display,
 )
-from fitler.core import Fitler
-from fitler.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
-from fitler.providers.strava.strava_activity import StravaActivity
+from tracekit.core import tracekit
+from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+from tracekit.providers.strava.strava_activity import StravaActivity
 
 
 def test_sync_month_detects_duration_hms_changes():
@@ -161,11 +161,11 @@ def test_sync_month_integration_with_real_activities():
     """Integration test using real database activities to verify duration_hms detection."""
 
     # Skip if no config file (CI environment)
-    if not os.path.exists("fitler_config.json"):
-        pytest.skip("Test requires fitler_config.json - skipping in CI")
+    if not os.path.exists("tracekit_config.json"):
+        pytest.skip("Test requires tracekit_config.json - skipping in CI")
 
     # This test requires real activities in the database
-    with Fitler():
+    with tracekit():
         # Get some activities from the database
         spreadsheet_activity = SpreadsheetActivity.select().first()
         strava_activity = StravaActivity.select().first()

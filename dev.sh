@@ -1,17 +1,17 @@
 #!/bin/bash
 
-# Fitler Web App Development Server
+# tracekit Web App Development Server
 # Runs the Flask development server for local testing
 
 set -e
 
-echo "🚀 Starting Fitler Web App Development Server..."
+echo "🚀 Starting tracekit Web App Development Server..."
 echo ""
 
 # Check if we're in the right directory
-if [ ! -f "fitler_config.json" ]; then
-    echo "❌ Error: fitler_config.json not found in current directory"
-    echo "   Please run this script from the fitler project root directory"
+if [ ! -f "tracekit_config.json" ]; then
+    echo "❌ Error: tracekit_config.json not found in current directory"
+    echo "   Please run this script from the tracekit project root directory"
     exit 1
 fi
 

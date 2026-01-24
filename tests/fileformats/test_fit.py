@@ -1,6 +1,6 @@
 import os
 
-from fitler.providers.file.formats.fit import parse_fit
+from tracekit.providers.file.formats.fit import parse_fit
 
 
 def test_parse_fit_sample():

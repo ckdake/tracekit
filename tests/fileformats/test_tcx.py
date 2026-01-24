@@ -1,6 +1,6 @@
 import os
 
-from fitler.providers.file.formats.tcx import parse_tcx
+from tracekit.providers.file.formats.tcx import parse_tcx
 
 
 def test_parse_tcx_sample():

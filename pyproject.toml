@@ -1,5 +1,5 @@
 [project]
-name = "fitler"
+name = "tracekit"
 version = "0.0.1"
 description = "Aggregate, sync, and analyze your fitness activity data."
 readme = "README.md"
@@ -36,9 +36,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://fitler.net"
-Repository = "https://github.com/ckdake/fitler"
-Issues = "https://github.com/ckdake/fitler/issues"
+Homepage = "https://tracekit.net"
+Repository = "https://github.com/ckdake/tracekit"
+Issues = "https://github.com/ckdake/tracekit/issues"
 
 [build-system]
 requires = ["hatchling >= 1.26"]

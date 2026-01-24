@@ -9,4 +9,4 @@ jobs:
       - name: Installs packages
         run: pip3 install .[dev]
       - name: Runs mypy
-        run: mypy --install-types --non-interactive fitler
+        run: mypy --install-types --non-interactive tracekit

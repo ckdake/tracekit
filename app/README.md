@@ -1,10 +1,10 @@
-# Fitler Web Dashboard
+# tracekit Web Dashboard
 
-A Flask-based web application providing a local development dashboard for Fitler configuration and database status.
+A Flask-based web application providing a local development dashboard for tracekit configuration and database status.
 
 ## Features
 
-- 📊 **Dashboard**: Overview of Fitler configuration and database status
+- 📊 **Dashboard**: Overview of tracekit configuration and database status
 - � **Sync Calendar**: Visual calendar showing provider sync status by month
 - �🔌 **Provider Management**: View and understand provider priority and status
 - 💾 **Database Info**: Table counts and database statistics
@@ -74,7 +74,7 @@ Web app tests run independently from the main Python package tests in the `test-
 
 ## Development
 
-The web app automatically detects the Fitler configuration file (`fitler_config.json`) in the current or parent directory and connects to the configured metadata database.
+The web app automatically detects the tracekit configuration file (`tracekit_config.json`) in the current or parent directory and connects to the configured metadata database.
 
 For development, the Flask app runs in debug mode with auto-reload enabled.
 
@@ -99,19 +99,19 @@ The app will be available at: http://localhost:5000
 ## Development
 
 The web app automatically:
-- Reads `fitler_config.json` from the parent directory
+- Reads `tracekit_config.json` from the parent directory
 - Connects to the configured SQLite database
 - Provides real-time status information
 
 ## Future Plans
 
-This local development app will eventually be deployed to `app.fitler.net` for remote access to Fitler status and management.
+This local development app will eventually be deployed to `app.tracekit.net` for remote access to tracekit status and management.
 
 ## Requirements
 
 - Python 3.7+
 - Flask 3.0+
-- Access to `fitler_config.json` and the configured SQLite database
+- Access to `tracekit_config.json` and the configured SQLite database
 
 ## Structure
 

@@ -1,4 +1,4 @@
-"""Tests for the Fitler web application."""
+"""Tests for the tracekit web application."""
 
 import json
 import os
@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from main import (
     app,
     get_database_info,
-    load_fitler_config,
+    load_tracekit_config,
     sort_providers,
 )
 
@@ -119,7 +119,7 @@ class TestConfigLoading:
         temp_file, _expected_data = temp_config
 
         with patch("main.CONFIG_PATH", Path(temp_file)):
-            config = load_fitler_config()
+            config = load_tracekit_config()
 
         assert config["home_timezone"] == "US/Pacific"
         assert config["metadata_db"] == "test_metadata.sqlite3"
@@ -130,7 +130,7 @@ class TestConfigLoading:
     def test_load_missing_config(self):
         """Test loading when config file is missing."""
         with patch("main.CONFIG_PATH", Path("nonexistent_file.json")):
-            config = load_fitler_config()
+            config = load_tracekit_config()
 
         assert "error" in config
         assert "not found" in config["error"]
@@ -143,7 +143,7 @@ class TestConfigLoading:
 
         try:
             with patch("main.CONFIG_PATH", Path(temp_file)):
-                config = load_fitler_config()
+                config = load_tracekit_config()
 
             assert "error" in config
             assert "Invalid JSON" in config["error"]
@@ -250,7 +250,7 @@ class TestWebRoutes:
             response = client.get("/")
 
         assert response.status_code == 200
-        assert b"Fitler Dashboard" in response.data
+        assert b"tracekit Dashboard" in response.data
         assert b"US/Pacific" in response.data
 
     def test_index_route_config_error(self, client):
@@ -273,7 +273,7 @@ class TestWebRoutes:
             response = client.get("/calendar")
 
         assert response.status_code == 200
-        assert b"Fitler Sync Calendar" in response.data
+        assert b"tracekit Sync Calendar" in response.data
         assert b"strava" in response.data
         assert b"garmin" in response.data
 
@@ -325,7 +325,7 @@ class TestWebRoutes:
         assert response.is_json
         data = response.get_json()
         assert data["status"] == "healthy"
-        assert data["app"] == "fitler-web"
+        assert data["app"] == "tracekit-web"
 
     def test_404_route(self, client):
         """Test a non-existent route returns 404."""
@@ -348,7 +348,7 @@ class TestIntegration:
             # Test index page
             response = client.get("/")
             assert response.status_code == 200
-            assert b"Fitler Dashboard" in response.data
+            assert b"tracekit Dashboard" in response.data
 
             # Test config API
             response = client.get("/api/config")

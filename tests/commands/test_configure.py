@@ -2,7 +2,7 @@ import json
 import os
 import tempfile
 
-import fitler.commands.configure as configure
+import tracekit.commands.configure as configure
 
 
 def test_run_creates_config_file(monkeypatch):
@@ -30,7 +30,7 @@ def test_run_creates_config_file(monkeypatch):
 
     # Use a temp directory for config file
     with tempfile.TemporaryDirectory() as tmpdir:
-        config_path = os.path.join(tmpdir, "fitler_config.json")
+        config_path = os.path.join(tmpdir, "tracekit_config.json")
         monkeypatch.setattr("os.path.abspath", lambda path: config_path)
 
         configure.run()

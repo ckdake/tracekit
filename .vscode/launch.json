@@ -10,10 +10,10 @@
             "justMyCode": true
         },
         {
-            "name": "Python: Fitler Module",
+            "name": "Python: tracekit Module",
             "type": "debugpy",
             "request": "launch",
-            "module": "fitler",
+            "module": "tracekit",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--help"]

@@ -104,7 +104,7 @@
         "**/__pycache__/**": true,
         "**/.pytest_cache/**": true,
         "**/.mypy_cache/**": true,
-        "**/fitler.egg-info/**": true
+        "**/tracekit.egg-info/**": true
     },
 
     // Search exclusions
@@ -115,7 +115,7 @@
         "**/__pycache__": true,
         "**/.pytest_cache": true,
         "**/.mypy_cache": true,
-        "**/fitler.egg-info": true
+        "**/tracekit.egg-info": true
     },
 
     // Auto-save settings

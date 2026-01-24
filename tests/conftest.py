@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-from fitler.database import get_all_models, migrate_tables
-from fitler.db import configure_db, get_db
+from tracekit.database import get_all_models, migrate_tables
+from tracekit.db import configure_db, get_db
 
 
 @pytest.fixture(scope="session", autouse=True)

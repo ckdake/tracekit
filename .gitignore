@@ -7,9 +7,9 @@ dist
 .coverage
 .DS_Store
 *.sqlite3
-fitler.egg-info
+tracekit.egg-info
 .mypy_cache
-fitler_config.json
+tracekit_config.json
 .env
 
 # Site build artifacts

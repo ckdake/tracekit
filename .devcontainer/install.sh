@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up fitler development environment..."
+echo "🚀 Setting up tracekit development environment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -102,10 +102,10 @@ fi
 print_status "Verifying installations..."
 
 # Check Python tools
-if python3 -c "import fitler" 2>/dev/null; then
-    print_success "Fitler package importable"
+if python3 -c "import tracekit" 2>/dev/null; then
+    print_success "tracekit package importable"
 else
-    print_error "Fitler package not importable"
+    print_error "tracekit package not importable"
 fi
 
 if command -v ruff >/dev/null 2>&1; then
@@ -143,7 +143,7 @@ fi
 
 # 9. Run linting to verify code quality tools
 print_status "Running linting checks..."
-if ruff check fitler/ tests/; then
+if ruff check tracekit/ tests/; then
     print_success "Ruff linting passed"
 else
     print_warning "Ruff found some issues (see output above)"
@@ -161,10 +161,10 @@ echo ""
 print_success "🎉 Development environment setup complete!"
 echo ""
 echo "Available commands:"
-echo "  python -m fitler --help              # Main CLI"
+echo "  python -m tracekit --help              # Main CLI"
 echo "  python -m pytest                     # Run tests"
-echo "  ruff check fitler/ tests/            # Lint code"
-echo "  ruff format fitler/ tests/           # Format code"
+echo "  ruff check tracekit/ tests/            # Lint code"
+echo "  ruff format tracekit/ tests/           # Format code"
 echo "  pre-commit run --all-files           # Run all pre-commit hooks"
 echo "  cd site && npm run dev               # Start development server"
 echo "  cd site && npm run build             # Build static site"

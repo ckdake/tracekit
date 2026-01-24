@@ -1,7 +1,7 @@
 {
-    "name": "fitler-site",
+    "name": "tracekit-site",
     "version": "1.0.0",
-    "description": "Static site for Fitler fitness data integration tool",
+    "description": "Static site for tracekit fitness data integration tool",
     "scripts": {
         "dev": "vite",
         "build": "node scripts/build.js && vite build",

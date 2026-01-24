@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fitler Site Development Helper Script
+# tracekit Site Development Helper Script
 
 set -e
 
@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚴‍♂️ Fitler Site Development Helper${NC}"
+echo -e "${BLUE}🚴‍♂️ tracekit Site Development Helper${NC}"
 echo "=================================="
 
 # Check if we're in the right directory

@@ -1,15 +1,15 @@
-# Fitler
+# tracekit
 
-Fitler is a Python toolkit for aggregating, syncing, and analyzing your fitness activity data from multiple sources (Strava, RideWithGPS, spreadsheets, and local files). It is designed to be self-contained, non-destructive, and extensible.
+tracekit is a Python toolkit for aggregating, syncing, and analyzing your fitness activity data from multiple sources (Strava, RideWithGPS, spreadsheets, and local files). It is designed to be self-contained, non-destructive, and extensible.
 
-🌐 **Website**: [fitler.net](https://fitler.net)
-📦 **PyPI**: [pypi.org/project/fitler](https://pypi.org/project/fitler/)
-📚 **Source**: [github.com/ckdake/fitler](https://github.com/ckdake/fitler)[CAUTION: This is under active development. Do not use it without reading every line of code!]
+🌐 **Website**: [tracekit.net](https://tracekit.net)
+📦 **PyPI**: [pypi.org/project/tracekit](https://pypi.org/project/tracekit/)
+📚 **Source**: [github.com/ckdake/tracekit](https://github.com/ckdake/tracekit)[CAUTION: This is under active development. Do not use it without reading every line of code!]
 
-[![ruff](https://github.com/ckdake/fitler/actions/workflows/ruff.yml/badge.svg)](https://github.com/ckdake/fitler/actions/workflows/ruff.yml)
-[![pytest](https://github.com/ckdake/fitler/actions/workflows/pytest.yml/badge.svg)](https://github.com/ckdake/fitler/actions/workflows/pytest.yml)
-[![mypy](https://github.com/ckdake/fitler/actions/workflows/mypy.yml/badge.svg)](https://github.com/ckdake/fitler/actions/workflows/mypy.yml)
-[![deploy-site](https://github.com/ckdake/fitler/actions/workflows/deploy-site.yml/badge.svg)](https://github.com/ckdake/fitler/actions/workflows/deploy-site.yml)
+[![ruff](https://github.com/ckdake/tracekit/actions/workflows/ruff.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/ruff.yml)
+[![pytest](https://github.com/ckdake/tracekit/actions/workflows/pytest.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/pytest.yml)
+[![mypy](https://github.com/ckdake/tracekit/actions/workflows/mypy.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/mypy.yml)
+[![deploy-site](https://github.com/ckdake/tracekit/actions/workflows/deploy-site.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/deploy-site.yml)
 
 ---
 
@@ -21,7 +21,7 @@ Fitler is a Python toolkit for aggregating, syncing, and analyzing your fitness 
 - Command-line interface for authentication and data management
 - **Web dashboard** for viewing configuration and database status (`./dev.sh`)
 - Modular provider and file format architecture for easy extension
-- Static website with documentation at [fitler.net](https://fitler.net)
+- Static website with documentation at [tracekit.net](https://tracekit.net)
 
 ---
 
@@ -42,15 +42,15 @@ The easiest way to get started is using the provided development container:
 **Verify Setup:**
 ```bash
 .devcontainer/verify.sh  # Quick environment check
-python -m fitler --help  # Test CLI access
+python -m tracekit --help  # Test CLI access
 ```
 
 ### Option 2: Local Installation
 
 1. **Clone the repository:**
     ```sh
-    git clone https://github.com/ckdake/fitler.git
-    cd fitler
+    git clone https://github.com/ckdake/tracekit.git
+    cd tracekit
     ```
 
 2. **Install dependencies:**
@@ -107,7 +107,7 @@ To use Strava API features, you need to authenticate and get an access token.
 
 2. **Run the Strava authentication command:**
     ```sh
-    python -m fitler auth-strava
+    python -m tracekit auth-strava
     ```
 
     This will guide you through the OAuth process and print an access token.
@@ -130,7 +130,7 @@ To use Garmin Connect API features, you need to authenticate and store OAuth tok
 
 2. **Run the Garmin authentication command:**
     ```sh
-    python -m fitler auth-garmin
+    python -m tracekit auth-garmin
     ```
 
     This will prompt for your email and password, handle any required MFA, and automatically
@@ -139,18 +139,18 @@ To use Garmin Connect API features, you need to authenticate and store OAuth tok
 
 ---
 
-## Running Fitler
+## Running tracekit
 
 You can use the CLI for various commands:
 
 ```sh
-python -m fitler --help
-python -m fitler configure
-python -m fitler auth-strava
-python -m fitler auth-garmin
-python -m fitler pull --date 2025-08
-python -m fitler sync-month 2025-08
-python -m fitler reset --date 2025-08
+python -m tracekit --help
+python -m tracekit configure
+python -m tracekit auth-strava
+python -m tracekit auth-garmin
+python -m tracekit pull --date 2025-08
+python -m tracekit sync-month 2025-08
+python -m tracekit reset --date 2025-08
 ```
 
 - `configure` – Set up paths and API credentials.
@@ -164,10 +164,10 @@ You can also use the Python API in your own scripts to process files, sync with 
 
 ## Running Tests
 
-Fitler uses [pytest](https://pytest.org/) for testing. To run all tests:
+tracekit uses [pytest](https://pytest.org/) for testing. To run all tests:
 
 ```sh
-python -m pytest --cov=fitler --cov-report=term-missing -v
+python -m pytest --cov=tracekit --cov-report=term-missing -v
 ```
 
 Test files are in the `tests/` directory and mirror the package structure.
@@ -202,11 +202,11 @@ This is a monorepo containing both the Python package and the static website.
 
 ### Repository Structure
 ```
-fitler/
+tracekit/
 ├── .devcontainer/       # Development container configuration
 ├── .github/workflows/   # CI/CD pipelines
 ├── app/                 # Web dashboard (Flask)
-├── fitler/              # Python package source
+├── tracekit/              # Python package source
 ├── tests/               # Python tests
 ├── site/                # Static website source
 │   ├── src/             # Website source files
@@ -220,7 +220,7 @@ fitler/
 
 ### Web Dashboard
 
-For local development, Fitler includes a simple web dashboard to view configuration and database status:
+For local development, tracekit includes a simple web dashboard to view configuration and database status:
 
 ```bash
 # Start the web dashboard
@@ -228,12 +228,12 @@ For local development, Fitler includes a simple web dashboard to view configurat
 ```
 
 Visit http://localhost:5000 to see:
-- 📊 **Configuration status** from `fitler_config.json`
+- 📊 **Configuration status** from `tracekit_config.json`
 - 🔌 **Provider settings** (enabled/disabled, priorities)
 - 💾 **Database information** (size, tables, row counts)
 - 🔗 **API endpoints** for programmatic access
 
-The dashboard provides a quick way to verify your Fitler setup without running CLI commands.
+The dashboard provides a quick way to verify your tracekit setup without running CLI commands.
 
 ### Development Tools
 
@@ -258,15 +258,15 @@ The dashboard provides a quick way to verify your Fitler setup without running C
 python -m pytest -v
 
 # Lint and format code
-ruff check fitler/ tests/           # Check for issues
-ruff check --fix fitler/ tests/     # Auto-fix issues
-ruff format fitler/ tests/          # Format code
+ruff check tracekit/ tests/           # Check for issues
+ruff check --fix tracekit/ tests/     # Auto-fix issues
+ruff format tracekit/ tests/          # Format code
 
 # Type checking
-mypy fitler/
+mypy tracekit/
 
 # Run CLI
-python -m fitler --help
+python -m tracekit --help
 ```
 
 **Website:**
@@ -312,7 +312,7 @@ The development container automatically configures VS Code with:
 
 ### Website Development
 
-The website at [fitler.net](https://fitler.net) automatically includes content from this README.md file:
+The website at [tracekit.net](https://tracekit.net) automatically includes content from this README.md file:
 
 1. Start development server: `cd site && npm run dev`
 2. Edit files in `site/src/` or update README.md
@@ -340,7 +340,7 @@ This project is licensed under the Creative Commons Attribution-NonCommercial 4.
 
 ## TODO
 
-    * Next month to fix:  `python -m fitler sync-month 2024-03`
+    * Next month to fix:  `python -m tracekit sync-month 2024-03`
     * File provider manually fixed, go through other providers and manually fix them to work the ~same way. make sure we're not making API calls if the month is synced.
     * Fix strava gear matching to work for running shoes.
     * Fix "create" in providers to create_from_activity, and get all that out of sync_month

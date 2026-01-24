@@ -1,6 +1,6 @@
 import os
 
-from fitler.providers.file.formats.gpx import parse_gpx
+from tracekit.providers.file.formats.gpx import parse_gpx
 
 
 def test_parse_gpx_sample():

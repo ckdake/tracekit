@@ -30,7 +30,7 @@ info() {
 
 # Test Python environment
 info "Testing Python environment..."
-python3 -c "import fitler; print(f'Fitler version: {fitler.__version__}')" && success "Fitler package importable" || failure "Fitler package not importable"
+python3 -c "import tracekit; print(f'tracekit version: {tracekit.__version__}')" && success "tracekit package importable" || failure "tracekit package not importable"
 
 # Test Ruff
 info "Testing Ruff..."
@@ -51,11 +51,11 @@ cd ..
 
 # Test code quality tools
 info "Testing code quality..."
-ruff check fitler/ tests/ >/dev/null && success "Ruff linting passes" || failure "Ruff linting fails"
+ruff check tracekit/ tests/ >/dev/null && success "Ruff linting passes" || failure "Ruff linting fails"
 
 # Test basic functionality
 info "Testing basic functionality..."
-python3 -m fitler --help >/dev/null && success "CLI accessible" || failure "CLI not accessible"
+python3 -m tracekit --help >/dev/null && success "CLI accessible" || failure "CLI not accessible"
 
 # Test pytest
 info "Testing pytest..."
@@ -69,10 +69,10 @@ echo ""
 success "🎉 All devcontainer verification tests passed!"
 echo ""
 echo "Your development environment is ready to use:"
-echo "  • Python 3.13 with Fitler package"
+echo "  • Python 3.13 with tracekit package"
 echo "  • Ruff for fast linting and formatting"
 echo "  • Pre-commit hooks configured"
 echo "  • Node.js 18 with site dependencies"
 echo "  • VS Code extensions ready"
 echo ""
-echo "Try running: python -m fitler --help"
+echo "Try running: python -m tracekit --help"

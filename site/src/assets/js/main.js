@@ -1,4 +1,4 @@
-// Simple JavaScript for the Fitler site
+// Simple JavaScript for the tracekit site
 document.addEventListener('DOMContentLoaded', function () {
     // Smooth scrolling for anchor links
     const links = document.querySelectorAll('a[href^="#"]');
@@ -53,5 +53,5 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    console.log('Fitler site loaded successfully! 🚴‍♂️');
+    console.log('tracekit site loaded successfully! 🚴‍♂️');
 });
