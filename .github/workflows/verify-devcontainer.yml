@@ -8,6 +8,9 @@ on:
   # Allow manual triggering
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   verify-devcontainer:
     runs-on: ubuntu-latest

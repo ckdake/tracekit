@@ -1,5 +1,9 @@
 name: pytest
 on: [push]
+
+permissions:
+  contents: read
+
 jobs:
   run-pytest:
     runs-on: ubuntu-latest

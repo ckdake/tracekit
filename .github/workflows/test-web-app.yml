@@ -1,5 +1,9 @@
 name: test-web-app
 on: [push]
+
+permissions:
+  contents: read
+
 jobs:
   test-web-app:
     runs-on: ubuntu-latest
