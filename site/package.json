@@ -15,7 +15,7 @@
         "format:check": "prettier --check \"src/**/*.{js,css,html}\" \"scripts/**/*.js\""
     },
     "devDependencies": {
-        "vite": "^7.1.5",
+        "vite": "^7.3.1",
         "@vitejs/plugin-legacy": "^7.2.1",
         "marked": "^9.0.0",
         "eslint": "^8.0.0",
