@@ -35,15 +35,17 @@ else
     print_status "Adding Yarn GPG key to apt keyring (if needed)..."
     if command -v gpg >/dev/null 2>&1; then
         curl -fsSL https://dl.yarnpkg.com/debian/pubkey.gpg \
-            | sudo gpg --dearmor -o /usr/share/keyrings/yarn-archive-keyring.gpg || true
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/yarn-archive-keyring.gpg >/dev/null || true
         echo "deb [signed-by=/usr/share/keyrings/yarn-archive-keyring.gpg] https://dl.yarnpkg.com/debian/ stable main" \
             | sudo tee /etc/apt/sources.list.d/yarn.list >/dev/null || true
     else
         curl -fsSL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - || true
     fi
 
-    sudo apt-get update -qq
-    sudo apt-get install -y -qq \
+    print_status "Updating packages"
+    sudo apt-get update
+    sudo apt-get install -y \
         curl \
         wget \
         git \
