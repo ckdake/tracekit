@@ -25,7 +25,15 @@
     --pulse-violet: #7c3aed;
 }
 
+html,
 body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     font-family:
         -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     line-height: 1.6;
@@ -41,12 +49,13 @@ body {
 
 /* Header */
 .header {
-    background: var(--graphite);
-    color: var(--cloud);
-    padding: 1rem 0;
+    background: var(--cloud);
+    color: var(--graphite);
+    padding: 0.6rem 0;
     position: sticky;
     top: 0;
     z-index: 100;
+    border-bottom: 1px solid var(--borders);
 }
 
 .header .container {
@@ -61,7 +70,8 @@ body {
 }
 
 .logo img {
-    height: 36px;
+    height: 56px;
+    width: auto;
     display: block;
 }
 
@@ -71,9 +81,9 @@ body {
 }
 
 .nav a {
-    color: var(--cloud);
+    color: var(--graphite);
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: color 0.14s ease;
 }
 
 .nav a:hover {
@@ -82,22 +92,33 @@ body {
 
 /* Hero section */
 .hero {
-    padding: 3rem 0;
-    margin-bottom: 3rem;
+    padding: 3rem 0 0;
+    margin-bottom: 1.5rem;
 }
 
 .hero-inner {
     display: flex;
-    gap: 2rem;
+    flex-direction: column;
+    gap: 1rem;
     align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .hero-media img {
-    max-width: 520px;
+    max-width: 800px;
     width: 100%;
-    border-radius: 8px;
+    border-radius: 10px;
     border: 1px solid var(--borders);
     background: var(--subtle-fill);
+    box-shadow: 0 8px 24px rgb(17 24 39 / 6%);
+}
+
+/* constrain hero copy and media to the same width so buttons align */
+.hero-copy,
+.hero-media {
+    max-width: 800px;
+    width: 100%;
 }
 
 .hero-copy {
@@ -116,6 +137,42 @@ body {
     font-size: 3rem;
     margin-bottom: 1rem;
     font-weight: 700;
+}
+
+.hero-title {
+    text-align: center;
+    line-height: 1.1;
+}
+
+.hero-title .brand-text {
+    display: block;
+    font-size: 2.4rem;
+    font-weight: 800;
+}
+
+.hero-title .tagline {
+    display: block;
+    font-size: 1.25rem;
+    color: var(--muted-text);
+    white-space: nowrap;
+}
+
+.hero-sub {
+    text-align: center;
+    max-width: 800px;
+    margin: 0.5rem auto;
+}
+
+.section-title {
+    font-size: 1.125rem;
+    color: var(--graphite);
+    margin: 0.625rem 0 0.5rem 0;
+    font-weight: 800;
+}
+
+.pricing-block {
+    margin: 0.5rem 0 0.5rem;
+    text-align: center;
 }
 
 .hero p {
@@ -247,11 +304,12 @@ body {
 
 /* Footer */
 .footer {
-    background: var(--graphite);
-    color: var(--cloud);
+    background: var(--cloud);
+    color: var(--graphite);
     text-align: center;
     padding: 2rem 0;
-    margin-top: 4rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--borders);
 }
 
 .footer a {
@@ -295,18 +353,41 @@ body {
     list-style: none;
     padding-left: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.25rem 1rem;
-    margin: 0.5rem 0 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.75rem;
+    margin: 0.5rem 0 0.75rem;
+    justify-items: stretch;
 }
 
 .services li {
     background: var(--subtle-fill);
-    padding: 8px 10px;
-    border-radius: 6px;
+    padding: 10px 14px;
+    border-radius: 8px;
     border: 1px solid var(--borders);
     color: var(--graphite);
-    font-weight: 600;
+    font-weight: 700;
+    box-sizing: border-box;
+}
+
+.providers {
+    list-style: none;
+    padding-left: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.75rem;
+    margin: 0.5rem 0 0.75rem;
+    justify-items: stretch;
+}
+
+.providers li {
+    background: var(--subtle-fill);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--borders);
+    color: var(--graphite);
+    font-weight: 700;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 .small {
@@ -316,6 +397,16 @@ body {
 
 .actions {
     margin-top: 1rem;
+}
+
+/* Ensure main grows so footer is anchored to bottom */
+.main {
+    flex: 1 0 auto;
+}
+
+/* Footer should stay at bottom */
+.footer {
+    flex-shrink: 0;
 }
 
 .price {

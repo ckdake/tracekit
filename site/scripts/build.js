@@ -1,6 +1,6 @@
 import fs from 'fs';
-import path from 'path';
 import { marked } from 'marked';
+import path from 'path';
 
 // Read the main README.md
 const readmePath = path.join(process.cwd(), '..', 'README.md');
