@@ -7,26 +7,27 @@
 
 :root {
     /* Primary */
-    --signal-blue: #2563EB;
+    --signal-blue: #2563eb;
     --graphite: #111827;
-    --cloud: #F8FAFC;
+    --cloud: #f8fafc;
 
     /* Status */
-    --trace-green: #22C55E;
-    --drift-amber: #F59E0B;
-    --conflict-red: #EF4444;
+    --trace-green: #22c55e;
+    --drift-amber: #f59e0b;
+    --conflict-red: #ef4444;
 
     /* Neutrals */
-    --muted-text: #6B7280;
-    --borders: #E5E7EB;
-    --subtle-fill: #F1F5F9;
+    --muted-text: #6b7280;
+    --borders: #e5e7eb;
+    --subtle-fill: #f1f5f9;
 
     /* Accent */
-    --pulse-violet: #7C3AED;
+    --pulse-violet: #7c3aed;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     line-height: 1.6;
     color: var(--graphite);
     background: var(--cloud);
@@ -55,8 +56,13 @@ body {
 }
 
 .logo {
-    font-size: 1.5rem;
-    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+}
+
+.logo img {
+    height: 36px;
+    display: block;
 }
 
 .nav {
@@ -126,8 +132,10 @@ body {
     text-decoration: none;
     border-radius: 8px;
     font-weight: 700;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
-    box-shadow: 0 6px 18px rgba(34,37,39,0.06);
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
+    box-shadow: 0 6px 18px rgb(34 37 39 / 6%);
 }
 
 .cta-button:hover {
@@ -256,7 +264,7 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 900px) {
+@media (width <= 900px) {
     .hero-inner {
         flex-direction: column;
     }
@@ -289,7 +297,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.25rem 1rem;
-    margin: 0.5rem 0 1rem 0;
+    margin: 0.5rem 0 1rem;
 }
 
 .services li {
@@ -306,7 +314,26 @@ body {
     margin-top: 0.5rem;
 }
 
-.actions { margin-top: 1rem; }
+.actions {
+    margin-top: 1rem;
+}
+
+.price {
+    margin-top: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--muted-text);
+}
+
+.price strong {
+    color: var(--graphite);
+    background: linear-gradient(
+        90deg,
+        rgb(37 99 235 / 6%),
+        rgb(124 58 237 / 4%)
+    );
+    padding: 4px 8px;
+    border-radius: 6px;
+}
 
 /* Smooth scrolling */
 html {

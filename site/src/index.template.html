@@ -13,9 +13,14 @@
     <body>
         <header class="header">
             <div class="container">
-                <h1 class="logo">tracekit</h1>
+                <a href="/" class="logo">
+                    <img src="/assets/img/logo.png" alt="tracekit logo" />
+                </a>
                 <nav class="nav">
-                    <a href="https://github.com/ckdake/tracekit" target="_blank">GitHub</a>
+                    <a href="https://github.com/ckdake/tracekit" target="_blank"
+                        >GitHub</a
+                    >
+                    <a href="/developer.html">Developers</a>
                 </nav>
             </div>
         </header>
@@ -23,28 +28,45 @@
         <main class="main">
             <div class="container">
                 <section class="hero">
+                    <h1 class="hero-title">
+                        tracekit — a service that centralizes your fitness data
+                    </h1>
+                    <p class="hero-sub">
+                        Connect activities from Strava, Garmin, RideWithGPS,
+                        spreadsheets, and files — view, sync, and back up your
+                        workouts in one place.
+                    </p>
+                    <p class="price">
+                        <strong>$5/month</strong> — unlimited sync &amp;
+                        backups. Login coming soon.
+                    </p>
+
                     <div class="hero-inner">
                         <div class="hero-media">
-                            <img src="/assets/img/screenshot.png" alt="tracekit screenshot" />
+                            <img
+                                src="/assets/img/screenshot.png"
+                                alt="tracekit screenshot"
+                            />
                         </div>
                         <div class="hero-copy">
-                            <h1>Fitness Data Integration, for everyone</h1>
-                            <p>Connect, sync and manage activity data across platforms. Login coming soon — sign up for updates on GitHub.</p>
-                            <p class="small">Supported services:</p>
+                            <p class="small">Key capabilities</p>
                             <ul class="services">
-                                <li>Strava</li>
-                                <li>Garmin</li>
-                                <li>RideWithGPS</li>
-                                <li>Spreadsheets</li>
-                                <li>Files (GPX / FIT / TCX)</li>
-                                <li>Strava JSON</li>
+                                <li>Import and sync activities</li>
+                                <li>Export and backup data</li>
+                                <li>Connect multiple providers</li>
+                                <li>Simple, privacy-first storage</li>
                             </ul>
-                            <p class="actions"><a class="cta-button" href="https://github.com/ckdake/tracekit" target="_blank">View on GitHub</a></p>
+                            <p class="actions">
+                                <a
+                                    class="cta-button"
+                                    href="https://github.com/ckdake/tracekit"
+                                    target="_blank"
+                                    >Get updates on GitHub</a
+                                >
+                            </p>
                         </div>
                     </div>
                 </section>
-
-                <div class="content">{{README_CONTENT}}</div>
             </div>
         </main>
 
