@@ -112,6 +112,8 @@ docker compose logs -f
 curl http://127.0.0.1:5000/health
 ```
 
+> **Local network access (testing only):** To reach the app from another device on your LAN, change the port binding in `docker-compose.yml` from `"127.0.0.1:5000:5000"` to `"5000:5000"`. Do not use this in production — use a reverse proxy with SSL instead.
+
 ---
 
 ## Updates
