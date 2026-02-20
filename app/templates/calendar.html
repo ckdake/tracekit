@@ -153,6 +153,18 @@
         }
         .pull-status.ok { color: #28a745; }
         .pull-status.err { color: #dc3545; }
+        .pull-status.running { color: #007bff; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
     </style>
 </head>
 <body>
@@ -247,29 +259,61 @@
 </html>
 
 <script>
+const _polling = {};
+
 async function pullMonth(btn) {
     const month = btn.dataset.month;
     const status = document.getElementById('status-' + month);
+
     btn.disabled = true;
-    btn.textContent = '...';
+    btn.innerHTML = '<span class="spinner"></span>Queuing…';
     status.textContent = '';
     status.className = 'pull-status';
+
+    let taskId;
     try {
         const res = await fetch('/api/sync/' + month, { method: 'POST' });
         const data = await res.json();
-        if (res.ok) {
-            status.textContent = 'Queued';
-            status.className = 'pull-status ok';
-        } else {
+        if (!res.ok) {
             status.textContent = data.error || 'Error';
             status.className = 'pull-status err';
+            btn.disabled = false;
+            btn.textContent = 'Pull';
+            return;
         }
+        taskId = data.task_id;
     } catch (e) {
         status.textContent = 'Network error';
         status.className = 'pull-status err';
-    } finally {
         btn.disabled = false;
         btn.textContent = 'Pull';
+        return;
     }
+
+    // Poll until the task finishes
+    btn.innerHTML = '<span class="spinner"></span>Running…';
+    status.textContent = 'In progress';
+    status.className = 'pull-status running';
+
+    _polling[month] = setInterval(async () => {
+        try {
+            const res = await fetch('/api/sync/status/' + taskId);
+            const data = await res.json();
+            if (data.state === 'SUCCESS') {
+                clearInterval(_polling[month]);
+                btn.disabled = false;
+                btn.textContent = 'Pull';
+                status.textContent = 'Done';
+                status.className = 'pull-status ok';
+            } else if (data.state === 'FAILURE') {
+                clearInterval(_polling[month]);
+                btn.disabled = false;
+                btn.textContent = 'Pull';
+                status.textContent = data.info || 'Failed';
+                status.className = 'pull-status err';
+            }
+            // PENDING / STARTED / RETRY — keep spinning
+        } catch (_) { /* ignore transient fetch errors */ }
+    }, 2000);
 }
 </script>

@@ -36,8 +36,6 @@ def _import_from_sqlite(sqlite_path: str, pg_db) -> None:
 
         columns = rows[0].keys()
         col_list = ", ".join(f'"{c}"' for c in columns)
-        # %s placeholders for psycopg2; peewee's execute_sql passes params
-        # straight through to cursor.execute() so this works for any backend.
         placeholders = ", ".join("%s" for _ in columns)
         sql = f'INSERT INTO "{table}" ({col_list}) VALUES ({placeholders}) ON CONFLICT DO NOTHING'
 
@@ -47,6 +45,27 @@ def _import_from_sqlite(sqlite_path: str, pg_db) -> None:
         print(f"  ✅ {table}: {len(rows)} rows")
 
     src.close()
+
+    # Advance every serial/identity sequence past the max imported ID so that
+    # new inserts don't collide with the rows we just copied in.
+    _reset_sequences(pg_db, tables)
+
+
+def _reset_sequences(pg_db, tables: list[str]) -> None:
+    """Set each table's primary-key sequence to MAX(id) so new inserts don't collide."""
+    for table in tables:
+        try:
+            # pg_get_serial_sequence returns NULL if the column has no sequence
+            result = pg_db.execute_sql("SELECT pg_get_serial_sequence(%s, 'id')", (table,)).fetchone()
+            if not result or not result[0]:
+                continue
+            pg_db.execute_sql(
+                f"SELECT setval(pg_get_serial_sequence(%s, 'id'), MAX(id)) FROM \"{table}\"",
+                (table,),
+            )
+            print(f"  🔢 reset sequence for {table}")
+        except Exception as e:
+            print(f"  ⚠️  could not reset sequence for {table}: {e}")
 
 
 def run():

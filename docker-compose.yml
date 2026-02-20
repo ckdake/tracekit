@@ -72,7 +72,7 @@ services:
     container_name: tracekit-beat
     restart: unless-stopped
     user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
-    command: celery -A tracekit.worker beat --loglevel=info
+    command: celery -A tracekit.worker beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     depends_on:
       - redis
     env_file:
