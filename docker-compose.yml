@@ -15,6 +15,13 @@ services:
       timeout: 5s
       retries: 6
 
+  redis:
+    image: redis:alpine
+    container_name: tracekit-redis
+    restart: unless-stopped
+    volumes:
+      - /opt/tracekit/redis:/data
+
   tracekit:
     image: ghcr.io/ckdake/tracekit:latest
     container_name: tracekit
@@ -22,14 +29,67 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "127.0.0.1:5000:5000"
     env_file:
       - .env
     environment:
       - CONFIG_PATH=/config/tracekit_config.json
-      # Constructed from POSTGRES_PASSWORD defined in .env
       - DATABASE_URL=postgresql://tracekit:${POSTGRES_PASSWORD}@postgres:5432/tracekit
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
     volumes:
       - /opt/tracekit/config:/config:ro
       - /opt/tracekit/data:/opt/tracekit/data
+
+  tracekit-worker:
+    image: ghcr.io/ckdake/tracekit:latest
+    container_name: tracekit-worker
+    restart: unless-stopped
+    command: celery -A tracekit.worker worker --loglevel=info --concurrency=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/config/tracekit_config.json
+      - DATABASE_URL=postgresql://tracekit:${POSTGRES_PASSWORD}@postgres:5432/tracekit
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - /opt/tracekit/config:/config:ro
+      - /opt/tracekit/data:/opt/tracekit/data
+
+  tracekit-beat:
+    image: ghcr.io/ckdake/tracekit:latest
+    container_name: tracekit-beat
+    restart: unless-stopped
+    command: celery -A tracekit.worker beat --loglevel=info
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/config/tracekit_config.json
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - /opt/tracekit/config:/config:ro
+
+  flower:
+    image: mher/flower:latest
+    container_name: tracekit-flower
+    restart: unless-stopped
+    command: celery flower
+    depends_on:
+      - redis
+    ports:
+      - "127.0.0.1:5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1

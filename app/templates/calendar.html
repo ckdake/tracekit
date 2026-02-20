@@ -131,6 +131,28 @@
             border-radius: 6px;
             margin: 20px 0;
         }
+        .pull-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 6px 0;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .pull-btn:hover:not(:disabled) { background: #0056b3; }
+        .pull-btn:disabled { background: #6c757d; cursor: default; }
+        .pull-status {
+            margin-top: 5px;
+            font-size: 11px;
+            text-align: center;
+            min-height: 14px;
+        }
+        .pull-status.ok { color: #28a745; }
+        .pull-status.err { color: #dc3545; }
     </style>
 </head>
 <body>
@@ -196,6 +218,8 @@
                     </div>
                     {% endfor %}
                 </div>
+                <button class="pull-btn" data-month="{{ month.year_month }}" onclick="pullMonth(this)">Pull</button>
+                <div class="pull-status" id="status-{{ month.year_month }}"></div>
             </div>
             {% endfor %}
         </div>
@@ -221,3 +245,31 @@
     {% endif %}
 </body>
 </html>
+
+<script>
+async function pullMonth(btn) {
+    const month = btn.dataset.month;
+    const status = document.getElementById('status-' + month);
+    btn.disabled = true;
+    btn.textContent = '...';
+    status.textContent = '';
+    status.className = 'pull-status';
+    try {
+        const res = await fetch('/api/sync/' + month, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            status.textContent = 'Queued';
+            status.className = 'pull-status ok';
+        } else {
+            status.textContent = data.error || 'Error';
+            status.className = 'pull-status err';
+        }
+    } catch (e) {
+        status.textContent = 'Network error';
+        status.className = 'pull-status err';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Pull';
+    }
+}
+</script>

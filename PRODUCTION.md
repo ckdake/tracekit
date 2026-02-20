@@ -116,6 +116,17 @@ Key volume mounts (defined in `docker-compose.yml`):
 - `/opt/tracekit/config` → `/config` (read-only) — contains `tracekit_config.json`
 - `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — activity files (FIT/GPX/TCX exports)
 - `/opt/tracekit/pgdata` → PostgreSQL data directory — all database files live here
+- `/opt/tracekit/redis` → Redis persistence directory
+
+Services started by `docker compose up -d`:
+| Container | Role |
+|---|---|
+| `tracekit` | Flask web app (port 5000) |
+| `tracekit-worker` | Celery worker — runs pull jobs, concurrency=1 |
+| `tracekit-beat` | Celery beat scheduler — fires the daily no-op heartbeat |
+| `tracekit-db` | PostgreSQL 17 |
+| `tracekit-redis` | Redis (broker + result backend) |
+| `tracekit-flower` | Flower task monitor (port 5555, localhost only) |
 
 To back up the database:
 ```bash
@@ -129,6 +140,12 @@ docker compose ps
 docker compose logs -f
 curl http://127.0.0.1:5000/health
 ```
+
+**Flower** (task queue observability) is available at `http://127.0.0.1:5555` on the host. To expose it through your reverse proxy, add a vhost/location pointing at port 5555. Keep it behind auth — it shows all task history and can inspect results.
+
+**Triggering a pull from the UI:** visit the `/calendar` page and click **Pull** on any month card. The job is enqueued immediately and runs in the worker container; Flower will show its progress and result.
+
+**Triggering a pull from the UI:** visit the `/calendar` page and click **Pull** on any month card. The job is enqueued immediately and runs in the worker container; Flower will show its progress and result.
 
 > **Local network access (testing only):** To reach the app from another device on your LAN, change the port binding in `docker-compose.yml` from `"127.0.0.1:5000:5000"` to `"5000:5000"`. Do not use this in production — use a reverse proxy with SSL instead.
 

@@ -35,9 +35,10 @@ dev = [
     "pre-commit==4.5.1",
 ]
 production = [
-    # PostgreSQL driver — only needed when DATABASE_URL is set.
-    # Uses the binary wheel to avoid requiring libpq-dev at runtime.
-    "psycopg2-binary>=2.9,<3.0",
+    # PostgreSQL driver
+    "psycopg2-binary>=2.9",
+    # Task queue + Redis broker/backend
+    "celery[redis]>=5.3",
 ]
 
 [project.urls]

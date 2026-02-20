@@ -274,6 +274,39 @@ def api_database():
     return jsonify({"error": "No database configured or config error"})
 
 
+@app.route("/api/sync/<year_month>", methods=["POST"])
+def sync_month(year_month: str):
+    """Enqueue a pull job for the given YYYY-MM month."""
+    import re
+
+    if not re.fullmatch(r"\d{4}-\d{2}", year_month):
+        return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
+    try:
+        from tracekit.worker import pull_month
+
+        task = pull_month.delay(year_month)
+        return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
+
+
+@app.route("/api/sync/status/<task_id>")
+def sync_status(task_id: str):
+    """Return the current state of a Celery task."""
+    try:
+        from celery.result import AsyncResult
+
+        from tracekit.worker import celery_app
+
+        result = AsyncResult(task_id, app=celery_app)
+        info = None
+        if result.failed():
+            info = str(result.info)
+        return jsonify({"task_id": task_id, "state": result.state, "info": info})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 503
+
+
 @app.route("/health")
 def health():
     """Health check endpoint."""
