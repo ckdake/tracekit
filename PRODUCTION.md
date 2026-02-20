@@ -40,7 +40,7 @@ su - tracekit
 As the `tracekit` user, create the subdirectories and copy in your config and compose file:
 
 ```bash
-mkdir -p ~/config ~/data/activities
+mkdir -p ~/config ~/data/activities ~/pgdata
 cp tracekit_config.json ~/config/tracekit_config.json
 cp docker-compose.yml ~/docker-compose.yml
 ```
@@ -115,7 +115,7 @@ The compose file binds to `127.0.0.1:5000` only, so the port is **not** publicly
 Key volume mounts (defined in `docker-compose.yml`):
 - `/opt/tracekit/config` → `/config` (read-only) — contains `tracekit_config.json`
 - `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — activity files (FIT/GPX/TCX exports)
-- `postgres_data` (named Docker volume) — PostgreSQL data directory, managed by Docker
+- `/opt/tracekit/pgdata` → PostgreSQL data directory — all database files live here
 
 To back up the database:
 ```bash
