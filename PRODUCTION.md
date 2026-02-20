@@ -128,7 +128,7 @@ docker compose up -d
 The compose file binds to `127.0.0.1:5000` only, so the port is **not** publicly exposed. Your reverse proxy connects to it internally.
 
 Key volume mounts (defined in `docker-compose.yml`):
-- `/opt/tracekit/config` → `/config` (read-only) — contains `tracekit_config.json`
+- `/opt/tracekit/config/tracekit_config.json` → `/app/tracekit_config.json` (read-only) — config file, mounted directly
 - `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — activity files (FIT/GPX/TCX exports)
 - `/opt/tracekit/pgdata` → PostgreSQL data directory — all database files live here
 - `/opt/tracekit/redis` → Redis persistence directory
