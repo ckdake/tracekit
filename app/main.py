@@ -1,10 +1,8 @@
 """Simple Flask web application to view tracekit configuration and database status."""
 
 import json
-import os
-import sqlite3
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +17,28 @@ app = Flask(__name__, template_folder=str(app_dir / "templates"))
 CONFIG_PATH = Path("tracekit_config.json")
 if not CONFIG_PATH.exists():
     CONFIG_PATH = Path("../tracekit_config.json")
+
+# ---------------------------------------------------------------------------
+# Database initialisation
+# ---------------------------------------------------------------------------
+
+_db_initialized = False
+
+
+def _init_db(config: dict[str, Any]) -> bool:
+    """Lazily initialise the tracekit DB (honours DATABASE_URL for Postgres)."""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            from tracekit.db import configure_db
+
+            db_path = config.get("metadata_db", "metadata.sqlite3")
+            configure_db(db_path)
+            _db_initialized = True
+        except Exception as e:
+            print(f"DB init failed: {e}")
+            return False
+    return True
 
 
 def load_tracekit_config() -> dict[str, Any]:
@@ -44,94 +64,84 @@ def get_current_date_in_timezone(config: dict[str, Any]) -> date:
         return datetime.now(pytz.UTC).date()
 
 
-def get_database_info(db_path: str) -> dict[str, Any]:
-    """Get basic information about the SQLite database."""
-    if not os.path.exists(db_path):
-        return {"error": "Database file not found", "path": db_path}
+def get_database_info(config: dict[str, Any]) -> dict[str, Any]:
+    """Get basic information about the configured database."""
+    if not _init_db(config):
+        return {"error": "Database not available"}
 
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        from tracekit.database import get_all_models
+        from tracekit.db import get_db
 
-        # Get database file size
-        file_size = os.path.getsize(db_path)
+        db = get_db()
+        db.connect(reuse_if_open=True)
 
-        # Get list of tables
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = [row[0] for row in cursor.fetchall()]
-
-        # Get row counts for each table
+        models = get_all_models()
         table_counts = {}
-        for table in tables:
-            cursor.execute(f"SELECT COUNT(*) FROM {table}")
-            table_counts[table] = cursor.fetchone()[0]
-
-        conn.close()
+        for model in models:
+            table_name = model._meta.table_name
+            table_counts[table_name] = model.select().count()
 
         return {
-            "path": db_path,
-            "file_size_bytes": file_size,
-            "file_size_mb": round(file_size / (1024 * 1024), 2),
             "tables": table_counts,
-            "total_tables": len(tables),
+            "total_tables": len(table_counts),
         }
-    except sqlite3.Error as e:
-        return {"error": f"Database error: {e}", "path": db_path}
+    except Exception as e:
+        return {"error": f"Database error: {e}"}
 
 
-def get_sync_calendar_data(db_path: str, config: dict[str, Any]) -> dict[str, Any]:
+def get_sync_calendar_data(config: dict[str, Any]) -> dict[str, Any]:
     """Get sync calendar data from the providersync table with activity counts."""
-    if not os.path.exists(db_path):
-        return {"error": "Database file not found", "path": db_path}
+    if not _init_db(config):
+        return {"error": "Database not available"}
 
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        from tracekit.db import get_db
+        from tracekit.provider_sync import ProviderSync
+        from tracekit.providers.file.file_activity import FileActivity
+        from tracekit.providers.garmin.garmin_activity import GarminActivity
+        from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
+        from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+        from tracekit.providers.strava.strava_activity import StravaActivity
+        from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
 
-        # Get all sync records
-        cursor.execute("SELECT year_month, provider FROM providersync ORDER BY year_month, provider")
-        records = cursor.fetchall()
+        db = get_db()
+        db.connect(reuse_if_open=True)
 
-        # Get date range
-        cursor.execute("SELECT MIN(year_month), MAX(year_month) FROM providersync")
-        date_range = cursor.fetchone()
+        # Get all sync records using the ORM
+        rows = ProviderSync.select(ProviderSync.year_month, ProviderSync.provider).order_by(
+            ProviderSync.year_month, ProviderSync.provider
+        )
+        records = [(r.year_month, r.provider) for r in rows]
 
-        # Get unique providers
-        cursor.execute("SELECT DISTINCT provider FROM providersync ORDER BY provider")
-        providers = [row[0] for row in cursor.fetchall()]
+        if not records:
+            date_range = (None, None)
+        else:
+            year_months = [r[0] for r in records]
+            date_range = (min(year_months), max(year_months))
 
-        # Get activity counts per provider per month
-        provider_tables = {
-            "strava": "strava_activities",
-            "garmin": "garmin_activities",
-            "ridewithgps": "ridewithgps_activities",
-            "spreadsheet": "spreadsheet_activities",
-            "file": "file_activities",
+        providers = sorted({r[1] for r in records})
+
+        # Count activities per provider per month — fetch start_time and group in Python
+        # so this works on both SQLite and Postgres without SQL dialect differences.
+        provider_models = {
+            "strava": StravaActivity,
+            "garmin": GarminActivity,
+            "ridewithgps": RideWithGPSActivity,
+            "spreadsheet": SpreadsheetActivity,
+            "file": FileActivity,
+            "stravajson": StravaJsonActivity,
         }
 
-        activity_counts = {}
-        for provider, table in provider_tables.items():
+        activity_counts: dict[str, dict[str, int]] = {}
+        for provider, model in provider_models.items():
             try:
-                # Get activity counts grouped by month (start_time is Unix timestamp)
-                cursor.execute(f"""
-                    SELECT
-                        strftime('%Y-%m', datetime(start_time, 'unixepoch')) as year_month,
-                        COUNT(*) as count
-                    FROM {table}
-                    WHERE start_time IS NOT NULL
-                    GROUP BY strftime('%Y-%m', datetime(start_time, 'unixepoch'))
-                """)
-
-                provider_counts = cursor.fetchall()
-                for year_month, count in provider_counts:
-                    if year_month not in activity_counts:
-                        activity_counts[year_month] = {}
-                    activity_counts[year_month][provider] = count
-
+                for activity in model.select(model.start_time).where(model.start_time.is_null(False)):
+                    ym = datetime.fromtimestamp(activity.start_time, tz=UTC).strftime("%Y-%m")
+                    activity_counts.setdefault(ym, {})
+                    activity_counts[ym][provider] = activity_counts[ym].get(provider, 0) + 1
             except Exception as e:
                 print(f"Error getting activity counts for {provider}: {e}")
-
-        conn.close()
 
         # Organize data by month
         sync_data = defaultdict(set)
@@ -196,8 +206,8 @@ def get_sync_calendar_data(db_path: str, config: dict[str, Any]) -> dict[str, An
         else:
             return {"months": [], "providers": providers, "date_range": (None, None), "total_months": 0}
 
-    except sqlite3.Error as e:
-        return {"error": f"Database error: {e}", "path": db_path}
+    except Exception as e:
+        return {"error": f"Database error: {e}"}
 
 
 @app.route("/calendar")
@@ -206,9 +216,8 @@ def calendar():
     config = load_tracekit_config()
 
     calendar_data = {}
-    if "metadata_db" in config and not config.get("error"):
-        db_path = config["metadata_db"]
-        calendar_data = get_sync_calendar_data(db_path, config)
+    if not config.get("error"):
+        calendar_data = get_sync_calendar_data(config)
 
     # Add current month for highlighting (using configured timezone)
     current_date = get_current_date_in_timezone(config)
@@ -251,9 +260,8 @@ def index():
         sorted_providers = sort_providers(config["providers"])
 
     db_info = {}
-    if "metadata_db" in config and not config.get("error"):
-        db_path = config["metadata_db"]
-        db_info = get_database_info(db_path)
+    if not config.get("error"):
+        db_info = get_database_info(config)
 
     return render_template("index.html", config=config, sorted_providers=sorted_providers, db_info=db_info)
 
@@ -268,10 +276,9 @@ def api_config():
 def api_database():
     """API endpoint for database information."""
     config = load_tracekit_config()
-    if "metadata_db" in config and not config.get("error"):
-        db_path = config["metadata_db"]
-        return jsonify(get_database_info(db_path))
-    return jsonify({"error": "No database configured or config error"})
+    if not config.get("error"):
+        return jsonify(get_database_info(config))
+    return jsonify({"error": "Config error"})
 
 
 @app.route("/api/sync/<year_month>", methods=["POST"])

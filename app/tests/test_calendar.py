@@ -1,8 +1,8 @@
 """Tests for calendar functionality in the tracekit web application."""
 
+import contextlib
 import json
 import os
-import sqlite3
 import sys
 import tempfile
 from pathlib import Path
@@ -16,8 +16,19 @@ from main import (
     app,
     get_current_date_in_timezone,
     get_sync_calendar_data,
-    load_tracekit_config,
 )
+
+
+@pytest.fixture(autouse=True)
+def reset_db_state():
+    """Reset DB initialisation state between tests to prevent leakage."""
+    yield
+    import main as main_module
+
+    import tracekit.db as tdb
+
+    main_module._db_initialized = False
+    tdb._configured = False
 
 
 @pytest.fixture
@@ -55,94 +66,84 @@ def temp_config():
 
 @pytest.fixture
 def temp_database():
-    """Create a temporary database for testing."""
+    """Create a temporary database with test data using peewee models."""
+    import tracekit.db as tdb
+    from tracekit.database import get_all_models, migrate_tables
+    from tracekit.db import configure_db
+    from tracekit.provider_sync import ProviderSync
+    from tracekit.providers.file.file_activity import FileActivity
+    from tracekit.providers.garmin.garmin_activity import GarminActivity
+    from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
+    from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+    from tracekit.providers.strava.strava_activity import StravaActivity
+
     with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
         db_path = f.name
 
-    # Create test database with sample data
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    tdb._configured = False
+    configure_db(db_path)
+    db = tdb.get_db()
+    db.connect(reuse_if_open=True)
+    migrate_tables(get_all_models())
 
-    # Create providersync table
-    cursor.execute("""
-        CREATE TABLE providersync (
-            id INTEGER PRIMARY KEY,
-            year_month TEXT,
-            provider TEXT
-        )
-    """)
-
-    # Insert test data
-    test_data = [
+    # Insert ProviderSync records
+    sync_records = [
         ("2024-01", "strava"),
         ("2024-01", "garmin"),
         ("2024-02", "strava"),
         ("2024-03", "garmin"),
         ("2024-03", "spreadsheet"),
     ]
+    for year_month, provider in sync_records:
+        ProviderSync.get_or_create(year_month=year_month, provider=provider)
 
-    cursor.executemany("INSERT INTO providersync (year_month, provider) VALUES (?, ?)", test_data)
-
-    # Create activity tables for testing activity counts
-    activity_tables = [
-        "strava_activities",
-        "garmin_activities",
-        "ridewithgps_activities",
-        "spreadsheet_activities",
-        "file_activities",
+    # Insert sample activities (Unix timestamps for 2024-01, 2024-02, 2024-03)
+    timestamps = [
+        1704067200,  # 2024-01-01
+        1706745600,  # 2024-02-01
+        1709251200,  # 2024-03-01
     ]
+    for model in (StravaActivity, GarminActivity, RideWithGPSActivity, SpreadsheetActivity):
+        for i, ts in enumerate(timestamps):
+            model.create(provider_id=f"test-{model.__name__}-{i}", start_time=ts)
 
-    for table in activity_tables:
-        cursor.execute(f"""
-            CREATE TABLE {table} (
-                id INTEGER PRIMARY KEY,
-                start_time INTEGER,
-                updated_at TEXT
-            )
-        """)
-
-        # Add some test activities with different months
-        test_activities = [
-            (1704067200,),  # 2024-01-01 in Unix timestamp
-            (1706745600,),  # 2024-02-01 in Unix timestamp
-            (1709251200,),  # 2024-03-01 in Unix timestamp
-        ]
-        cursor.executemany(f"INSERT INTO {table} (start_time) VALUES (?)", test_activities)
-
-    conn.commit()
-    conn.close()
+    # FileActivity requires file_path + file_checksum
+    for i, ts in enumerate(timestamps):
+        FileActivity.create(
+            provider_id=f"test-file-{i}",
+            start_time=ts,
+            file_path=f"/fake/path/{i}.gpx",
+            file_checksum=f"abc{i:061d}",
+        )
 
     yield db_path
 
+    with contextlib.suppress(Exception):
+        db.close()
+    tdb._configured = False
     os.remove(db_path)
 
 
 class TestSyncCalendar:
     """Test sync calendar functionality."""
 
-    def test_get_sync_calendar_data_valid_db(self, temp_database, temp_config):
+    def test_get_sync_calendar_data_valid_db(self, temp_database):
         """Test getting sync calendar data from a valid database."""
-        _temp_file, _config_data = temp_config
-        config = load_tracekit_config()  # This will use the default config
+        config = {"metadata_db": temp_database, "home_timezone": "UTC"}
 
-        calendar_data = get_sync_calendar_data(temp_database, config)
+        calendar_data = get_sync_calendar_data(config)
 
         assert "error" not in calendar_data
         assert "months" in calendar_data
         assert "providers" in calendar_data
         assert "date_range" in calendar_data
 
-        # Check providers
         assert set(calendar_data["providers"]) == {"strava", "garmin", "spreadsheet"}
-
-        # Check date range
         assert calendar_data["date_range"] == ("2024-01", "2024-03")
 
-        # Check months data
         months = calendar_data["months"]
-        assert len(months) >= 3  # Should include 2024-01, 2024-02, 2024-03 and possibly more to current month
+        assert len(months) >= 3
 
-        # Check specific month data
         jan_2024 = next((m for m in months if m["year_month"] == "2024-01"), None)
         assert jan_2024 is not None
         assert jan_2024["year"] == 2024
@@ -151,46 +152,28 @@ class TestSyncCalendar:
         assert jan_2024["provider_status"]["strava"] is True
         assert jan_2024["provider_status"]["garmin"] is True
         assert jan_2024["provider_status"]["spreadsheet"] is False
-
-        # Check activity counts are present
         assert "activity_counts" in jan_2024
         assert "total_activities" in jan_2024
         assert isinstance(jan_2024["activity_counts"], dict)
         assert isinstance(jan_2024["total_activities"], int)
 
-    def test_get_sync_calendar_data_missing_file(self, temp_config):
-        """Test getting sync calendar data from a missing database file."""
-        _temp_file, _config_data = temp_config
-        config = {"home_timezone": "UTC"}
-
-        calendar_data = get_sync_calendar_data("nonexistent_database.sqlite3", config)
-
-        assert "error" in calendar_data
-        assert "not found" in calendar_data["error"]
-
-    def test_get_sync_calendar_data_empty_db(self, temp_config):
+    def test_get_sync_calendar_data_empty_db(self):
         """Test getting sync calendar data from an empty database."""
-        _temp_file, _config_data = temp_config
-        config = {"home_timezone": "UTC"}
+        import tracekit.db as tdb
+        from tracekit.database import get_all_models, migrate_tables
+        from tracekit.db import configure_db
 
         with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
             db_path = f.name
 
         try:
-            # Create empty database
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE providersync (
-                    id INTEGER PRIMARY KEY,
-                    year_month TEXT,
-                    provider TEXT
-                )
-            """)
-            conn.commit()
-            conn.close()
+            tdb._configured = False
+            configure_db(db_path)
+            tdb.get_db().connect(reuse_if_open=True)
+            migrate_tables(get_all_models())
 
-            calendar_data = get_sync_calendar_data(db_path, config)
+            config = {"metadata_db": db_path, "home_timezone": "UTC"}
+            calendar_data = get_sync_calendar_data(config)
 
             assert "error" not in calendar_data
             assert calendar_data["months"] == []
@@ -198,19 +181,18 @@ class TestSyncCalendar:
             assert calendar_data["date_range"] == (None, None)
             assert calendar_data["total_months"] == 0
         finally:
+            tdb._configured = False
             os.remove(db_path)
 
-    def test_calendar_activity_counts(self, temp_database, temp_config):
+    def test_calendar_activity_counts(self, temp_database):
         """Test that calendar includes activity counts per provider per month."""
-        _temp_file, _config_data = temp_config
-        config = {"home_timezone": "UTC"}
+        config = {"metadata_db": temp_database, "home_timezone": "UTC"}
 
-        calendar_data = get_sync_calendar_data(temp_database, config)
+        calendar_data = get_sync_calendar_data(config)
 
         assert "error" not in calendar_data
         assert "months" in calendar_data
 
-        # Find a month with data
         months_with_data = [m for m in calendar_data["months"] if m.get("total_activities", 0) > 0]
         assert len(months_with_data) > 0, "Should have months with activity data"
 
@@ -219,11 +201,8 @@ class TestSyncCalendar:
         assert "total_activities" in month
         assert month["total_activities"] > 0
 
-        # Check that activity counts are properly structured
         activity_counts = month["activity_counts"]
         assert isinstance(activity_counts, dict)
-
-        # Should have some provider with activities
         provider_counts = [count for count in activity_counts.values() if count > 0]
         assert len(provider_counts) > 0, "Should have at least one provider with activities"
 
@@ -236,12 +215,9 @@ class TestTimezone:
         config = {"home_timezone": "US/Eastern"}
         current_date = get_current_date_in_timezone(config)
 
-        # Should return a date object
         assert hasattr(current_date, "year")
         assert hasattr(current_date, "month")
         assert hasattr(current_date, "day")
-
-        # Should be a reasonable year (not in the distant past/future)
         assert 2020 <= current_date.year <= 2030
 
     def test_get_current_date_in_timezone_with_invalid_timezone(self):
@@ -249,7 +225,6 @@ class TestTimezone:
         config = {"home_timezone": "Invalid/Timezone"}
         current_date = get_current_date_in_timezone(config)
 
-        # Should still return a valid date object (fallback to UTC)
         assert hasattr(current_date, "year")
         assert hasattr(current_date, "month")
         assert hasattr(current_date, "day")
@@ -259,43 +234,27 @@ class TestTimezone:
         config = {}
         current_date = get_current_date_in_timezone(config)
 
-        # Should still return a valid date object (fallback to UTC)
         assert hasattr(current_date, "year")
         assert hasattr(current_date, "month")
         assert hasattr(current_date, "day")
 
-    def test_calendar_uses_configured_timezone(self, temp_config, temp_database):
+    def test_calendar_uses_configured_timezone(self, temp_database):
         """Test that calendar functionality uses the configured timezone."""
-        temp_file, config_data = temp_config
-        config_data["metadata_db"] = temp_database
-        config_data["home_timezone"] = "US/Pacific"
+        config = {"metadata_db": temp_database, "home_timezone": "US/Pacific"}
 
-        with open(temp_file, "w") as f:
-            json.dump(config_data, f)
+        calendar_data = get_sync_calendar_data(config)
 
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            config = load_tracekit_config()
-            calendar_data = get_sync_calendar_data(temp_database, config)
+        assert "error" not in calendar_data
+        assert "months" in calendar_data
+        assert "providers" in calendar_data
+        assert isinstance(calendar_data["providers"], list)
 
-            # Should successfully load calendar data
-            assert "error" not in calendar_data
-            assert "months" in calendar_data
-            assert "providers" in calendar_data
-
-            # The function should have used the timezone for current date calculations
-            # We can't easily test the exact date without mocking datetime,
-            # but we can verify the function ran successfully with timezone config
-            # The exact providers depend on what's in the test database
-            assert isinstance(calendar_data["providers"], list)
-            assert len(calendar_data["providers"]) >= 0  # Could be empty or have providers
-
-            # Verify months data structure is correct
-            if calendar_data["months"]:
-                month = calendar_data["months"][0]
-                assert "year_month" in month
-                assert "month_name" in month
-                assert "activity_counts" in month
-                assert "total_activities" in month
+        if calendar_data["months"]:
+            month = calendar_data["months"][0]
+            assert "year_month" in month
+            assert "month_name" in month
+            assert "activity_counts" in month
+            assert "total_activities" in month
 
 
 class TestCalendarIntegration:
@@ -314,11 +273,8 @@ class TestCalendarIntegration:
             assert response.status_code == 200
             assert b"Sync Calendar" in response.data
 
-            # Should contain timezone-aware data
             content = response.data.decode()
             assert "2024-01" in content or "2024-02" in content or "2024-03" in content
-
-            # Should contain activity count information
             assert "activities" in content or "total" in content
 
     def test_calendar_page_with_timezone(self, client, temp_config, temp_database):
@@ -334,7 +290,6 @@ class TestCalendarIntegration:
             response = client.get("/calendar")
             assert response.status_code == 200
 
-            # Should successfully render with Eastern timezone
             content = response.data.decode()
             assert "Sync Calendar" in content
-            assert len(content) > 1000  # Should be a substantial page
+            assert len(content) > 1000
