@@ -4,7 +4,6 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
-- [ ] Move config to be in the database, and give us a GUI to update config
 - [ ] users. database should have 'em and we should have to log in when in production
 - [ ] improve / on webapp to be what we care about, most recent months first
 
