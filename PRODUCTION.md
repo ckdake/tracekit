@@ -33,6 +33,13 @@ That's it for root. Switch to the tracekit user for everything from here on:
 su - tracekit
 ```
 
+Capture the uid/gid — these go into `.env` so compose can run every container as this user:
+
+```bash
+echo "TRACEKIT_UID=$(id -u)" >> ~/.env
+echo "TRACEKIT_GID=$(id -g)" >> ~/.env
+```
+
 ---
 
 ## Config File
@@ -40,7 +47,8 @@ su - tracekit
 As the `tracekit` user, create the subdirectories and copy in your config and compose file:
 
 ```bash
-mkdir -p ~/config ~/data/activities ~/pgdata
+mkdir -p ~/config ~/data/activities ~/pgdata ~/redis
+chown -R tracekit:tracekit ~/config ~/data ~/pgdata ~/redis
 cp tracekit_config.json ~/config/tracekit_config.json
 cp docker-compose.yml ~/docker-compose.yml
 ```
@@ -70,6 +78,13 @@ RIDEWITHGPS_KEY=your_api_key
 # Garmin
 GARMIN_EMAIL=your_email
 GARMINTOKENS=/opt/tracekit/.garminconnect
+
+# Host uid/gid — all containers run as this user so bind-mount files
+# are owned by tracekit:tracekit on the host. Set with:
+#   echo "TRACEKIT_UID=$(id -u)" >> ~/.env
+#   echo "TRACEKIT_GID=$(id -g)" >> ~/.env
+TRACEKIT_UID=
+TRACEKIT_GID=
 
 # PostgreSQL — used by both the postgres container and the tracekit container.
 # Choose a strong random password; it never needs to leave this file.

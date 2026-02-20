@@ -3,6 +3,7 @@ services:
     image: postgres:17-alpine
     container_name: tracekit-db
     restart: unless-stopped
+    user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     environment:
       POSTGRES_DB: tracekit
       POSTGRES_USER: tracekit
@@ -19,6 +20,7 @@ services:
     image: redis:alpine
     container_name: tracekit-redis
     restart: unless-stopped
+    user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     volumes:
       - /opt/tracekit/redis:/data
 
@@ -26,6 +28,7 @@ services:
     image: ghcr.io/ckdake/tracekit:latest
     container_name: tracekit
     restart: unless-stopped
+    user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,6 +51,7 @@ services:
     image: ghcr.io/ckdake/tracekit:latest
     container_name: tracekit-worker
     restart: unless-stopped
+    user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     command: celery -A tracekit.worker worker --loglevel=info --concurrency=1
     depends_on:
       postgres:
@@ -69,6 +73,7 @@ services:
     image: ghcr.io/ckdake/tracekit:latest
     container_name: tracekit-beat
     restart: unless-stopped
+    user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     command: celery -A tracekit.worker beat --loglevel=info
     depends_on:
       - redis
@@ -85,6 +90,7 @@ services:
     image: mher/flower:latest
     container_name: tracekit-flower
     restart: unless-stopped
+    user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     command: celery flower
     depends_on:
       - redis
