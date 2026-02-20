@@ -164,7 +164,13 @@ class FileProvider(FitnessProvider):
         processed_count = 0
 
         if unprocessed_file_paths:
-            with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            # Use "spawn" start method instead of the default "fork" on Linux.
+            # fork() inherits open SQLite/Peewee connections from the parent
+            # process, which causes EDEADLK (errno 35) when those connections
+            # hold pthread mutex locks at fork time. Spawned processes start
+            # fresh with no inherited file descriptors or mutex state.
+            spawn_ctx = multiprocessing.get_context("spawn")
+            with spawn_ctx.Pool(processes=multiprocessing.cpu_count()) as pool:
                 results = pool.map(
                     self._file_processing_worker,
                     [(fp,) for fp in unprocessed_file_paths],

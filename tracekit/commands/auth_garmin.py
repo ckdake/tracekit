@@ -71,11 +71,18 @@ def run():
     try:
         print("\nAuthenticating with Garmin Connect...")
 
+        # Remove GARMINTOKENS from environment so login() doesn't try to load
+        # potentially missing/stale token files from that path during fresh auth.
+        env_backup = os.environ.pop("GARMINTOKENS", None)
+
         # Create Garmin client with MFA support
         garmin = garminconnect.Garmin(email=email, password=password, is_cn=False, return_on_mfa=True)
 
         # Attempt login - returns (result, data) tuple in v0.2.28
         result, data = garmin.login()
+
+        if env_backup is not None:
+            os.environ["GARMINTOKENS"] = env_backup
 
         # Handle MFA if required
         if result == "needs_mfa":
@@ -84,6 +91,7 @@ def run():
             garmin.resume_login(data, mfa_code)
 
         # Save tokens
+        tokenstore_path.mkdir(parents=True, exist_ok=True)
         garmin.garth.dump(str(tokenstore_path))
 
         print(f"✓ Successfully authenticated as: {garmin.get_full_name()}")
