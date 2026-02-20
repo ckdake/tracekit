@@ -39,6 +39,7 @@ services:
     env_file:
       - .env
     environment:
+      - RUN_MIGRATIONS=true
       - DATABASE_URL=postgresql://tracekit:${POSTGRES_PASSWORD}@postgres:5432/tracekit
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
@@ -53,10 +54,8 @@ services:
     user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     command: celery -A tracekit.worker worker --loglevel=info --concurrency=1
     depends_on:
-      postgres:
+      tracekit:
         condition: service_healthy
-      redis:
-        condition: service_started
     env_file:
       - .env
     environment:
@@ -74,11 +73,11 @@ services:
     user: "${TRACEKIT_UID}:${TRACEKIT_GID}"
     command: celery -A tracekit.worker beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     depends_on:
-      - redis
+      tracekit:
+        condition: service_healthy
     env_file:
       - .env
     environment:
-      - SKIP_MIGRATE=1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
     volumes:
