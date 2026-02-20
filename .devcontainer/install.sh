@@ -56,6 +56,9 @@ else
 fi
 
 # 2. Install Python development dependencies
+print_status "Upgrading pip to latest version..."
+pip3 install --upgrade pip
+
 print_status "Installing Python package in development mode..."
 if pip3 install --user -e .[dev]; then
     print_success "Python package installed successfully"
