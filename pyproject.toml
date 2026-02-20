@@ -7,7 +7,7 @@ license = { text = "CC-BY-NC-4.0" }
 authors = [
     { name = "Chris Kelly", email = "ckdake@ckdake.com" }
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.14"
 dependencies = [
     "peewee==4.0.0",
     "gpxpy==1.6.2",

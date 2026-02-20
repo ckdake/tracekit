@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.title="tracekit"
 LABEL org.opencontainers.image.description="Tracekit web dashboard and tools"
