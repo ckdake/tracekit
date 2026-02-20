@@ -70,7 +70,17 @@ RIDEWITHGPS_KEY=your_api_key
 # Garmin
 GARMIN_EMAIL=your_email
 GARMINTOKENS=/opt/tracekit/.garminconnect
+
+# PostgreSQL — used by both the postgres container and the tracekit container.
+# Choose a strong random password; it never needs to leave this file.
+POSTGRES_PASSWORD=change_me_to_a_strong_random_password
 ```
+
+> **Database backend:** When `DATABASE_URL` is set (which `docker-compose.yml` does automatically using `POSTGRES_PASSWORD`), tracekit connects to PostgreSQL instead of SQLite. The `metadata_db` field in `tracekit_config.json` is ignored in this mode.
+
+Tables are created (and safely re-created if already present) automatically on every container start via `python -m tracekit migrate`, which runs in `docker-entrypoint.sh` before the Flask process starts. It retries the connection for up to 60 s so the app container and the database container can start in any order.
+
+> **Dev / local:** SQLite remains the default when `DATABASE_URL` is not set, so local development and the CLI work exactly as before with zero extra setup.
 
 Docker Compose picks this up automatically from the working directory and injects it into the container via `env_file` in `docker-compose.yml`.
 
@@ -87,6 +97,8 @@ Update paths inside `tracekit_config.json` to reflect the data directory:
 }
 ```
 
+> `metadata_db` is only used when `DATABASE_URL` is **not** set. In production (with `DATABASE_URL` pointing at the postgres container) this field is ignored — all data goes to PostgreSQL.
+
 ---
 
 ## Deploying
@@ -102,7 +114,13 @@ The compose file binds to `127.0.0.1:5000` only, so the port is **not** publicly
 
 Key volume mounts (defined in `docker-compose.yml`):
 - `/opt/tracekit/config` → `/config` (read-only) — contains `tracekit_config.json`
-- `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — database and activity files
+- `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — activity files (FIT/GPX/TCX exports)
+- `postgres_data` (named Docker volume) — PostgreSQL data directory, managed by Docker
+
+To back up the database:
+```bash
+docker exec tracekit-db pg_dump -U tracekit tracekit > tracekit_backup_$(date +%Y%m%d).sql
+```
 
 Verify it's running:
 

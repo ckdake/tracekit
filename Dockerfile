@@ -10,17 +10,18 @@ ENV PATH="/home/tracekit/.local/bin:${PATH}"
 
 WORKDIR /app
 
-# Install minimal system deps
+# Install minimal system deps (libpq-dev needed for psycopg2 when not using binary)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates build-essential \
+    && apt-get install -y --no-install-recommends curl ca-certificates build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy project files
 COPY . /app
 
-# Install the package and its dependencies from pyproject.toml
+# Install the package and its dependencies from pyproject.toml.
+# [production] adds psycopg2-binary for PostgreSQL support.
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir ".[production]"
 
 # Create a non-root user
 RUN useradd --create-home --shell /bin/bash tracekit \
