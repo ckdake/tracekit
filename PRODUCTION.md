@@ -116,6 +116,29 @@ Update paths inside `tracekit_config.json` to reflect the data directory:
 
 ---
 
+## Garmin Authentication
+
+Garmin tokens must exist on the host **before** the containers start. Run auth once as the `tracekit` user (with `GARMINTOKENS` pointing at the bind-mount path so the tokens land in the right place):
+
+```bash
+cd /opt/tracekit
+GARMINTOKENS=/opt/tracekit/.garminconnect python -m tracekit auth-garmin
+```
+
+This creates `oauth1_token.json` and `oauth2_token.json` inside `/opt/tracekit/.garminconnect/`. The directory is bind-mounted into both the web and worker containers so all services share the same tokens.
+
+> **Token refresh:** garth (the underlying auth library) rewrites the token files when it refreshes them during normal use. The mount is therefore **read-write** — not read-only.
+
+To re-authenticate after tokens expire, stop the containers, re-run the command above, then restart:
+
+```bash
+docker compose down
+GARMINTOKENS=/opt/tracekit/.garminconnect python -m tracekit auth-garmin
+docker compose up -d
+```
+
+---
+
 ## Deploying
 
 As the `tracekit` user, everything lives under `/opt/tracekit/`:
@@ -130,6 +153,7 @@ The compose file binds to `127.0.0.1:5000` only, so the port is **not** publicly
 Key volume mounts (defined in `docker-compose.yml`):
 - `/opt/tracekit/config/tracekit_config.json` → `/app/tracekit_config.json` (read-only) — config file, mounted directly
 - `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — activity files (FIT/GPX/TCX exports)
+- `/opt/tracekit/.garminconnect` → `/opt/tracekit/.garminconnect` (read-write) — Garmin OAuth tokens (garth refreshes these in-place)
 - `/opt/tracekit/pgdata` → PostgreSQL data directory — all database files live here
 - `/opt/tracekit/redis` → Redis persistence directory
 
@@ -157,8 +181,6 @@ curl http://127.0.0.1:5000/health
 ```
 
 **Flower** (task queue observability) is available at `http://127.0.0.1:5555` on the host. To expose it through your reverse proxy, add a vhost/location pointing at port 5555. Keep it behind auth — it shows all task history and can inspect results.
-
-**Triggering a pull from the UI:** visit the `/calendar` page and click **Pull** on any month card. The job is enqueued immediately and runs in the worker container; Flower will show its progress and result.
 
 **Triggering a pull from the UI:** visit the `/calendar` page and click **Pull** on any month card. The job is enqueued immediately and runs in the worker container; Flower will show its progress and result.
 

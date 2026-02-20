@@ -1,7 +1,7 @@
 """Simple Flask web application to view tracekit configuration and database status."""
 
+import calendar as _cal
 import json
-from collections import defaultdict
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -91,7 +91,97 @@ def get_database_info(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_sync_calendar_data(config: dict[str, Any]) -> dict[str, Any]:
-    """Get sync calendar data from the providersync table with activity counts."""
+    """Compatibility shim — returns full calendar data (used by tests).
+
+    In production the page uses get_calendar_shell + get_single_month_data
+    so that each month loads independently.  This function still works for
+    the test suite which imports it directly.
+    """
+    shell = get_calendar_shell(config)
+    if shell.get("error"):
+        return shell
+
+    months_with_data = []
+    for stub in shell["months"]:
+        month_data = get_single_month_data(config, stub["year_month"])
+        if month_data.get("error"):
+            months_with_data.append(stub)
+        else:
+            months_with_data.append(month_data)
+
+    return {
+        "months": months_with_data,
+        "providers": shell["providers"],
+        "date_range": shell["date_range"],
+        "total_months": shell["total_months"],
+    }
+
+
+def get_calendar_shell(config: dict[str, Any]) -> dict[str, Any]:
+    """Return month stubs and providers list — no activity table scans."""
+    if not _init_db(config):
+        return {"error": "Database not available"}
+
+    try:
+        from tracekit.db import get_db
+        from tracekit.provider_sync import ProviderSync
+
+        db = get_db()
+        db.connect(reuse_if_open=True)
+
+        rows = ProviderSync.select(ProviderSync.year_month, ProviderSync.provider).order_by(
+            ProviderSync.year_month, ProviderSync.provider
+        )
+        records = [(r.year_month, r.provider) for r in rows]
+
+        if not records:
+            return {"months": [], "providers": [], "date_range": (None, None), "total_months": 0}
+
+        year_months_all = [r[0] for r in records]
+        date_range = (min(year_months_all), max(year_months_all))
+        providers = sorted({r[1] for r in records})
+
+        start_year, start_month = map(int, date_range[0].split("-"))
+        end_year, end_month = map(int, date_range[1].split("-"))
+
+        current_date = get_current_date_in_timezone(config)
+        current_ym = f"{current_date.year:04d}-{current_date.month:02d}"
+        if current_ym > date_range[1]:
+            end_year, end_month = current_date.year, current_date.month
+
+        all_months = []
+        year, month = start_year, start_month
+        while year < end_year or (year == end_year and month <= end_month):
+            ym = f"{year:04d}-{month:02d}"
+            all_months.append(
+                {
+                    "year_month": ym,
+                    "year": year,
+                    "month": month,
+                    "month_name": datetime(year, month, 1).strftime("%B"),
+                }
+            )
+            month += 1
+            if month > 12:
+                month = 1
+                year += 1
+
+        return {
+            "months": all_months,
+            "providers": providers,
+            "date_range": date_range,
+            "total_months": len(all_months),
+        }
+    except Exception as e:
+        return {"error": f"Database error: {e}"}
+
+
+def get_single_month_data(config: dict[str, Any], year_month: str) -> dict[str, Any]:
+    """Return sync status and activity counts for one month.
+
+    Activity queries are scoped to the month's timestamp range so this is
+    fast even for large databases.
+    """
     if not _init_db(config):
         return {"error": "Database not available"}
 
@@ -108,22 +198,19 @@ def get_sync_calendar_data(config: dict[str, Any]) -> dict[str, Any]:
         db = get_db()
         db.connect(reuse_if_open=True)
 
-        # Get all sync records using the ORM
-        rows = ProviderSync.select(ProviderSync.year_month, ProviderSync.provider).order_by(
-            ProviderSync.year_month, ProviderSync.provider
-        )
-        records = [(r.year_month, r.provider) for r in rows]
+        synced_rows = ProviderSync.select(ProviderSync.provider).where(ProviderSync.year_month == year_month)
+        synced_providers = [r.provider for r in synced_rows]
 
-        if not records:
-            date_range = (None, None)
-        else:
-            year_months = [r[0] for r in records]
-            date_range = (min(year_months), max(year_months))
+        all_rows = ProviderSync.select(ProviderSync.provider).distinct()
+        providers = sorted({r.provider for r in all_rows})
 
-        providers = sorted({r[1] for r in records})
+        provider_status = {p: p in synced_providers for p in providers}
 
-        # Count activities per provider per month — fetch start_time and group in Python
-        # so this works on both SQLite and Postgres without SQL dialect differences.
+        year_int, month_int = map(int, year_month.split("-"))
+        start_ts = int(datetime(year_int, month_int, 1, tzinfo=UTC).timestamp())
+        last_day = _cal.monthrange(year_int, month_int)[1]
+        end_ts = int(datetime(year_int, month_int, last_day, 23, 59, 59, tzinfo=UTC).timestamp())
+
         provider_models = {
             "strava": StravaActivity,
             "garmin": GarminActivity,
@@ -133,97 +220,51 @@ def get_sync_calendar_data(config: dict[str, Any]) -> dict[str, Any]:
             "stravajson": StravaJsonActivity,
         }
 
-        activity_counts: dict[str, dict[str, int]] = {}
+        activity_counts: dict[str, int] = {}
         for provider, model in provider_models.items():
             try:
-                for activity in model.select(model.start_time).where(model.start_time.is_null(False)):
-                    ym = datetime.fromtimestamp(activity.start_time, tz=UTC).strftime("%Y-%m")
-                    activity_counts.setdefault(ym, {})
-                    activity_counts[ym][provider] = activity_counts[ym].get(provider, 0) + 1
-            except Exception as e:
-                print(f"Error getting activity counts for {provider}: {e}")
-
-        # Organize data by month
-        sync_data = defaultdict(set)
-        for year_month, provider in records:
-            sync_data[year_month].add(provider)
-
-        # Generate all months from start to current month
-        if date_range[0] and date_range[1]:
-            start_year, start_month = map(int, date_range[0].split("-"))
-            end_year, end_month = map(int, date_range[1].split("-"))
-            current_date = get_current_date_in_timezone(config)
-            current_year_month = f"{current_date.year:04d}-{current_date.month:02d}"
-
-            # If current month is later than last sync, extend to current month
-            if current_year_month > date_range[1]:
-                end_year, end_month = current_date.year, current_date.month
-
-            # Also consider months that have activities but no sync data
-            activity_months = set(activity_counts.keys())
-            if activity_months:
-                for activity_month in activity_months:
-                    activity_year, activity_month_num = map(int, activity_month.split("-"))
-                    if activity_year < start_year or (activity_year == start_year and activity_month_num < start_month):
-                        start_year, start_month = activity_year, activity_month_num
-                    if activity_year > end_year or (activity_year == end_year and activity_month_num > end_month):
-                        end_year, end_month = activity_year, activity_month_num
-
-            all_months = []
-            year, month = start_year, start_month
-            while year < end_year or (year == end_year and month <= end_month):
-                year_month = f"{year:04d}-{month:02d}"
-
-                # Build provider activity counts for this month
-                provider_activity_counts = {}
-                if year_month in activity_counts:
-                    provider_activity_counts = activity_counts[year_month]
-
-                all_months.append(
-                    {
-                        "year_month": year_month,
-                        "year": year,
-                        "month": month,
-                        "month_name": datetime(year, month, 1).strftime("%B"),
-                        "synced_providers": list(sync_data[year_month]),
-                        "provider_status": {provider: provider in sync_data[year_month] for provider in providers},
-                        "activity_counts": provider_activity_counts,
-                        "total_activities": sum(provider_activity_counts.values()) if provider_activity_counts else 0,
-                    }
+                count = (
+                    model.select()
+                    .where(
+                        model.start_time.is_null(False) & (model.start_time >= start_ts) & (model.start_time <= end_ts)
+                    )
+                    .count()
                 )
+                if count > 0:
+                    activity_counts[provider] = count
+            except Exception as e:
+                print(f"Error counting {provider} activities for {year_month}: {e}")
 
-                month += 1
-                if month > 12:
-                    month = 1
-                    year += 1
+        total_activities = sum(activity_counts.values())
 
-            return {
-                "months": all_months,
-                "providers": providers,
-                "date_range": date_range,
-                "total_months": len(all_months),
-            }
-        else:
-            return {"months": [], "providers": providers, "date_range": (None, None), "total_months": 0}
-
+        return {
+            "year_month": year_month,
+            "year": year_int,
+            "month": month_int,
+            "month_name": datetime(year_int, month_int, 1).strftime("%B"),
+            "providers": providers,
+            "synced_providers": synced_providers,
+            "provider_status": provider_status,
+            "activity_counts": activity_counts,
+            "total_activities": total_activities,
+        }
     except Exception as e:
         return {"error": f"Database error: {e}"}
 
 
 @app.route("/calendar")
 def calendar():
-    """Sync calendar page."""
+    """Sync calendar page — renders card shells; each card loads via /api/calendar/<ym>."""
     config = load_tracekit_config()
 
-    calendar_data = {}
+    shell_data: dict[str, Any] = {}
     if not config.get("error"):
-        calendar_data = get_sync_calendar_data(config)
+        shell_data = get_calendar_shell(config)
 
-    # Add current month for highlighting (using configured timezone)
     current_date = get_current_date_in_timezone(config)
     current_month = f"{current_date.year:04d}-{current_date.month:02d}"
 
-    return render_template("calendar.html", config=config, calendar_data=calendar_data, current_month=current_month)
+    return render_template("calendar.html", config=config, shell_data=shell_data, current_month=current_month)
 
 
 def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
@@ -279,6 +320,19 @@ def api_database():
     if not config.get("error"):
         return jsonify(get_database_info(config))
     return jsonify({"error": "Config error"})
+
+
+@app.route("/api/calendar/<year_month>")
+def api_calendar_month(year_month: str):
+    """Return sync status and activity counts for a single month."""
+    import re
+
+    if not re.fullmatch(r"\d{4}-\d{2}", year_month):
+        return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
+    config = load_tracekit_config()
+    if config.get("error"):
+        return jsonify({"error": "Config error"}), 503
+    return jsonify(get_single_month_data(config, year_month))
 
 
 @app.route("/api/sync/<year_month>", methods=["POST"])

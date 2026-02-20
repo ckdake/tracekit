@@ -12,14 +12,8 @@
             background: #f8f9fa;
             color: #333;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .nav {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        .header { text-align: center; margin-bottom: 30px; }
+        .nav { text-align: center; margin-bottom: 20px; }
         .nav a {
             display: inline-block;
             margin: 0 10px;
@@ -30,13 +24,8 @@
             border-radius: 4px;
             font-size: 14px;
         }
-        .nav a:hover {
-            background: #0056b3;
-        }
-        .calendar-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        .nav a:hover { background: #0056b3; }
+        .calendar-container { max-width: 1400px; margin: 0 auto; }
         .legend {
             display: flex;
             justify-content: center;
@@ -47,21 +36,11 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 3px;
-        }
-        .synced { background: #28a745; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 3px; }
+        .synced    { background: #28a745; }
         .not-synced { background: #dc3545; }
-        .disabled { background: #6c757d; }
-
+        .disabled  { background: #6c757d; }
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -74,9 +53,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border: 2px solid transparent;
         }
-        .month-card.current {
-            border-color: #007bff;
-        }
+        .month-card.current { border-color: #007bff; }
         .month-header {
             font-weight: bold;
             font-size: 16px;
@@ -84,10 +61,17 @@
             color: #2c3e50;
             text-align: center;
         }
+        .total-label {
+            font-size: 12px;
+            font-weight: normal;
+            opacity: 0.8;
+            min-height: 16px;
+        }
         .provider-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
             gap: 6px;
+            min-height: 36px;
         }
         .provider-status {
             padding: 6px 8px;
@@ -101,19 +85,15 @@
             align-items: center;
             gap: 2px;
         }
-        .activity-count {
-            font-size: 10px;
-            opacity: 0.9;
-            font-weight: normal;
-        }
-        .provider-status.synced {
-            background: #28a745;
-        }
-        .provider-status.not-synced {
-            background: #dc3545;
-        }
-        .provider-status.disabled {
-            background: #6c757d;
+        .activity-count { font-size: 10px; opacity: 0.9; font-weight: normal; }
+        .provider-status.synced    { background: #28a745; }
+        .provider-status.not-synced { background: #dc3545; }
+        .provider-status.disabled  { background: #6c757d; }
+        .card-loading {
+            color: #999;
+            font-size: 12px;
+            text-align: center;
+            padding: 6px 0;
         }
         .stats {
             text-align: center;
@@ -151,8 +131,8 @@
             text-align: center;
             min-height: 14px;
         }
-        .pull-status.ok { color: #28a745; }
-        .pull-status.err { color: #dc3545; }
+        .pull-status.ok      { color: #28a745; }
+        .pull-status.err     { color: #dc3545; }
         .pull-status.running { color: #007bff; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner {
@@ -179,141 +159,184 @@
         <a href="/health">❤️ Health</a>
     </div>
 
-    {% if calendar_data.error %}
+    {% if shell_data.error %}
     <div class="error">
         <h3>❌ Database Error</h3>
-        <p><strong>Error:</strong> {{ calendar_data.error }}</p>
-        {% if calendar_data.path %}
-        <p><strong>Path:</strong> <code>{{ calendar_data.path }}</code></p>
-        {% endif %}
+        <p><strong>Error:</strong> {{ shell_data.error }}</p>
     </div>
+    {% elif not shell_data.months %}
+    <div class="error"><p>No sync data found in the database.</p></div>
     {% else %}
 
     <div class="calendar-container">
-        {% if calendar_data.providers %}
         <div class="legend">
             <div class="legend-item">
-                <div class="legend-color synced"></div>
-                <span>Synced</span>
+                <div class="legend-color synced"></div><span>Synced</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color not-synced"></div>
-                <span>Not Synced</span>
+                <div class="legend-color not-synced"></div><span>Not Synced</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color disabled"></div>
-                <span>Disabled</span>
+                <div class="legend-color disabled"></div><span>Disabled</span>
             </div>
         </div>
 
-        {% if calendar_data.months %}
         <div class="calendar-grid">
-            {% for month in calendar_data.months %}
-            <div class="month-card {% if month.year_month == current_month %}current{% endif %}">
+            {% for month in shell_data.months %}
+            <div class="month-card {% if month.year_month == current_month %}current{% endif %}"
+                 id="card-{{ month.year_month }}">
                 <div class="month-header">
                     {{ month.month_name }} {{ month.year }}
-                    {% if month.total_activities > 0 %}
-                    <div style="font-size: 12px; font-weight: normal; opacity: 0.8;">{{ month.total_activities }} total activities</div>
-                    {% endif %}
+                    <div class="total-label" id="total-{{ month.year_month }}"></div>
                 </div>
-                <div class="provider-grid">
-                    {% for provider in calendar_data.providers %}
-                    {% set is_synced = month.provider_status[provider] %}
-                    {% set provider_config = config.providers.get(provider, {}) if config.providers else {} %}
-                    {% set is_enabled = provider_config.get('enabled', false) %}
-                    {% set activity_count = month.activity_counts.get(provider, 0) %}
-                    <div class="provider-status {% if not is_enabled %}disabled{% elif is_synced %}synced{% else %}not-synced{% endif %}">
-                        <div>{{ provider[:8] }}</div>
-                        {% if activity_count > 0 %}
-                        <div class="activity-count">{{ activity_count }} activities</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
+                <div class="provider-grid" id="grid-{{ month.year_month }}">
+                    <div class="card-loading">Loading…</div>
                 </div>
-                <button class="pull-btn" data-month="{{ month.year_month }}" onclick="pullMonth(this)">Pull</button>
+                <button class="pull-btn" data-month="{{ month.year_month }}"
+                        onclick="pullMonth(this)">Pull</button>
                 <div class="pull-status" id="status-{{ month.year_month }}"></div>
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div class="error">
-            <p>No sync data found in the database.</p>
-        </div>
-        {% endif %}
 
         <div class="stats">
             <h3>📊 Summary</h3>
-            <p><strong>Date Range:</strong> {{ calendar_data.date_range[0] }} to {{ calendar_data.date_range[1] }}</p>
-            <p><strong>Total Months:</strong> {{ calendar_data.total_months }}</p>
-            <p><strong>Providers:</strong> {{ calendar_data.providers|length }}</p>
-            <p><strong>Provider List:</strong> {{ calendar_data.providers|join(', ') }}</p>
+            <p><strong>Date Range:</strong>
+                {{ shell_data.date_range[0] }} to {{ shell_data.date_range[1] }}</p>
+            <p><strong>Total Months:</strong> {{ shell_data.total_months }}</p>
+            <p><strong>Providers:</strong> {{ shell_data.providers|length }}</p>
+            <p><strong>Provider List:</strong> {{ shell_data.providers|join(', ') }}</p>
         </div>
-        {% else %}
-        <div class="error">
-            <p>No providers found in the database.</p>
-        </div>
-        {% endif %}
     </div>
     {% endif %}
-</body>
-</html>
 
-<script>
-const _polling = {};
+    {# Embed provider config so JS can determine enabled/disabled state #}
+    <script>
+    const PROVIDER_CONFIG = {{ (config.providers or {})|tojson }};
 
-async function pullMonth(btn) {
-    const month = btn.dataset.month;
-    const status = document.getElementById('status-' + month);
+    // -------------------------------------------------------------------------
+    // Render a single card's provider grid from API data
+    // -------------------------------------------------------------------------
+    function renderGrid(yearMonth, data) {
+        const grid = document.getElementById('grid-' + yearMonth);
+        const totalEl = document.getElementById('total-' + yearMonth);
+        if (!grid) return;
 
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Queuing…';
-    status.textContent = '';
-    status.className = 'pull-status';
+        if (data.error) {
+            grid.innerHTML = '<div class="card-loading" style="color:#dc3545">' +
+                             data.error + '</div>';
+            return;
+        }
 
-    let taskId;
-    try {
-        const res = await fetch('/api/sync/' + month, { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok) {
-            status.textContent = data.error || 'Error';
+        if (!data.providers || data.providers.length === 0) {
+            grid.innerHTML = '<div class="card-loading">No providers</div>';
+            return;
+        }
+
+        if (data.total_activities > 0) {
+            totalEl.textContent = data.total_activities + ' total activities';
+        }
+
+        grid.innerHTML = data.providers.map(p => {
+            const synced  = data.provider_status[p];
+            const cfg     = PROVIDER_CONFIG[p] || {};
+            const enabled = cfg.enabled !== false;  // default true if not in config
+            const cls     = !enabled ? 'disabled' : synced ? 'synced' : 'not-synced';
+            const count   = data.activity_counts[p] || 0;
+            const countHtml = count > 0
+                ? '<div class="activity-count">' + count + ' activities</div>'
+                : '';
+            return '<div class="provider-status ' + cls + '">' +
+                   '<div>' + p.substring(0, 8) + '</div>' + countHtml + '</div>';
+        }).join('');
+    }
+
+    // -------------------------------------------------------------------------
+    // Load (or reload) a single card from the API
+    // -------------------------------------------------------------------------
+    async function loadCard(yearMonth) {
+        try {
+            const res = await fetch('/api/calendar/' + yearMonth);
+            const data = await res.json();
+            renderGrid(yearMonth, data);
+        } catch (e) {
+            const grid = document.getElementById('grid-' + yearMonth);
+            if (grid) grid.innerHTML =
+                '<div class="card-loading" style="color:#dc3545">Load error</div>';
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Pull a month and refresh the card when done
+    // -------------------------------------------------------------------------
+    const _polling = {};
+
+    async function pullMonth(btn) {
+        const month = btn.dataset.month;
+        const status = document.getElementById('status-' + month);
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Queuing…';
+        status.textContent = '';
+        status.className = 'pull-status';
+
+        let taskId;
+        try {
+            const res = await fetch('/api/sync/' + month, { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) {
+                status.textContent = data.error || 'Error';
+                status.className = 'pull-status err';
+                btn.disabled = false;
+                btn.textContent = 'Pull';
+                return;
+            }
+            taskId = data.task_id;
+        } catch (e) {
+            status.textContent = 'Network error';
             status.className = 'pull-status err';
             btn.disabled = false;
             btn.textContent = 'Pull';
             return;
         }
-        taskId = data.task_id;
-    } catch (e) {
-        status.textContent = 'Network error';
-        status.className = 'pull-status err';
-        btn.disabled = false;
-        btn.textContent = 'Pull';
-        return;
+
+        btn.innerHTML = '<span class="spinner"></span>Running…';
+        status.textContent = 'In progress';
+        status.className = 'pull-status running';
+
+        _polling[month] = setInterval(async () => {
+            try {
+                const res = await fetch('/api/sync/status/' + taskId);
+                const data = await res.json();
+                if (data.state === 'SUCCESS') {
+                    clearInterval(_polling[month]);
+                    btn.disabled = false;
+                    btn.textContent = 'Pull';
+                    status.textContent = 'Done ✓';
+                    status.className = 'pull-status ok';
+                    // Reload just this card to show updated counts/status
+                    loadCard(month);
+                } else if (data.state === 'FAILURE') {
+                    clearInterval(_polling[month]);
+                    btn.disabled = false;
+                    btn.textContent = 'Pull';
+                    status.textContent = data.info || 'Failed';
+                    status.className = 'pull-status err';
+                }
+                // PENDING / STARTED / RETRY — keep spinning
+            } catch (_) { /* ignore transient fetch errors */ }
+        }, 2000);
     }
 
-    // Poll until the task finishes
-    btn.innerHTML = '<span class="spinner"></span>Running…';
-    status.textContent = 'In progress';
-    status.className = 'pull-status running';
-
-    _polling[month] = setInterval(async () => {
-        try {
-            const res = await fetch('/api/sync/status/' + taskId);
-            const data = await res.json();
-            if (data.state === 'SUCCESS') {
-                clearInterval(_polling[month]);
-                btn.disabled = false;
-                btn.textContent = 'Pull';
-                status.textContent = 'Done';
-                status.className = 'pull-status ok';
-            } else if (data.state === 'FAILURE') {
-                clearInterval(_polling[month]);
-                btn.disabled = false;
-                btn.textContent = 'Pull';
-                status.textContent = data.info || 'Failed';
-                status.className = 'pull-status err';
-            }
-            // PENDING / STARTED / RETRY — keep spinning
-        } catch (_) { /* ignore transient fetch errors */ }
-    }, 2000);
-}
-</script>
+    // -------------------------------------------------------------------------
+    // On page load: fetch all cards in parallel
+    // -------------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.month-card[id^="card-"]').forEach(card => {
+            const ym = card.id.replace('card-', '');
+            loadCard(ym);
+        });
+    });
+    </script>
+</body>
+</html>

@@ -47,7 +47,7 @@ services:
     volumes:
       - /opt/tracekit/config/tracekit_config.json:/app/tracekit_config.json:ro
       - /opt/tracekit/data:/opt/tracekit/data
-      - /opt/tracekit/.garminconnect:/opt/tracekit/.garminconnect:ro
+      - /opt/tracekit/.garminconnect:/opt/tracekit/.garminconnect
 
   tracekit-worker:
     image: ghcr.io/ckdake/tracekit:latest
@@ -68,7 +68,7 @@ services:
     volumes:
       - /opt/tracekit/config/tracekit_config.json:/app/tracekit_config.json:ro
       - /opt/tracekit/data:/opt/tracekit/data
-      - /opt/tracekit/.garminconnect:/opt/tracekit/.garminconnect:ro
+      - /opt/tracekit/.garminconnect:/opt/tracekit/.garminconnect
 
   tracekit-beat:
     image: ghcr.io/ckdake/tracekit:latest
