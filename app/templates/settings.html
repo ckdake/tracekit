@@ -13,6 +13,10 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="field-row">
+            <label for="debug-toggle">Debug mode</label>
+            <input type="checkbox" id="debug-toggle" {% if config.debug %}checked{% endif %}>
+        </div>
     </div>
 
     <div class="card">
