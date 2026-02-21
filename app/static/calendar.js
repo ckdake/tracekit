@@ -34,34 +34,39 @@ function renderGrid(yearMonth, data) {
     }
 
     const PROVIDER_DISPLAY = {
-        strava:      { label: 'Strava',        cls: 'provider-strava',      attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
-        garmin:      { label: 'Garmin',        cls: 'provider-garmin',      attr: '<a href="https://www.garmin.com" target="_blank" rel="noopener" class="provider-attr attr-garmin" title="Powered by Garmin">Powered by Garmin</a>' },
-        stravajson:  { label: 'Strava (JSON)', cls: 'provider-strava',      attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
-        ridewithgps: { label: 'RideWithGPS',  cls: 'provider-ridewithgps', attr: '<a href="https://ridewithgps.com" target="_blank" rel="noopener" class="provider-attr attr-ridewithgps" title="Powered by RideWithGPS">Powered by RideWithGPS</a>' },
-        spreadsheet: { label: 'Spreadsheet',  cls: 'provider-spreadsheet', attr: '' },
-        file:        { label: 'File',          cls: 'provider-file',        attr: '' },
+        strava:      { cls: 'provider-strava',      label: 'Strava',       logo: '/static/powered_by_strava.svg',      logoAlt: 'Powered by Strava',      logoHref: 'https://www.strava.com' },
+        garmin:      { cls: 'provider-garmin',      label: 'Garmin',       logo: '/static/powered_by_garmin.svg',      logoAlt: 'Powered by Garmin',      logoHref: 'https://www.garmin.com' },
+        stravajson:  { cls: 'provider-strava',      label: 'Strava (JSON)',logo: '/static/powered_by_strava.svg',      logoAlt: 'Powered by Strava',      logoHref: 'https://www.strava.com' },
+        ridewithgps: { cls: 'provider-ridewithgps', label: 'RideWithGPS',  logo: '/static/powered_by_ridewithgps.svg', logoAlt: 'Powered by RideWithGPS', logoHref: 'https://ridewithgps.com' },
+        spreadsheet: { cls: 'provider-spreadsheet', label: 'Spreadsheet',  logo: '', logoAlt: 'Spreadsheet' },
+        file:        { cls: 'provider-file',        label: 'File',         logo: '', logoAlt: 'File' },
     };
 
     const meta = data.provider_metadata || {};
 
     grid.innerHTML = enabledProviders.map(p => {
-        const synced  = data.provider_status[p];
-        const cls     = synced ? 'synced' : 'not-synced';
-        const tooltip = synced ? 'Synced' : 'Not synced';
-        const count   = data.activity_counts[p] || 0;
-        const countHtml = count > 0 ? '<div class="activity-count">' + count + ' activities</div>' : '';
-        const info    = PROVIDER_DISPLAY[p] || {};
-        const label   = info.label || p;
+        const synced      = data.provider_status[p];
+        const cls         = synced ? 'synced' : 'not-synced';
+        const tooltip     = synced ? 'Synced' : 'Not synced';
+        const count       = data.activity_counts[p] || 0;
+        const info        = PROVIDER_DISPLAY[p] || {};
         const providerCls = info.cls || '';
-        const attrHtml = (synced && info.attr) ? '<div class="provider-attr-row">' + info.attr + '</div>' : '';
 
-        // Device names (currently Garmin-only)
+        // Big integer count (no label)
+        const countHtml = count > 0 ? '<div class="activity-count-big">' + count + '</div>' : '';
+
+        // Device chip (Garmin-only)
         const devices = (synced && meta[p] && meta[p].devices) ? meta[p].devices : [];
         const deviceHtml = devices.length
-            ? '<div class="provider-devices">' + devices.map(d => '<span class="device-chip">' + d + '</span>').join('') + '</div>'
+            ? '<div class="provider-devices">' + devices.map(d => '<span class="device-chip">⌚ ' + d + '</span>').join('') + '</div>'
             : '';
 
-        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '"><div>' + label + '</div>' + countHtml + deviceHtml + attrHtml + '</div>';
+        // Logo or fallback text label at bottom
+        const logoHtml = info.logo
+            ? '<div class="provider-logo-row"><a href="' + info.logoHref + '" target="_blank" rel="noopener"><img src="' + info.logo + '" alt="' + info.logoAlt + '" class="provider-logo-img"></a></div>'
+            : '<div class="provider-name-label">' + (info.label || p) + '</div>';
+
+        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + countHtml + deviceHtml + logoHtml + '</div>';
     }).join('');
 }
 

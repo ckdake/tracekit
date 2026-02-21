@@ -204,8 +204,8 @@ function makeProviderCard(name, data) {
     if (name === 'garmin') {
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
-        authBtn.className = 'provider-auth-btn';
-        authBtn.textContent = data.garth_tokens ? 'Re-authenticate' : 'Authenticate';
+        authBtn.className = 'garmin-auth-btn';
+        authBtn.textContent = data.garth_tokens ? 'Re-authenticate with Garmin' : 'Authenticate with Garmin';
         authBtn.addEventListener('click', () => openGarminModal(card, data, name));
         card.appendChild(authBtn);
     }
@@ -507,8 +507,8 @@ function onAuthSuccess(email, fullName) {
     showStatus(`Garmin authenticated${fullName ? ` as ${fullName}` : ''}.`, 'ok');
     // Update the button label on the card
     if (_modalCard) {
-        const btn = _modalCard.querySelector('.provider-auth-btn');
-        if (btn) btn.textContent = 'Re-authenticate';
+        const btn = _modalCard.querySelector('.garmin-auth-btn');
+        if (btn) btn.textContent = 'Re-authenticate with Garmin';
         // Reload config silently to pick up new tokens
         fetch('/api/config').then(r => r.json()).then(cfg => {
             Object.assign(INITIAL_CONFIG, cfg);

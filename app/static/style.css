@@ -482,21 +482,45 @@ select#timezone:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
 }
-.activity-count { font-size: 10px; opacity: 0.9; font-weight: normal; }
 
-/* Fallback synced/not-synced colours for unknown providers */
-.provider-status.synced     { background: #28a745; }
-.provider-status.not-synced { opacity: 0.38; filter: saturate(0.4); }
+/* Big bare integer */
+.activity-count-big {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.5px;
+}
 
-/* Provider brand colours — come after synced/not-synced so they win on background */
-.provider-status.provider-strava      { background: #FC4C02; }
-.provider-status.provider-garmin      { background: #007CC3; }
-.provider-status.provider-ridewithgps { background: #52AF4A; }
-.provider-status.provider-stravajson  { background: #FC4C02; }
-.provider-status.provider-spreadsheet { background: #34a853; }
-.provider-status.provider-file        { background: #6c757d; }
+/* Fallback text label for logo-less providers */
+.provider-name-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Provider logo */
+.provider-logo-row { margin-top: 1px; }
+.provider-logo-img {
+    display: block;
+    max-height: 13px;
+    max-width: 72px;
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
+}
+
+/* Not-synced = neutral gray */
+.provider-status.not-synced { background: #aab0b8; opacity: 0.55; }
+
+/* Per-provider synced colors */
+.provider-status.provider-strava.synced      { background: #FC4C02; }
+.provider-status.provider-garmin.synced      { background: #007CC3; }
+.provider-status.provider-ridewithgps.synced { background: #52AF4A; }
+.provider-status.provider-spreadsheet.synced { background: #5a6b7c; }
+.provider-status.provider-file.synced        { background: #5a6b7c; }
 
 .card-loading { color: #999; font-size: 12px; text-align: center; padding: 6px 0; }
 
@@ -649,6 +673,25 @@ select#timezone:focus {
 }
 .provider-auth-btn:hover { background: #2980b9; }
 
+/* Garmin-branded auth button */
+.garmin-auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 1rem;
+    padding: 11px 22px;
+    border-radius: 4px;
+    background: #1B6ECD;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: .015em;
+    transition: background .15s;
+}
+.garmin-auth-btn:hover { background: #155bb0; }
+
 /* Strava-branded auth button */
 .strava-auth-btn {
     display: inline-flex;
@@ -705,7 +748,26 @@ select#timezone:focus {
     color: rgba(0,0,0,.2);
 }
 .footer-attribution {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.footer-logo-link {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+}
+.footer-logo-link:hover {
+    opacity: 1;
+}
+.footer-logo {
+    height: 22px;
+    width: auto;
+    display: block;
+    vertical-align: middle;
 }
 /* Strava brand orange: #FC4C02 */
 .attr-strava {
@@ -764,12 +826,12 @@ select#timezone:focus {
 }
 .provider-attr.attr-ridewithgps:hover { background: rgba(82,175,74,.08); }
 
-/* Attribution links inside branded (coloured) provider cards — use white */
-.provider-status[class*="provider-"] .provider-attr {
+/* Attribution links inside synced (green) provider cards — use white */
+.provider-status.synced .provider-attr {
     color: rgba(255,255,255,.9) !important;
     border-color: rgba(255,255,255,.4);
 }
-.provider-status[class*="provider-"] .provider-attr:hover {
+.provider-status.synced .provider-attr:hover {
     background: rgba(255,255,255,.15) !important;
 }
 
@@ -785,10 +847,17 @@ select#timezone:focus {
     font-size: 0.62rem;
     padding: 1px 5px;
     border-radius: 3px;
-    background: rgba(0,124,195,.1);
-    color: #005f99;
-    font-weight: 500;
+    background: transparent;
+    color: #007CC3;
+    border: 1px solid rgba(0,124,195,.35);
+    font-weight: 600;
     white-space: nowrap;
+}
+/* Inside synced provider cards, flip device chip to white */
+.provider-status.synced .device-chip {
+    color: rgba(255,255,255,.9);
+    border-color: rgba(255,255,255,.4);
+    background: rgba(255,255,255,.12);
 }
 
 /* ── Privacy / prose page ────────────────────────────────────────────────────── */
