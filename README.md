@@ -3,7 +3,6 @@
 tracekit is a Python toolkit for aggregating, syncing, and analyzing fitness activity data from multiple sources (Strava, RideWithGPS, Garmin, spreadsheets, and local files). It is designed to be self-contained, non-destructive, and extensible.
 
 🌐 **Website**: [tracekit.app](https://tracekit.app)
-📦 **PyPI**: [pypi.org/project/tracekit](https://pypi.org/project/tracekit/)
 📚 **Source**: [github.com/ckdake/tracekit](https://github.com/ckdake/tracekit)
 
 > ⚠️ **Caution:** This is under active development. Do not use it without reading every line of code.
