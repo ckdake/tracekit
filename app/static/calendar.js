@@ -115,8 +115,38 @@ async function loadCard(yearMonth) {
     }
 }
 
+// ── Exponential-backoff task poller ──────────────────────────────────────────
+// Polls /api/sync/status/<taskId> with increasing delays.
+//   initialDelay  – ms before first check  (default 2 s)
+//   maxDelay      – cap on any single delay (default 5 min)
+//   maxElapsed    – give-up wall-clock time  (default 60 min)
+function pollTaskStatus(taskId, { onSuccess, onFailure, onTimeout,
+                                  initialDelay = 2000, maxDelay = 300000,
+                                  maxElapsed = 3600000 } = {}) {
+    const start = Date.now();
+    let delay = initialDelay;
+
+    function schedule() {
+        setTimeout(async () => {
+            try {
+                const res  = await fetch('/api/sync/status/' + taskId);
+                const data = await res.json();
+                if (data.state === 'SUCCESS') { onSuccess && onSuccess(data); return; }
+                if (data.state === 'FAILURE') { onFailure && onFailure(data); return; }
+                // PENDING / STARTED / RETRY — fall through to reschedule
+            } catch (_) { /* ignore transient fetch errors */ }
+
+            const elapsed = Date.now() - start;
+            if (elapsed + delay >= maxElapsed) { onTimeout && onTimeout(); return; }
+            delay = Math.min(delay * 2, maxDelay);
+            schedule();
+        }, delay);
+    }
+
+    schedule();
+}
+
 // ── Pull a month and refresh the card ─────────────────────────────────────────
-const _polling = {};
 
 async function pullMonth(btn) {
     const month  = btn.dataset.month;
@@ -151,28 +181,28 @@ async function pullMonth(btn) {
     status.textContent = 'In progress';
     status.className = 'pull-status running';
 
-    _polling[month] = setInterval(async () => {
-        try {
-            const res  = await fetch('/api/sync/status/' + taskId);
-            const data = await res.json();
-            if (data.state === 'SUCCESS') {
-                clearInterval(_polling[month]);
-                btn.disabled = false;
-                btn.textContent = '⬇';
-                status.textContent = 'Done ✓';
-                status.className = 'pull-status ok';
-                loadCard(month);
-                setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
-            } else if (data.state === 'FAILURE') {
-                clearInterval(_polling[month]);
-                btn.disabled = false;
-                btn.textContent = '⬇';
-                status.textContent = data.info || 'Failed';
-                status.className = 'pull-status err';
-            }
-            // PENDING / STARTED / RETRY — keep spinning
-        } catch (_) { /* ignore transient fetch errors */ }
-    }, 2000);
+    pollTaskStatus(taskId, {
+        onSuccess: () => {
+            btn.disabled = false;
+            btn.textContent = '⬇';
+            status.textContent = 'Done ✓';
+            status.className = 'pull-status ok';
+            loadCard(month);
+            setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
+        },
+        onFailure: (data) => {
+            btn.disabled = false;
+            btn.textContent = '⬇';
+            status.textContent = data.info || 'Failed';
+            status.className = 'pull-status err';
+        },
+        onTimeout: () => {
+            btn.disabled = false;
+            btn.textContent = '⬇';
+            status.textContent = 'Timed out – try again';
+            status.className = 'pull-status err';
+        },
+    });
 }
 
 // ── Reset a month and refresh the card ────────────────────────────────────────
@@ -225,25 +255,25 @@ async function confirmResetMonth(month, confirmed) {
         return;
     }
 
-    _polling['reset-' + month] = setInterval(async () => {
-        try {
-            const res  = await fetch('/api/sync/status/' + taskId);
-            const data = await res.json();
-            if (data.state === 'SUCCESS') {
-                clearInterval(_polling['reset-' + month]);
-                if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
-                status.textContent = 'Reset ✓';
-                status.className = 'pull-status ok';
-                loadCard(month);
-                setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
-            } else if (data.state === 'FAILURE') {
-                clearInterval(_polling['reset-' + month]);
-                if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
-                status.textContent = data.info || 'Reset failed';
-                status.className = 'pull-status err';
-            }
-        } catch (_) { /* ignore transient fetch errors */ }
-    }, 2000);
+    pollTaskStatus(taskId, {
+        onSuccess: () => {
+            if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
+            status.textContent = 'Reset ✓';
+            status.className = 'pull-status ok';
+            loadCard(month);
+            setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
+        },
+        onFailure: (data) => {
+            if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
+            status.textContent = data.info || 'Reset failed';
+            status.className = 'pull-status err';
+        },
+        onTimeout: () => {
+            if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
+            status.textContent = 'Timed out – try again';
+            status.className = 'pull-status err';
+        },
+    });
 }
 
 // ── On page load: fetch all cards in parallel ─────────────────────────────────
