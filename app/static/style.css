@@ -506,9 +506,11 @@ select#timezone:focus {
 .provider-logo-row { margin-top: 1px; }
 .provider-logo-img {
     display: block;
-    max-height: 16px;
-    max-width: 80px;
-    border-radius: 3px;
+    max-height: 24px;
+    max-width: 90px;
+    /* Turn all colours white so logo is readable on any brand-colour background */
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
 }
 
 /* Not-synced = neutral gray */
@@ -764,7 +766,7 @@ select#timezone:focus {
     opacity: 1;
 }
 .footer-logo {
-    height: 22px;
+    height: 32px;
     width: auto;
     display: block;
     vertical-align: middle;

@@ -183,6 +183,39 @@ class Tracekit:
         """Get a provider by name, returning None if not available or enabled."""
         return getattr(self, provider_name, None)
 
+    def delete_month_activities(self, year_month: str) -> None:
+        """Delete all activity records and sync state for the given YYYY-MM month.
+
+        Called before re-pulling so stale data doesn't linger.
+        Removes:
+          - Activity rows whose date falls within the month
+          - All BaseProviderActivity subclass rows whose start_time falls in the month
+          - ProviderSync rows for the month
+        """
+        import calendar as _calendar
+
+        from .activity import Activity
+        from .provider_sync import ProviderSync
+        from .providers.base_provider import FitnessProvider
+
+        home_tz = self.config.get("home_timezone", "US/Eastern")
+        start_ts, end_ts = FitnessProvider._YYYY_MM_to_unixtime_range(year_month, home_tz)
+
+        year_int, month_int = (int(p) for p in year_month.split("-"))
+        last_day = _calendar.monthrange(year_int, month_int)[1]
+        date_start = f"{year_month}-01"
+        date_end = f"{year_month}-{last_day:02d}"
+
+        # Delete core Activity rows for the month
+        Activity.delete().where((Activity.date >= date_start) & (Activity.date <= date_end)).execute()
+
+        # Delete every provider-specific activity table for the month
+        for model_cls in BaseProviderActivity.__subclasses__():
+            model_cls.delete().where((model_cls.start_time >= start_ts) & (model_cls.start_time <= end_ts)).execute()
+
+        # Clear sync-state so the month is treated as never-synced
+        ProviderSync.delete().where(ProviderSync.year_month == year_month).execute()
+
     def pull_activities(self, year_month: str) -> dict[str, list[BaseProviderActivity]]:
         """Pull activities from all enabled providers for the given month.
 

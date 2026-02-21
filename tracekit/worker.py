@@ -50,6 +50,11 @@ def pull_month(self, year_month: str):
 
     try:
         from tracekit.commands.pull import run
+        from tracekit.core import tracekit as tracekit_class
+
+        # Delete existing data for the month so we get a clean re-pull
+        with tracekit_class() as tk:
+            tk.delete_month_activities(year_month)
 
         run(["--date", year_month])
 

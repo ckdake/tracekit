@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="148" height="28" viewBox="0 0 148 28" role="img" aria-label="Powered by RideWithGPS">
-  <rect width="148" height="28" rx="4" fill="#52AF4A"/>
-  <text x="74" y="18.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.3">Powered by RideWithGPS</text>
-</svg>
+<svg width="240" height="37" viewBox="0 0 240 37" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Powered by RideWithGPS"><text x="0" y="14" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="11" font-weight="400" fill="#888" letter-spacing="0.5">powered by</text><text x="0" y="34" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#52AF4A" letter-spacing="0.3">ride with GPS</text></svg>
