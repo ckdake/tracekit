@@ -144,10 +144,11 @@ def test_activity_file_determines_format():
 
 @patch("tracekit.provider_sync.ProviderSync.create")
 @patch("tracekit.provider_sync.ProviderSync.get_or_none")
+@patch("tracekit.providers.file.file_activity.FileActivity.select")
 @patch("tracekit.providers.file.file_activity.FileActivity.get")
 @patch("tracekit.providers.file.file_activity.FileActivity.create")
-def test_file_provider_handles_gzipped(mock_create, mock_get, mock_sync_get, mock_sync_create, tmp_path):
-    """Test that gzipped files are properly handled."""
+def test_file_provider_handles_gzipped(mock_create, mock_get, mock_select, mock_sync_get, mock_sync_create, tmp_path):
+    """Test that gzipped files are decompressed, flushed to disk, and parsed correctly."""
     from peewee import DoesNotExist
 
     # Mock that month hasn't been synced yet
@@ -155,6 +156,11 @@ def test_file_provider_handles_gzipped(mock_create, mock_get, mock_sync_get, moc
 
     # Mock that file hasn't been processed before
     mock_get.side_effect = DoesNotExist()
+
+    mock_activity = MagicMock()
+    mock_activity.start_time = "1716811800"
+    mock_create.return_value = mock_activity
+    mock_select.return_value = [mock_activity]
 
     # Create a gzipped GPX file
     gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
@@ -179,9 +185,12 @@ def test_file_provider_handles_gzipped(mock_create, mock_get, mock_sync_get, moc
     assert format_type == "gpx"
     assert is_gzipped
 
-    # Test parsing - gzipped parsing fails, so create should not be called
-    provider.pull_activities("2024-05")
-    assert mock_create.call_count == 0  # Parsing failed
+    # Gzipped files should parse successfully now that the temp file is flushed
+    activities = provider.pull_activities("2024-05")
+    assert mock_create.call_count == 1
+    call_args = mock_create.call_args[1]
+    assert call_args["file_format"] == "gpx"
+    assert isinstance(activities, list)
 
 
 def test_file_provider_initialization():

@@ -118,6 +118,7 @@ class FileProvider(FitnessProvider):
                     if file_format in ["gpx", "tcx"]:
                         data = data.lstrip()
                     fp.write(data)
+                fp.flush()  # ensure data is on disk before the parser opens fp.name
                 read_file = fp.name
             if file_format == "gpx":
                 result = parse_gpx(read_file)

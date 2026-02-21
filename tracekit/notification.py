@@ -44,7 +44,13 @@ def create_notification(
     after that time.  Use ``expiry_timestamp()`` for convenience.
     """
     try:
-        from tracekit.db import get_db
+        from tracekit.db import _configured, get_db
+
+        if not _configured:
+            # DB not yet configured in this worker process — skip silently.
+            # The API route already creates a "scheduled" notification when
+            # the task is enqueued, so this pre-task ping is non-essential.
+            return None  # type: ignore[return-value]
 
         db_instance = get_db()
         db_instance.connect(reuse_if_open=True)
