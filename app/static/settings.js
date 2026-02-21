@@ -15,6 +15,7 @@ function showStatus(text, type = 'ok') {
 const PROVIDER_META = {
     strava: {
         label: 'Strava', sync_equipment: true, sync_name: true,
+        instructions: 'Enter your Strava API client id and secret, save, then click <strong>Connect with Strava</strong> to authorize access.',
         text_fields: [
             { key: 'client_id',     label: 'client id' },
             { key: 'client_secret', label: 'client secret', field_type: 'password' },
@@ -157,10 +158,21 @@ function makeProviderCard(name, data) {
         card.appendChild(note);
     }
 
+    if (name === 'strava') {
+        const authBtn = document.createElement('button');
+        authBtn.type = 'button';
+        authBtn.className = 'provider-auth-btn';
+        authBtn.textContent = data.access_token ? 'Re-authenticate with Strava' : 'Connect with Strava';
+        authBtn.addEventListener('click', () => {
+            window.location.href = '/api/auth/strava/authorize';
+        });
+        card.appendChild(authBtn);
+    }
+
     if (name === 'garmin') {
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
-        authBtn.className = 'garmin-auth-btn';
+        authBtn.className = 'provider-auth-btn';
         authBtn.textContent = data.garth_tokens ? 'Re-authenticate' : 'Authenticate';
         authBtn.addEventListener('click', () => openGarminModal(card, data, name));
         card.appendChild(authBtn);
