@@ -5,18 +5,21 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 - [ ] users. database should have 'em and we should have to log in when in production
-- [ ] improve / on webapp to be what we care about, most recent months first
+- [ ] know which months are pulling, show that
+- [ ] auto-pull daily on current month to get new things
+- [ ] expose sync in the web UI
 
 ## Providers & Sync
 
 - [ ] Go through all providers and manually fix them to work the same way as the file provider
 - [ ] Ensure no API calls are made if the month is already synced
 - [ ] Fix Strava gear matching to work for running shoes
-- [ ] Fix "create" in providers to `create_from_activity`, get all that out of `sync_month`
-- [ ] What is in TrainingPeaks?
-- [ ] What is in Wandrer.earth?
+- [ ] Fix "create" in providers to `create_from_activity`, get all that out of `sync_month` command
+- [ ] Add TrainingPeaks as provider
+- [ ] Add Wandrer.earth as provider
 - [ ] What about choochoo?
-- [ ] Load files from S3 or another remote source: [boto3](https://pypi.org/project/boto3/)
+- [ ] allow upload of data file, persist to it as it currently works, and allow download
+- [ ] Back files from S3/compatabile or another remote source: [boto3](https://pypi.org/project/boto3/)
 
 ## Strava API Compliance
 
