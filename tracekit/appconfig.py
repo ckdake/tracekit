@@ -34,8 +34,26 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "home_timezone": "UTC",
     "debug": False,
     "providers": {
-        "strava": {"enabled": False, "priority": 3, "sync_equipment": True, "sync_name": True},
-        "ridewithgps": {"enabled": False, "priority": 2, "sync_equipment": True, "sync_name": True},
+        "strava": {
+            "enabled": False,
+            "priority": 3,
+            "sync_equipment": True,
+            "sync_name": True,
+            "client_id": "",
+            "client_secret": "",
+            "access_token": "",
+            "refresh_token": "",
+            "token_expires": "0",
+        },
+        "ridewithgps": {
+            "enabled": False,
+            "priority": 2,
+            "sync_equipment": True,
+            "sync_name": True,
+            "email": "",
+            "password": "",
+            "apikey": "",
+        },
         "garmin": {"enabled": False, "sync_equipment": False, "sync_name": True},
         "spreadsheet": {
             "enabled": False,

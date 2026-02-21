@@ -1,4 +1,3 @@
-import os
 import socket
 import urllib.parse
 import webbrowser
@@ -7,9 +6,20 @@ from stravalib.client import Client
 
 
 def run():
+    from tracekit.appconfig import load_config, save_config
+
+    config = load_config()
+    strava_cfg = config.get("providers", {}).get("strava", {})
+    client_id_raw = strava_cfg.get("client_id", "").strip()
+    client_secret = strava_cfg.get("client_secret", "").strip()
+
+    if not client_id_raw or not client_secret:
+        print("Error: strava client_id and client_secret must be set in the Settings UI before running auth.")
+        print("Visit http://localhost:5000/settings and fill in the Strava credentials.")
+        return
+
+    client_id = int(client_id_raw)
     client = Client()
-    client_id = int(os.environ["STRAVA_CLIENT_ID"])
-    client_secret = os.environ["STRAVA_CLIENT_SECRET"]
     port = 8000
     redirect_uri = f"http://localhost:{port}/authorization_successful"
     authorize_url = client.authorization_url(
@@ -57,9 +67,11 @@ def run():
     access_token = token_dict["access_token"]
     refresh_token = token_dict.get("refresh_token")
     expires_at = token_dict.get("expires_at")
-    print("\nPaste the following lines into your .env file:")
-    print(f"STRAVA_ACCESS_TOKEN={access_token}")
-    if refresh_token:
-        print(f"STRAVA_REFRESH_TOKEN={refresh_token}")
-    if expires_at:
-        print(f"STRAVA_TOKEN_EXPIRES={expires_at}")
+    providers = config.get("providers", {})
+    strava_updated = providers.get("strava", {}).copy()
+    strava_updated["access_token"] = access_token
+    strava_updated["refresh_token"] = refresh_token or ""
+    strava_updated["token_expires"] = str(expires_at) if expires_at else "0"
+    providers["strava"] = strava_updated
+    save_config({**config, "providers": providers})
+    print("✓ Strava tokens saved to database.")

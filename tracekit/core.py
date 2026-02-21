@@ -88,15 +88,14 @@ class Tracekit:
         provider_config = self.config.get("providers", {}).get("strava", {})
 
         if not self._strava and provider_config.get("enabled", False):
-            token = os.environ.get("STRAVA_ACCESS_TOKEN")
+            token = provider_config.get("access_token", "").strip()
             if token:
-                # Add home_timezone to provider config
                 enhanced_config = provider_config.copy()
                 enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
                 self._strava = StravaProvider(
                     token,
-                    refresh_token=os.environ.get("STRAVA_REFRESH_TOKEN"),
-                    token_expires=os.environ.get("STRAVA_TOKEN_EXPIRES"),
+                    refresh_token=provider_config.get("refresh_token") or None,
+                    token_expires=provider_config.get("token_expires", "0"),
                     config=enhanced_config,
                 )
         return self._strava
@@ -109,16 +108,10 @@ class Tracekit:
         if (
             not self._ridewithgps
             and provider_config.get("enabled", False)
-            and all(
-                os.environ.get(env)
-                for env in [
-                    "RIDEWITHGPS_EMAIL",
-                    "RIDEWITHGPS_PASSWORD",
-                    "RIDEWITHGPS_KEY",
-                ]
-            )
+            and provider_config.get("email", "").strip()
+            and provider_config.get("password", "").strip()
+            and provider_config.get("apikey", "").strip()
         ):
-            # Add home_timezone to provider config
             enhanced_config = provider_config.copy()
             enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
             self._ridewithgps = RideWithGPSProvider(config=enhanced_config)

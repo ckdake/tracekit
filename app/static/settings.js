@@ -13,8 +13,24 @@ function showStatus(text, type = 'ok') {
 }
 
 const PROVIDER_META = {
-    strava:      { label: 'Strava',       sync_equipment: true,  sync_name: true,  text_fields: [] },
-    ridewithgps: { label: 'RideWithGPS',  sync_equipment: true,  sync_name: true,  text_fields: [] },
+    strava: {
+        label: 'Strava', sync_equipment: true, sync_name: true,
+        text_fields: [
+            { key: 'client_id',     label: 'client id' },
+            { key: 'client_secret', label: 'client secret', field_type: 'password' },
+            { key: 'access_token',  label: 'access token',  field_type: 'password' },
+            { key: 'refresh_token', label: 'refresh token', field_type: 'password' },
+            { key: 'token_expires', label: 'token expires' },
+        ],
+    },
+    ridewithgps: {
+        label: 'RideWithGPS', sync_equipment: true, sync_name: true,
+        text_fields: [
+            { key: 'email',    label: 'email' },
+            { key: 'password', label: 'password', field_type: 'password' },
+            { key: 'apikey',   label: 'api key',  field_type: 'password' },
+        ],
+    },
     garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,  text_fields: [] },
     spreadsheet: { label: 'Spreadsheet',  sync_equipment: true,  sync_name: true,  text_fields: [{ key: 'path', label: 'path' }] },
     file:        { label: 'File',         sync_equipment: true,  sync_name: true,  text_fields: [{ key: 'glob', label: 'glob' }] },
@@ -66,11 +82,12 @@ function makeToggle(id, checked, labelText) {
 }
 
 function makeEditableField(fieldMeta, value) {
+    const inputType = fieldMeta.field_type || 'text';
     const wrap = document.createElement('div');
     wrap.className = 'editable-field';
     wrap.innerHTML = `
         <span class="field-label">${fieldMeta.label}</span>
-        <input type="text" class="field-${fieldMeta.key}" value="${escHtml(value)}" placeholder="(not set)">
+        <input type="${inputType}" class="field-${fieldMeta.key}" value="${escHtml(value)}" placeholder="(not set)">
         <span class="edit-hint">click to edit</span>`;
 
     const input = wrap.querySelector('input');

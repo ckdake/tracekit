@@ -6,7 +6,6 @@ updating activities, and managing gear.
 """
 
 import datetime
-import os
 from decimal import Decimal
 from typing import Any
 
@@ -21,9 +20,9 @@ from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActiv
 class RideWithGPSProvider(FitnessProvider):
     def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self.username = os.environ["RIDEWITHGPS_EMAIL"]
-        self.password = os.environ["RIDEWITHGPS_PASSWORD"]
-        self.apikey = os.environ["RIDEWITHGPS_KEY"]
+        self.username = (self.config or {}).get("email", "")
+        self.password = (self.config or {}).get("password", "")
+        self.apikey = (self.config or {}).get("apikey", "")
 
         self.client = RideWithGPS(apikey=self.apikey, cache=True)
 

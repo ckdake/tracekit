@@ -1,4 +1,3 @@
-import os
 from unittest.mock import MagicMock, patch
 
 import tracekit.appconfig as tcfg
@@ -90,16 +89,8 @@ class TesttracekitCore:
         # Should detect spreadsheet provider
         assert "spreadsheet" in tracekit.enabled_providers
 
-    @patch.dict(
-        os.environ,
-        {
-            "STRAVA_ACCESS_TOKEN": "test_token",
-            "STRAVA_REFRESH_TOKEN": "12345",
-            "STRAVA_TOKEN_EXPIRES": "1738568400",
-        },
-    )
     def test_enabled_providers_with_strava_env(self, monkeypatch):
-        """Test enabled_providers when Strava env vars are set and provider is enabled."""
+        """Test enabled_providers when Strava credentials are in config and provider is enabled."""
         monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
         AppConfig.delete().execute()
         save_config(
@@ -108,7 +99,12 @@ class TesttracekitCore:
                 "debug": False,
                 "providers": {
                     "spreadsheet": {"enabled": False},
-                    "strava": {"enabled": True},
+                    "strava": {
+                        "enabled": True,
+                        "access_token": "test_token",
+                        "refresh_token": "12345",
+                        "token_expires": "1738568400",
+                    },
                     "ridewithgps": {"enabled": False},
                     "garmin": {"enabled": False},
                     "file": {"enabled": False},
@@ -119,19 +115,11 @@ class TesttracekitCore:
 
         tracekit = tracekit_class()
 
-        # Should detect strava provider due to env vars and enabled config
+        # Should detect strava provider due to credentials in config and enabled flag
         assert "strava" in tracekit.enabled_providers
 
-    @patch.dict(
-        os.environ,
-        {
-            "STRAVA_ACCESS_TOKEN": "test_token",
-            "STRAVA_CLIENT_ID": "12345",
-            "STRAVA_CLIENT_SECRET": "secret",
-        },
-    )
     def test_enabled_providers_with_strava_disabled(self, monkeypatch):
-        """Test enabled_providers when Strava env vars are set but provider is disabled."""
+        """Test enabled_providers when Strava credentials present but provider is disabled."""
         monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
         AppConfig.delete().execute()
         save_config(
@@ -140,7 +128,12 @@ class TesttracekitCore:
                 "debug": False,
                 "providers": {
                     "spreadsheet": {"enabled": False},
-                    "strava": {"enabled": False},  # Disabled in config
+                    "strava": {
+                        "enabled": False,  # Disabled in config
+                        "access_token": "test_token",
+                        "client_id": "12345",
+                        "client_secret": "secret",
+                    },
                     "ridewithgps": {"enabled": False},
                     "garmin": {"enabled": False},
                     "file": {"enabled": False},
