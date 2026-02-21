@@ -1,14 +1,11 @@
 """Authentication command for Garmin Connect.
 
 This module provides authentication for Garmin Connect using the garminconnect library.
-It stores OAuth tokens that are valid for about a year to avoid frequent re-authentication.
-
-Remove Garmin env vars from your .evn file to re-authenticate!
+It stores OAuth tokens in the database (valid for about a year) to avoid frequent
+re-authentication.
 """
 
-import os
 from getpass import getpass
-from pathlib import Path
 
 try:
     import garminconnect
@@ -28,61 +25,50 @@ def get_mfa():
 
 
 def run():
-    """Authenticate with Garmin Connect and store tokens."""
+    """Authenticate with Garmin Connect and store tokens in the database."""
     if garminconnect is None:
         print("Error: garminconnect library not installed.")
         print("Please install it with: pip install garminconnect")
         return
 
-    # Check for existing tokens first
-    tokenstore = os.getenv("GARMINTOKENS", "~/.garminconnect")
-    tokenstore_path = Path(tokenstore).expanduser()
+    from tracekit.appconfig import load_config, save_config
 
-    if tokenstore_path.exists():
-        print(f"Found existing Garmin tokens in: {tokenstore_path}")
+    config = load_config()
+    garmin_cfg = config.get("providers", {}).get("garmin", {})
+    existing_tokens = garmin_cfg.get("garth_tokens", "").strip()
+    email = garmin_cfg.get("email", "").strip()
+
+    # Test existing DB tokens first if present
+    if existing_tokens:
+        print("Found existing Garmin tokens in database.")
         choice = input("Test existing tokens? (y/n): ").lower().strip()
         if choice == "y":
             try:
                 print("Testing existing tokens...")
                 garmin = garminconnect.Garmin()
-                garmin.login(str(tokenstore_path))
+                garmin.login(existing_tokens)
                 print(f"✓ Successfully authenticated as: {garmin.get_full_name()}")
-                print("Existing tokens are still valid!")
-                print("\nAdd these to your .env file if not already present:")
-                print(f"GARMINTOKENS={tokenstore_path}")
+                print("Existing tokens are still valid.")
                 return
             except (
-                FileNotFoundError,
                 GarthHTTPError,
                 GarminConnectAuthenticationError,
             ) as e:
                 print(f"✗ Existing tokens are expired or invalid: {e}")
                 print("Will proceed with fresh authentication...")
 
-    # Get credentials
-    email = os.getenv("GARMIN_EMAIL")
-    password = os.getenv("GARMIN_PASSWORD")
-
+    # Prompt for credentials
     if not email:
         email = input("Garmin Connect email: ")
-    if not password:
-        password = getpass("Garmin Connect password: ")
+    password = getpass("Garmin Connect password: ")
 
     try:
         print("\nAuthenticating with Garmin Connect...")
 
-        # Remove GARMINTOKENS from environment so login() doesn't try to load
-        # potentially missing/stale token files from that path during fresh auth.
-        env_backup = os.environ.pop("GARMINTOKENS", None)
-
-        # Create Garmin client with MFA support
         garmin = garminconnect.Garmin(email=email, password=password, is_cn=False, return_on_mfa=True)
 
-        # Attempt login - returns (result, data) tuple in v0.2.28
+        # Attempt login — returns (result, data) tuple
         result, data = garmin.login()
-
-        if env_backup is not None:
-            os.environ["GARMINTOKENS"] = env_backup
 
         # Handle MFA if required
         if result == "needs_mfa":
@@ -90,17 +76,18 @@ def run():
             mfa_code = get_mfa()
             garmin.resume_login(data, mfa_code)
 
-        # Save tokens
-        tokenstore_path.mkdir(parents=True, exist_ok=True)
-        garmin.garth.dump(str(tokenstore_path))
+        # Serialize tokens and save to DB
+        garth_tokens = garmin.garth.dumps()
+
+        providers = config.get("providers", {})
+        garmin_updated = providers.get("garmin", {}).copy()
+        garmin_updated["email"] = email
+        garmin_updated["garth_tokens"] = garth_tokens
+        providers["garmin"] = garmin_updated
+        save_config({**config, "providers": providers})
 
         print(f"✓ Successfully authenticated as: {garmin.get_full_name()}")
-        print(f"✓ Tokens saved to: {tokenstore_path}")
-
-        print("\nAdd these lines to your .env file:")
-        print(f"GARMIN_EMAIL={email}")
-        print(f"GARMINTOKENS={tokenstore_path}")
-        print("\nNote: Password is not stored - tokens are valid for about a year")
+        print("✓ Garmin tokens saved to database.")
 
     except GarminConnectAuthenticationError as e:
         print(f"✗ Authentication failed: {e}")

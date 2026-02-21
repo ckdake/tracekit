@@ -10,6 +10,13 @@
 <body>
 {% include 'partials/_header.html' %}
 {% block body %}{% endblock %}
+<footer class="app-footer">
+    &copy; 2026 tracekit
+    <span class="footer-sep">&middot;</span>
+    <a href="https://github.com/ckdake/tracekit" target="_blank" rel="noopener">GitHub</a>
+    <span class="footer-sep">&middot;</span>
+    Non-commercial use only &mdash; see <a href="https://github.com/ckdake/tracekit/blob/main/LICENSE.txt" target="_blank" rel="noopener">license</a>
+</footer>
 <script>
 fetch('/api/recent-activity')
     .then(r => r.json())

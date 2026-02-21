@@ -22,6 +22,7 @@ def run():
     client = Client()
     port = 8000
     redirect_uri = f"http://localhost:{port}/authorization_successful"
+    # Bind on all interfaces so the callback works when port-forwarded through Docker.
     authorize_url = client.authorization_url(
         client_id=client_id,
         redirect_uri=redirect_uri,
@@ -39,7 +40,7 @@ def run():
     # Start a simple HTTP server to capture the code
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(("127.0.0.1", port))
+        s.bind(("0.0.0.0", port))
         s.listen()
         conn, _addr = s.accept()
         request_bytes = b""

@@ -23,14 +23,23 @@ function renderGrid(yearMonth, data) {
         totalEl.textContent = data.total_activities + ' total activities';
     }
 
-    grid.innerHTML = data.providers.map(p => {
+    const enabledProviders = data.providers.filter(p => {
+        const cfg = PROVIDER_CONFIG[p] || {};
+        return cfg.enabled !== false;
+    });
+
+    if (enabledProviders.length === 0) {
+        grid.innerHTML = '<div class="card-loading">No active providers</div>';
+        return;
+    }
+
+    grid.innerHTML = enabledProviders.map(p => {
         const synced  = data.provider_status[p];
-        const cfg     = PROVIDER_CONFIG[p] || {};
-        const enabled = cfg.enabled !== false;
-        const cls     = !enabled ? 'disabled' : synced ? 'synced' : 'not-synced';
+        const cls     = synced ? 'synced' : 'not-synced';
+        const tooltip = synced ? 'Synced' : 'Not synced';
         const count   = data.activity_counts[p] || 0;
         const countHtml = count > 0 ? '<div class="activity-count">' + count + ' activities</div>' : '';
-        return '<div class="provider-status ' + cls + '"><div>' + p.substring(0, 8) + '</div>' + countHtml + '</div>';
+        return '<div class="provider-status ' + cls + '" title="' + tooltip + '"><div>' + p.substring(0, 8) + '</div>' + countHtml + '</div>';
     }).join('');
 }
 
@@ -54,7 +63,7 @@ async function pullMonth(btn) {
     const status = document.getElementById('status-' + month);
 
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Queuing…';
+    btn.innerHTML = '<span class="spinner spinner-sm"></span>';
     status.textContent = '';
     status.className = 'pull-status';
 
@@ -66,7 +75,7 @@ async function pullMonth(btn) {
             status.textContent = data.error || 'Error';
             status.className = 'pull-status err';
             btn.disabled = false;
-            btn.textContent = 'Pull';
+            btn.textContent = '⬇';
             return;
         }
         taskId = data.task_id;
@@ -74,11 +83,11 @@ async function pullMonth(btn) {
         status.textContent = 'Network error';
         status.className = 'pull-status err';
         btn.disabled = false;
-        btn.textContent = 'Pull';
+        btn.textContent = '⬇';
         return;
     }
 
-    btn.innerHTML = '<span class="spinner"></span>Running…';
+    btn.innerHTML = '<span class="spinner spinner-sm"></span>';
     status.textContent = 'In progress';
     status.className = 'pull-status running';
 
@@ -89,14 +98,14 @@ async function pullMonth(btn) {
             if (data.state === 'SUCCESS') {
                 clearInterval(_polling[month]);
                 btn.disabled = false;
-                btn.textContent = 'Pull';
+                btn.textContent = '⬇';
                 status.textContent = 'Done ✓';
                 status.className = 'pull-status ok';
                 loadCard(month);
             } else if (data.state === 'FAILURE') {
                 clearInterval(_polling[month]);
                 btn.disabled = false;
-                btn.textContent = 'Pull';
+                btn.textContent = '⬇';
                 status.textContent = data.info || 'Failed';
                 status.className = 'pull-status err';
             }
@@ -119,13 +128,15 @@ function appendMonthCard(ym, year, month) {
     div.id = 'card-' + ym;
     div.innerHTML = `
         <div class="month-header">
-            ${monthName} ${year}
+            <div class="month-title-row">
+                <span>${monthName} ${year}</span>
+                <button class="pull-btn" data-month="${ym}" onclick="pullMonth(this)" title="Pull">⬇</button>
+            </div>
             <div class="total-label" id="total-${ym}"></div>
         </div>
         <div class="provider-grid" id="grid-${ym}">
             <div class="card-loading">Loading…</div>
         </div>
-        <button class="pull-btn" data-month="${ym}" onclick="pullMonth(this)">Pull</button>
         <div class="pull-status" id="status-${ym}"></div>`;
     document.getElementById('calendar-grid').appendChild(div);
 }

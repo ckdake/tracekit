@@ -54,7 +54,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "password": "",
             "apikey": "",
         },
-        "garmin": {"enabled": False, "sync_equipment": False, "sync_name": True},
+        "garmin": {
+            "enabled": False,
+            "sync_equipment": False,
+            "sync_name": True,
+            "email": "",
+            "garth_tokens": "",
+        },
         "spreadsheet": {
             "enabled": False,
             "path": "",

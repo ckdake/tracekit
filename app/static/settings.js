@@ -15,6 +15,7 @@ function showStatus(text, type = 'ok') {
 const PROVIDER_META = {
     strava: {
         label: 'Strava', sync_equipment: true, sync_name: true,
+        instructions: 'Set <em>client id</em> and <em>client secret</em> here, then run <code>python -m tracekit auth-strava</code> inside the container to complete OAuth and save tokens. See PRODUCTION.md for port-forwarding steps.',
         text_fields: [
             { key: 'client_id',     label: 'client id' },
             { key: 'client_secret', label: 'client secret', field_type: 'password' },
@@ -25,13 +26,19 @@ const PROVIDER_META = {
     },
     ridewithgps: {
         label: 'RideWithGPS', sync_equipment: true, sync_name: true,
+        instructions: 'Enter your RideWithGPS email, password, and API key. All credentials are stored in the database — no CLI step required.',
         text_fields: [
             { key: 'email',    label: 'email' },
             { key: 'password', label: 'password', field_type: 'password' },
             { key: 'apikey',   label: 'api key',  field_type: 'password' },
         ],
     },
-    garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,  text_fields: [] },
+    garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,
+        instructions: 'Run <code>python -m tracekit auth-garmin</code> inside the container. It will prompt for email/password (and MFA if enabled) and save tokens directly to the database.',
+        text_fields: [
+        { key: 'email',        label: 'Email' },
+        { key: 'garth_tokens', label: 'Garth Tokens', field_type: 'password' },
+    ] },
     spreadsheet: { label: 'Spreadsheet',  sync_equipment: true,  sync_name: true,  text_fields: [{ key: 'path', label: 'path' }] },
     file:        { label: 'File',         sync_equipment: true,  sync_name: true,  text_fields: [{ key: 'glob', label: 'glob' }] },
     stravajson:  { label: 'StravaJSON',   sync_equipment: false, sync_name: false, text_fields: [] },
@@ -118,7 +125,11 @@ function makeProviderCard(name, data) {
 
     const enabledToggle = makeToggle(`en-${name}`, data.enabled, 'Enabled');
     enabledToggle.querySelector('input').addEventListener('change', e => {
-        card.classList.toggle('disabled-card', !e.target.checked);
+        const enabled = e.target.checked;
+        card.classList.toggle('disabled-card', !enabled);
+        card.querySelectorAll('.provider-controls input[type="checkbox"]').forEach(cb => {
+            cb.disabled = !enabled;
+        });
         autoSave();
     });
     header.appendChild(enabledToggle);
@@ -129,16 +140,25 @@ function makeProviderCard(name, data) {
 
     if (meta.sync_equipment) {
         const t = makeToggle(`se-${name}`, data.sync_equipment ?? false, 'Sync equipment');
+        t.querySelector('input').disabled = !data.enabled;
         t.querySelector('input').addEventListener('change', autoSave);
         controls.appendChild(t);
     }
     if (meta.sync_name) {
         const t = makeToggle(`sn-${name}`, data.sync_name ?? false, 'Sync name');
+        t.querySelector('input').disabled = !data.enabled;
         t.querySelector('input').addEventListener('change', autoSave);
         controls.appendChild(t);
     }
 
     if (controls.children.length > 0) card.appendChild(controls);
+
+    if (meta.instructions) {
+        const note = document.createElement('p');
+        note.className = 'provider-note';
+        note.innerHTML = meta.instructions;
+        card.appendChild(note);
+    }
 
     for (const f of meta.text_fields) {
         const field = makeEditableField(f, data[f.key] ?? '');

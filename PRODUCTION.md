@@ -46,12 +46,12 @@ echo "TRACEKIT_GID=$(id -g)" >> ~/.env
 Create the directories and copy in the compose file:
 
 ```bash
-mkdir -p ~/data/activities ~/pgdata ~/redis ~/.garminconnect
-chown -R tracekit:tracekit ~/data ~/pgdata ~/redis ~/.garminconnect
+mkdir -p ~/data/activities ~/pgdata ~/redis
+chown -R tracekit:tracekit ~/data ~/pgdata ~/redis
 cp docker-compose.yml ~/docker-compose.yml
 ```
 
-Create a `.env` file with your provider credentials:
+Create a `.env` file:
 
 ```bash
 touch ~/.env
@@ -61,22 +61,6 @@ chmod 600 ~/.env
 Edit `~/.env`:
 
 ```sh
-# Strava
-STRAVA_CLIENT_ID=your_client_id
-STRAVA_CLIENT_SECRET=your_client_secret
-STRAVA_ACCESS_TOKEN=your_access_token
-STRAVA_REFRESH_TOKEN=your_refresh_token
-STRAVA_TOKEN_EXPIRES=token_expiration_timestamp
-
-# RideWithGPS
-RIDEWITHGPS_EMAIL=your_email
-RIDEWITHGPS_PASSWORD=your_password
-RIDEWITHGPS_KEY=your_api_key
-
-# Garmin
-GARMIN_EMAIL=your_email
-GARMINTOKENS=/opt/tracekit/.garminconnect
-
 # Host uid/gid — all containers run as this user so bind-mount files
 # are owned by tracekit:tracekit on the host. Set with:
 #   echo "TRACEKIT_UID=$(id -u)" >> ~/.env
@@ -89,30 +73,59 @@ TRACEKIT_GID=
 POSTGRES_PASSWORD=change_me_to_a_strong_random_password
 ```
 
-Docker Compose picks this up automatically from the working directory and injects it into each container via `env_file` in `docker-compose.yml`.
+Docker Compose picks this up automatically from the working directory. All provider credentials (Strava, RideWithGPS, Garmin) are stored in the database and configured through the Settings UI — no credentials belong in this file.
 
 Tables are created automatically on every container start — the app retries the DB connection for up to 60 s, so containers can start in any order.
 
-## Garmin Authentication
+## Provider Authentication
 
-Garmin tokens must exist on the host **before** the containers start. Run auth once as the `tracekit` user (with `GARMINTOKENS` pointing at the bind-mount path so the tokens land in the right place):
+All provider credentials are stored in the database. Visit `/settings` to enter and update them. The instructions below are also shown on the Settings page next to each provider card.
+
+### RideWithGPS
+
+No CLI step needed. Enter your email, password, and API key directly in the Settings UI under the RideWithGPS provider card.
+
+### Strava
+
+1. **In the Settings UI**, enter your Strava `client_id` and `client_secret` under the Strava provider card and save.
+
+2. **Expose port 8000 temporarily.** The auth command opens a local HTTP listener to capture the OAuth redirect. Add a temporary port binding to the `tracekit` service in `docker-compose.yml`:
+   ```yaml
+   ports:
+     - "127.0.0.1:5000:5000"
+     - "127.0.0.1:8000:8000"   # temporary — remove after auth
+   ```
+   Then restart: `docker compose up -d tracekit`
+
+3. **Set up an SSH tunnel** from your local machine so the OAuth redirect reaches you:
+   ```bash
+   ssh -L 8000:localhost:8000 user@your-server
+   ```
+
+4. **Run the auth command** inside the container:
+   ```bash
+   docker exec -it tracekit python -m tracekit auth-strava
+   ```
+   It prints a Strava authorization URL. Open it in your local browser, authorize the app, and the browser's redirect to `http://localhost:8000/...` is captured through the SSH tunnel. Tokens are saved directly to the database.
+
+5. **Clean up** — remove the temporary `8000` port line from `docker-compose.yml` and restart:
+   ```bash
+   docker compose up -d tracekit
+   ```
+
+> Re-authenticate any time tokens expire by repeating steps 2–5.
+
+### Garmin
+
+Garmin uses garth for OAuth. Tokens are stored in the database and valid for roughly a year.
 
 ```bash
-cd /opt/tracekit
-GARMINTOKENS=/opt/tracekit/.garminconnect python -m tracekit auth-garmin
+docker exec -it tracekit python -m tracekit auth-garmin
 ```
 
-This creates `oauth1_token.json` and `oauth2_token.json` inside `/opt/tracekit/.garminconnect/`. The directory is bind-mounted into both the web and worker containers so all services share the same tokens.
+The command checks the database for existing tokens first. If none are found (or you choose to re-authenticate), it prompts for your Garmin email, password, and MFA code if enabled. Tokens are saved directly to the database — no filesystem token files are used.
 
-> **Token refresh:** garth (the underlying auth library) rewrites the token files when it refreshes them during normal use. The mount is therefore **read-write** — not read-only.
-
-To re-authenticate after tokens expire, stop the containers, re-run the command above, then restart:
-
-```bash
-docker compose down
-GARMINTOKENS=/opt/tracekit/.garminconnect python -m tracekit auth-garmin
-docker compose up -d
-```
+To re-authenticate after tokens expire, simply re-run the same command.
 
 ---
 
@@ -125,13 +138,12 @@ cd /opt/tracekit
 docker compose up -d
 ```
 
-On first boot, visit `http://your-domain/settings` to configure your timezone, enabled providers, and debug mode. Configuration is stored in PostgreSQL and persists across restarts.
+On first boot, visit `http://your-domain/settings` to configure your timezone, enabled providers, and credentials. Configuration is stored in PostgreSQL and persists across restarts.
 
 The compose file binds to `127.0.0.1:5000` only, so the port is **not** publicly exposed. Your reverse proxy connects to it internally.
 
 Key volume mounts (defined in `docker-compose.yml`):
 - `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — activity files (FIT/GPX/TCX exports)
-- `/opt/tracekit/.garminconnect` → `/opt/tracekit/.garminconnect` (read-write) — Garmin OAuth tokens (garth refreshes these in-place)
 - `/opt/tracekit/pgdata` → PostgreSQL data directory — all database files live here
 - `/opt/tracekit/redis` → Redis persistence directory
 

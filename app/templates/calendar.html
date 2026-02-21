@@ -19,25 +19,21 @@
     <div class="error"><p>No sync data found in the database.</p></div>
     {% else %}
 
-    <div class="legend">
-        <div class="legend-item"><div class="legend-color synced"></div><span>Synced</span></div>
-        <div class="legend-item"><div class="legend-color not-synced"></div><span>Not Synced</span></div>
-        <div class="legend-item"><div class="legend-color disabled"></div><span>Disabled</span></div>
-    </div>
-
     <div class="calendar-grid">
         {% for month in shell_data.months %}
         <div class="month-card {% if month.year_month == current_month %}current{% endif %}"
              id="card-{{ month.year_month }}">
             <div class="month-header">
-                {{ month.month_name }} {{ month.year }}
+                <div class="month-title-row">
+                    <span>{{ month.month_name }} {{ month.year }}</span>
+                    <button class="pull-btn" data-month="{{ month.year_month }}"
+                            onclick="pullMonth(this)" title="Pull">⬇</button>
+                </div>
                 <div class="total-label" id="total-{{ month.year_month }}"></div>
             </div>
             <div class="provider-grid" id="grid-{{ month.year_month }}">
                 <div class="card-loading">Loading…</div>
             </div>
-            <button class="pull-btn" data-month="{{ month.year_month }}"
-                    onclick="pullMonth(this)">Pull</button>
             <div class="pull-status" id="status-{{ month.year_month }}"></div>
         </div>
         {% endfor %}

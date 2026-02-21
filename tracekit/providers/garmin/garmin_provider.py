@@ -7,7 +7,6 @@ creating, updating activities, and managing gear.
 
 import datetime
 import json
-import os
 from decimal import Decimal
 from typing import Any
 
@@ -29,10 +28,10 @@ class GarminProvider(FitnessProvider):
     """Provider for Garmin Connect activities."""
 
     def __init__(self, config: dict[str, Any] | None = None):
-        """Initialize GarminProvider with environment credentials."""
+        """Initialize GarminProvider with config credentials."""
         super().__init__(config)
-        self.email = os.environ.get("GARMIN_EMAIL", "")
-        self.tokenstore = os.environ.get("GARMINTOKENS", "~/.garminconnect")
+        self.email = (self.config or {}).get("email", "")
+        self.garth_tokens = (self.config or {}).get("garth_tokens", "")
         self.client = None
 
     @property
@@ -43,10 +42,11 @@ class GarminProvider(FitnessProvider):
     def _get_client(self):
         """Get authenticated Garmin client."""
         if self.client is None:
+            if not self.garth_tokens:
+                raise Exception("Garmin tokens not found. Please run 'python -m tracekit auth-garmin' first.")
             try:
-                # Try to login with existing tokens
                 self.client = garminconnect.Garmin()
-                self.client.login(self.tokenstore)
+                self.client.login(self.garth_tokens)
             except Exception as e:
                 raise Exception(
                     f"Garmin authentication failed: {e}. Please run 'python -m tracekit auth-garmin' first."

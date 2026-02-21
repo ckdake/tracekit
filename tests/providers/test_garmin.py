@@ -25,22 +25,18 @@ class TestGarminProviderCore:
         provider = GarminProvider()
         assert provider.config == {}
 
-    @patch.dict(
-        "os.environ",
-        {"GARMIN_EMAIL": "test@example.com", "GARMINTOKENS": "/tmp/tokens"},
-    )
-    def test_initialization_with_environment_vars(self):
-        """Test provider initialization with environment variables."""
-        provider = GarminProvider()
+    def test_initialization_with_config_credentials(self):
+        """Test provider initialization with config credentials."""
+        config = {"email": "test@example.com", "garth_tokens": "somebase64tokens"}
+        provider = GarminProvider(config=config)
         assert provider.email == "test@example.com"
-        assert provider.tokenstore == "/tmp/tokens"
+        assert provider.garth_tokens == "somebase64tokens"
 
-    def test_initialization_without_environment_vars(self):
-        """Test provider initialization without environment variables."""
-        with patch.dict("os.environ", {}, clear=True):
-            provider = GarminProvider()
-            assert provider.email == ""
-            assert provider.tokenstore == "~/.garminconnect"
+    def test_initialization_without_config_credentials(self):
+        """Test provider initialization without credentials defaults to empty strings."""
+        provider = GarminProvider()
+        assert provider.email == ""
+        assert provider.garth_tokens == ""
 
 
 class TestGarminProviderAuthentication:
@@ -53,13 +49,14 @@ class TestGarminProviderAuthentication:
         mock_garmin_class.return_value = mock_client
         mock_client.login = Mock()
 
-        provider = GarminProvider()
+        garth_tokens = "x" * 600  # simulate a long base64 token string
+        provider = GarminProvider(config={"garth_tokens": garth_tokens})
 
         result = provider._get_client()
 
         assert result == mock_client
         assert provider.client == mock_client
-        mock_client.login.assert_called_once_with("~/.garminconnect")
+        mock_client.login.assert_called_once_with(garth_tokens)
 
     @patch("garminconnect.Garmin")
     def test_get_client_cached(self, mock_garmin_class):
@@ -76,18 +73,28 @@ class TestGarminProviderAuthentication:
 
     @patch("garminconnect.Garmin")
     def test_get_client_authentication_failure(self, mock_garmin_class):
-        """Test client authentication failure."""
+        """Test client authentication failure when login raises an exception."""
         mock_client = Mock()
         mock_garmin_class.return_value = mock_client
         mock_client.login = Mock(side_effect=Exception("Auth failed"))
 
-        provider = GarminProvider()
+        garth_tokens = "x" * 600
+        provider = GarminProvider(config={"garth_tokens": garth_tokens})
 
         with pytest.raises(Exception) as exc_info:
             provider._get_client()
 
         assert "Garmin authentication failed" in str(exc_info.value)
         assert "Please run 'python -m tracekit auth-garmin' first" in str(exc_info.value)
+
+    def test_get_client_no_tokens(self):
+        """Test that _get_client raises when no garth_tokens are configured."""
+        provider = GarminProvider()
+
+        with pytest.raises(Exception) as exc_info:
+            provider._get_client()
+
+        assert "Garmin tokens not found" in str(exc_info.value)
 
 
 class TestGarminProviderPullActivities:

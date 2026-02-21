@@ -43,10 +43,8 @@ services:
       - DATABASE_URL=postgresql://tracekit:${POSTGRES_PASSWORD}@postgres:5432/tracekit
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - GARMINTOKENS=/opt/tracekit/.garminconnect
     volumes:
       - /opt/tracekit/data:/opt/tracekit/data
-      - /opt/tracekit/.garminconnect:/opt/tracekit/.garminconnect
 
   tracekit-worker:
     image: ghcr.io/ckdake/tracekit:latest
@@ -63,10 +61,8 @@ services:
       - DATABASE_URL=postgresql://tracekit:${POSTGRES_PASSWORD}@postgres:5432/tracekit
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - GARMINTOKENS=/opt/tracekit/.garminconnect
     volumes:
       - /opt/tracekit/data:/opt/tracekit/data
-      - /opt/tracekit/.garminconnect:/opt/tracekit/.garminconnect
 
   tracekit-beat:
     image: ghcr.io/ckdake/tracekit:latest
