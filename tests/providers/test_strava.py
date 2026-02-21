@@ -542,6 +542,35 @@ class TestStravaProviderPullActivities:
         assert result == mock_final_activities
         mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava")
 
+    @patch("tracekit.providers.strava.strava_provider.ProviderSync")
+    def test_pull_activities_rate_limit_propagates(self, mock_provider_sync):
+        """Test that ProviderRateLimitError propagates out of the activity loop."""
+        from tracekit.provider_status import RATE_LIMIT_LONG_TERM, ProviderRateLimitError
+
+        provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
+
+        mock_provider_sync.get_or_none.return_value = None
+
+        mock_raw_activity = Mock()
+        provider._fetch_strava_activities_for_month = Mock(return_value=[mock_raw_activity])
+
+        # Simulate a long-term rate-limit error inside convert
+        rate_limit_exc = ProviderRateLimitError(
+            "Daily limit exceeded",
+            provider="strava",
+            limit_type=RATE_LIMIT_LONG_TERM,
+            reset_at=9999999999,
+        )
+        provider._convert_to_strava_activity = Mock(side_effect=rate_limit_exc)
+        provider._get_strava_activities_for_month = Mock(return_value=[])
+
+        # The error must NOT be swallowed — it should propagate to the caller.
+        with pytest.raises(ProviderRateLimitError):
+            provider.pull_activities(date_filter="2021-01")
+
+        # The month must NOT be marked as synced when a rate-limit aborts the pull.
+        mock_provider_sync.create.assert_not_called()
+
 
 class TestStravaProviderCreateActivity:
     """Test Strava provider create_activity method."""

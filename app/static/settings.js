@@ -143,7 +143,7 @@ function makeProviderCard(name, data) {
 
     const header = document.createElement('div');
     header.className = 'provider-header';
-    header.innerHTML = `<span class="drag-handle">⠿</span><span class="provider-name">${escHtml(meta.label)}</span>`;
+    header.innerHTML = `<span class="drag-handle">⠿</span><span class="provider-name">${escHtml(meta.label)}</span><span class="provider-inline-status"></span>`;
 
     const enabledToggle = makeToggle(`en-${name}`, data.enabled, 'Enabled');
     enabledToggle.querySelector('input').addEventListener('change', e => {
@@ -559,10 +559,38 @@ function renderProviderStatuses(statuses) {
         const name = card.dataset.provider;
         const status = statuses[name];
 
-        // Remove old status elements if re-rendering
-        card.querySelectorAll('.provider-status, .provider-rate-limit').forEach(el => el.remove());
+        // Remove old rate-limit banners if re-rendering
+        card.querySelectorAll('.provider-rate-limit').forEach(el => el.remove());
 
-        // Rate limit banner (shown first / most prominently if present)
+        // Update inline status in the header
+        const inlineStatus = card.querySelector('.provider-inline-status');
+        if (inlineStatus) {
+            inlineStatus.innerHTML = '';
+            const hasStatus = status?.last_operation !== null && status?.last_operation !== undefined;
+            const dotClass  = !status || !hasStatus ? 'unknown' : status.last_success ? 'ok' : 'error';
+
+            const dot = document.createElement('span');
+            dot.className = `status-dot ${dotClass}`;
+            inlineStatus.appendChild(dot);
+
+            if (status && hasStatus) {
+                const t = formatRelativeTime(status.last_operation_at);
+                const text = document.createElement('span');
+                text.className = 'status-inline-text';
+                text.textContent = t ? `${status.last_operation} · ${t}` : status.last_operation;
+                inlineStatus.appendChild(text);
+
+                if (status.last_message) {
+                    const info = document.createElement('span');
+                    info.className = 'status-info-icon';
+                    info.textContent = 'ⓘ';
+                    info.setAttribute('data-tooltip', status.last_message);
+                    inlineStatus.appendChild(info);
+                }
+            }
+        }
+
+        // Rate-limit banner (shown at bottom of card if present)
         if (status?.rate_limit_type) {
             const isLong = status.rate_limit_type === 'long_term';
             const banner = document.createElement('div');
@@ -581,48 +609,6 @@ function renderProviderStatuses(statuses) {
                     `<span>Short-term rate limit — retrying in ~${resetIn}.</span>`;
             }
             card.appendChild(banner);
-        }
-
-        // Status strip
-        if (status) {
-            const strip = document.createElement('div');
-            strip.className = 'provider-status';
-
-            const hasStatus = status.last_operation !== null && status.last_operation !== undefined;
-            const dotClass  = !hasStatus ? 'unknown' : status.last_success ? 'ok' : 'error';
-
-            const dot  = document.createElement('span');
-            dot.className = `status-dot ${dotClass}`;
-            strip.appendChild(dot);
-
-            if (hasStatus) {
-                const op = document.createElement('span');
-                op.className = 'status-op';
-                op.textContent = status.last_operation;
-                strip.appendChild(op);
-
-                const t = formatRelativeTime(status.last_operation_at);
-                if (t) {
-                    const time = document.createElement('span');
-                    time.className = 'status-time';
-                    time.textContent = `· ${t}`;
-                    strip.appendChild(time);
-                }
-
-                if (status.last_message) {
-                    const msg = document.createElement('span');
-                    msg.className = 'status-msg';
-                    msg.textContent = `· ${status.last_message.slice(0, 120)}`;
-                    strip.appendChild(msg);
-                }
-            } else {
-                const never = document.createElement('span');
-                never.className = 'status-time';
-                never.textContent = 'No operations recorded yet';
-                strip.appendChild(never);
-            }
-
-            card.appendChild(strip);
         }
     });
 }

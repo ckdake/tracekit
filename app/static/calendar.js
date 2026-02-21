@@ -101,7 +101,7 @@ function renderGrid(yearMonth, data) {
 
         const provPullBtn = '<button class="provider-pull-btn" data-month="' + yearMonth + '" data-provider="' + p + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">⬇</button>';
 
-        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + provPullBtn + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div>';
+        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + provPullBtn + '<div class="provider-content">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div></div>';
     }).join('');
 }
 

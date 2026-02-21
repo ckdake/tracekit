@@ -297,30 +297,64 @@ select#timezone:focus {
 }
 .provider-card.disabled-card { opacity: .7; }
 
-/* Provider operational status strip */
-.provider-status {
+/* Provider inline status (shown in header next to provider name) */
+.provider-inline-status {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: .78rem;
-    color: #666;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #ebebeb;
-    flex-wrap: wrap;
+    gap: 5px;
+    flex: 1;
+    min-width: 0;
+    margin-left: 8px;
 }
-.provider-status .status-dot {
+.provider-inline-status .status-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
 }
-.provider-status .status-dot.ok   { background: #27ae60; }
-.provider-status .status-dot.error { background: #e74c3c; }
-.provider-status .status-dot.unknown { background: #bbb; }
-.provider-status .status-op   { font-weight: 500; color: #444; }
-.provider-status .status-time { color: #999; }
-.provider-status .status-msg  { color: #777; font-style: italic; }
+.provider-inline-status .status-dot.ok      { background: #27ae60; }
+.provider-inline-status .status-dot.error   { background: #e74c3c; }
+.provider-inline-status .status-dot.unknown { background: #bbb; }
+.status-inline-text {
+    font-size: .78rem;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.status-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    color: #aaa;
+    font-size: .8rem;
+    flex-shrink: 0;
+    position: relative;
+}
+.status-info-icon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 7px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2c3e50;
+    color: #fff;
+    padding: 6px 9px;
+    border-radius: 5px;
+    font-size: .74rem;
+    white-space: pre-wrap;
+    max-width: 280px;
+    min-width: 120px;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 20;
+    line-height: 1.45;
+    box-shadow: 0 3px 10px rgba(0,0,0,.2);
+}
+.status-info-icon:hover::after { opacity: 1; }
 
 /* Rate-limit warning banner inside provider card */
 .provider-rate-limit {
@@ -362,7 +396,7 @@ select#timezone:focus {
     font-weight: 600;
     font-size: 1rem;
     color: #2c3e50;
-    flex: 1;
+    flex-shrink: 0;
 }
 .provider-controls {
     display: flex;
@@ -536,6 +570,9 @@ select#timezone:focus {
     font-size: 12px;
     font-weight: 500;
     color: white;
+}
+
+.provider-content {
     display: flex;
     flex-direction: column;
     align-items: center;

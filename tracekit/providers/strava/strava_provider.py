@@ -186,6 +186,9 @@ class StravaProvider(FitnessProvider):
                     strava_activity.save()
                     processed_count += 1
 
+                except ProviderRateLimitError:
+                    # Let rate-limit errors propagate so the worker can handle them correctly.
+                    raise
                 except Exception as e:
                     print(f"Error processing Strava activity: {e}")
                     continue
