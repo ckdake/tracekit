@@ -2,12 +2,22 @@ import fs from 'fs';
 import { marked } from 'marked';
 import path from 'path';
 
+const GITHUB_BASE = 'https://github.com/ckdake/tracekit/blob/main';
+
+// Rewrite relative .md and .txt links to point to GitHub
+function rewriteRelativeLinks(html) {
+    return html.replace(
+        /href="((?!https?:\/\/|\/|#)[^"]+)"/g,
+        (match, href) => `href="${GITHUB_BASE}/${href}" target="_blank"`
+    );
+}
+
 // Read the main README.md
 const readmePath = path.join(process.cwd(), '..', 'README.md');
 const readmeContent = fs.readFileSync(readmePath, 'utf-8');
 
-// Convert markdown to HTML
-const readmeHtml = marked(readmeContent);
+// Convert markdown to HTML and rewrite relative links
+const readmeHtml = rewriteRelativeLinks(marked(readmeContent));
 
 // Generate marketing homepage from index.template.html (no README content)
 const indexTemplatePath = path.join(
