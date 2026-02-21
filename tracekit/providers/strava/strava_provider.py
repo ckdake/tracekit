@@ -25,6 +25,51 @@ from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.strava.strava_activity import StravaActivity
 
 
+class _RaisingRateLimiter:
+    """Stravalib-compatible rate limiter that raises ProviderRateLimitError.
+
+    stravalib's default SleepingRateLimitRule calls ``time.sleep()`` for up to
+    the rest of the day when the long-term limit is exceeded, causing Celery
+    tasks to hang indefinitely.  This replacement raises immediately so the
+    worker can decide whether to retry (short-term) or fail fast (long-term).
+    """
+
+    def __init__(self) -> None:
+        self.log = logging.getLogger(f"{__name__}._RaisingRateLimiter")
+
+    def __call__(self, response_headers: dict, method) -> None:
+        from stravalib.util.limiter import (
+            get_rates_from_response_headers,
+            get_seconds_until_next_quarter,
+        )
+
+        rates = get_rates_from_response_headers(response_headers, method)
+        if rates is None:
+            self.log.warning("No rates present in response headers")
+            return
+
+        if rates.long_usage >= rates.long_limit:
+            raise ProviderRateLimitError(
+                "Strava daily rate limit exceeded — resets at midnight UTC. "
+                "See https://developers.strava.com/docs/rate-limits/",
+                provider="strava",
+                limit_type=RATE_LIMIT_LONG_TERM,
+                reset_at=next_midnight_utc(),
+                retry_after=None,
+            )
+
+        if rates.short_usage >= rates.short_limit:
+            timeout = get_seconds_until_next_quarter()
+            raise ProviderRateLimitError(
+                f"Strava short-term rate limit hit — retrying in {timeout}s. "
+                "See https://developers.strava.com/docs/rate-limits/",
+                provider="strava",
+                limit_type=RATE_LIMIT_SHORT_TERM,
+                reset_at=int(time.time()) + timeout,
+                retry_after=timeout,
+            )
+
+
 class StravaProvider(FitnessProvider):
     def __init__(
         self,
@@ -46,6 +91,7 @@ class StravaProvider(FitnessProvider):
             access_token=token,
             refresh_token=refresh_token,
             token_expires=int(token_expires),
+            rate_limiter=_RaisingRateLimiter(),
         )
 
     def _raise_rate_limit(self, exc: RateLimitExceeded, operation: str) -> None:

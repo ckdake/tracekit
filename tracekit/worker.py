@@ -121,7 +121,19 @@ def pull_provider_month(self, year_month: str, provider_name: str):
                     pass
                 raise self.retry(countdown=exc.retry_after, exc=exc)
             else:
-                # Long-term: fail immediately
+                # Long-term: fail immediately without retry
+                try:
+                    from tracekit.provider_status import record_rate_limit
+
+                    record_rate_limit(
+                        provider=exc.provider,
+                        limit_type=exc.limit_type,
+                        reset_at=exc.reset_at,
+                        operation="pull",
+                        message=str(exc),
+                    )
+                except Exception:
+                    pass
                 try:
                     from tracekit.notification import create_notification
 
