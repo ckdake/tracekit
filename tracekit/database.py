@@ -5,6 +5,7 @@ from peewee import Model
 from .activity import Activity
 from .appconfig import AppConfig
 from .db import get_db
+from .notification import Notification
 from .provider_sync import ProviderSync
 from .providers.base_provider_activity import BaseProviderActivity
 
@@ -17,4 +18,10 @@ def migrate_tables(models: list[type[Model]]) -> None:
 
 
 def get_all_models() -> list[type[Model]]:
-    return [AppConfig, Activity, ProviderSync, *list(cast(list[type[Model]], BaseProviderActivity.__subclasses__()))]
+    return [
+        AppConfig,
+        Activity,
+        ProviderSync,
+        Notification,
+        *list(cast(list[type[Model]], BaseProviderActivity.__subclasses__())),
+    ]

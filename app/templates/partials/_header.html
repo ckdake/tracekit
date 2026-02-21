@@ -12,7 +12,23 @@
     {% endif %}    <div class="header-recent">
         <span class="recent-label">last activity</span>
         <span class="recent-value" id="recent-activity-time">—</span>
-    </div>    <nav class="header-nav">
+    </div>
+    <div class="notif-wrap" id="notif-wrap">
+        <button class="notif-bell" id="notif-bell" aria-label="Notifications" title="Notifications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-badge" id="notif-badge" hidden>0</span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown" hidden>
+            <div class="notif-dropdown-header">
+                <span class="notif-dropdown-title">Notifications</span>
+                <button class="notif-read-all" id="notif-read-all">Mark all read</button>
+            </div>
+            <ul class="notif-list" id="notif-list">
+                <li class="notif-empty">No notifications</li>
+            </ul>
+        </div>
+    </div>
+    <nav class="header-nav">
         <a href="/settings" class="header-nav-link{% if page_name == 'Settings' %} active{% endif %}">⚙ Settings</a>
     </nav>
 </header>

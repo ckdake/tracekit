@@ -1,6 +1,8 @@
 """Simple Flask web application to view tracekit configuration and database status."""
 
 import calendar as _cal
+import time
+import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -428,8 +430,10 @@ def sync_month(year_month: str):
     if not re.fullmatch(r"\d{4}-\d{2}", year_month):
         return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
     try:
+        from tracekit.notification import create_notification
         from tracekit.worker import pull_month
 
+        create_notification(f"Pull scheduled for {year_month}", category="info")
         task = pull_month.delay(year_month)
         return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
     except Exception as e:
@@ -451,6 +455,310 @@ def sync_status(task_id: str):
         return jsonify({"task_id": task_id, "state": result.state, "info": info})
     except Exception as e:
         return jsonify({"error": str(e)}), 503
+
+
+# ---------------------------------------------------------------------------
+# Notifications API
+# ---------------------------------------------------------------------------
+
+
+def _get_notifications_list() -> list[dict]:
+    """Return all notifications ordered newest-first."""
+    if not _init_db():
+        return []
+    try:
+        from tracekit.db import get_db
+        from tracekit.notification import Notification
+
+        get_db().connect(reuse_if_open=True)
+        rows = Notification.select().order_by(Notification.created.desc())
+        return [r.to_dict() for r in rows]
+    except Exception as e:
+        print(f"notifications list error: {e}")
+        return []
+
+
+@app.route("/api/notifications")
+def api_notifications():
+    """Return all notifications ordered newest-first."""
+    return jsonify(_get_notifications_list())
+
+
+@app.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
+def api_notification_read(notification_id: int):
+    """Mark a single notification as read."""
+    if not _init_db():
+        return jsonify({"error": "Database not available"}), 503
+    try:
+        from tracekit.db import get_db
+        from tracekit.notification import Notification
+
+        get_db().connect(reuse_if_open=True)
+        n = Notification.get_by_id(notification_id)
+        n.read = True
+        n.save()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/notifications/read-all", methods=["POST"])
+def api_notifications_read_all():
+    """Mark all notifications as read."""
+    if not _init_db():
+        return jsonify({"error": "Database not available"}), 503
+    try:
+        from tracekit.db import get_db
+        from tracekit.notification import Notification
+
+        get_db().connect(reuse_if_open=True)
+        Notification.update(read=True).where(Notification.read == False).execute()  # noqa: E712
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/notifications/<int:notification_id>", methods=["DELETE"])
+def api_notification_delete(notification_id: int):
+    """Delete a single notification."""
+    if not _init_db():
+        return jsonify({"error": "Database not available"}), 503
+    try:
+        from tracekit.db import get_db
+        from tracekit.notification import Notification
+
+        get_db().connect(reuse_if_open=True)
+        n = Notification.get_by_id(notification_id)
+        n.delete_instance()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+
+# ---------------------------------------------------------------------------
+# Garmin auth — pending MFA sessions (in-memory, single-process only)
+# ---------------------------------------------------------------------------
+
+# Maps session_id -> (Garmin instance, client_state dict, email, expiry timestamp)
+_pending_garmin_sessions: dict[str, tuple[Any, Any, str, float]] = {}
+_GARMIN_SESSION_TTL = 600  # 10 minutes
+
+
+def _cleanup_garmin_sessions() -> None:
+    now = time.time()
+    expired = [k for k, (*_, exp) in _pending_garmin_sessions.items() if now > exp]
+    for k in expired:
+        del _pending_garmin_sessions[k]
+
+
+def _save_garmin_tokens(email: str, garth_tokens: str) -> None:
+    """Persist Garmin email + garth tokens to the config store."""
+    _init_db()
+    from tracekit.appconfig import load_config, save_config
+
+    config = load_config()
+    providers = config.get("providers", {})
+    garmin_cfg = providers.get("garmin", {}).copy()
+    garmin_cfg["email"] = email
+    garmin_cfg["garth_tokens"] = garth_tokens
+    providers["garmin"] = garmin_cfg
+    save_config({**config, "providers": providers})
+
+
+@app.route("/api/auth/garmin", methods=["POST"])
+def api_auth_garmin():
+    """Start Garmin authentication. Returns needs_mfa + session_id or ok."""
+    data = request.get_json(silent=True) or {}
+    email = data.get("email", "").strip()
+    password = data.get("password", "")
+    if not email or not password:
+        return jsonify({"error": "email and password are required"}), 400
+
+    try:
+        import garminconnect
+        from garminconnect import (
+            GarminConnectAuthenticationError,
+            GarminConnectConnectionError,
+            GarminConnectTooManyRequestsError,
+        )
+    except ImportError:
+        return jsonify({"error": "garminconnect library not installed"}), 500
+
+    _cleanup_garmin_sessions()
+
+    try:
+        garmin = garminconnect.Garmin(email=email, password=password, is_cn=False, return_on_mfa=True)
+        result, client_state = garmin.login()
+
+        if result == "needs_mfa":
+            session_id = str(uuid.uuid4())
+            _pending_garmin_sessions[session_id] = (
+                garmin,
+                client_state,
+                email,
+                time.time() + _GARMIN_SESSION_TTL,
+            )
+            return jsonify({"status": "needs_mfa", "session_id": session_id})
+
+        # No MFA required — tokens are ready
+        garth_tokens = garmin.garth.dumps()
+        _save_garmin_tokens(email, garth_tokens)
+        return jsonify({"status": "ok", "full_name": garmin.get_full_name()})
+
+    except GarminConnectAuthenticationError as e:
+        return jsonify({"error": f"Authentication failed: {e}"}), 401
+    except GarminConnectTooManyRequestsError as e:
+        return jsonify({"error": f"Rate limit exceeded, please wait and try again: {e}"}), 429
+    except GarminConnectConnectionError as e:
+        return jsonify({"error": f"Connection error: {e}"}), 502
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/auth/garmin/mfa", methods=["POST"])
+def api_auth_garmin_mfa():
+    """Complete Garmin MFA step. Accepts session_id + mfa_code."""
+    data = request.get_json(silent=True) or {}
+    session_id = data.get("session_id", "")
+    mfa_code = data.get("mfa_code", "").strip()
+    if not session_id or not mfa_code:
+        return jsonify({"error": "session_id and mfa_code are required"}), 400
+
+    entry = _pending_garmin_sessions.get(session_id)
+    if not entry:
+        return jsonify({"error": "Session not found or expired. Please start authentication again."}), 404
+
+    garmin, client_state, email, expires_at = entry
+    if time.time() > expires_at:
+        del _pending_garmin_sessions[session_id]
+        return jsonify({"error": "Session expired. Please start authentication again."}), 410
+
+    try:
+        from garminconnect import (
+            GarminConnectAuthenticationError,
+            GarminConnectConnectionError,
+        )
+    except ImportError:
+        return jsonify({"error": "garminconnect library not installed"}), 500
+
+    try:
+        garmin.resume_login(client_state, mfa_code)
+        del _pending_garmin_sessions[session_id]
+
+        garth_tokens = garmin.garth.dumps()
+        _save_garmin_tokens(email, garth_tokens)
+        return jsonify({"status": "ok", "full_name": garmin.get_full_name()})
+
+    except GarminConnectAuthenticationError as e:
+        return jsonify({"error": f"MFA verification failed: {e}"}), 401
+    except GarminConnectConnectionError as e:
+        return jsonify({"error": f"Connection error: {e}"}), 502
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Strava OAuth endpoints
+# ---------------------------------------------------------------------------
+
+
+def _strava_callback_page(success: bool, message: str) -> str:
+    """Return an HTML page that notifies the opener then closes itself."""
+    status = "ok" if success else "error"
+    icon = "\u2713" if success else "\u2717"
+    safe_msg = message.replace("'", "\\'").replace("<", "&lt;").replace(">", "&gt;")
+    return f"""<!DOCTYPE html>
+<html><head><title>Strava Auth</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:48px;color:#2c3e50;">
+  <p style="font-size:1.2rem;">{icon} {safe_msg}</p>
+  <script>
+    if (window.opener) {{
+      window.opener.postMessage({{stravaAuth:true,status:'{status}',message:'{safe_msg}'}}, '*');
+      window.close();
+    }}
+  </script>
+</body></html>"""
+
+
+@app.route("/api/auth/strava/authorize")
+def api_auth_strava_authorize():
+    """Redirect the browser to Strava's OAuth authorization page."""
+    from flask import redirect as flask_redirect
+
+    _init_db()
+    from tracekit.appconfig import load_config
+
+    config = load_config()
+    strava_cfg = config.get("providers", {}).get("strava", {})
+    client_id = strava_cfg.get("client_id", "").strip()
+    client_secret = strava_cfg.get("client_secret", "").strip()
+
+    if not client_id or not client_secret:
+        return (
+            "<h3>Configuration error</h3>"
+            "<p>Strava <strong>client id</strong> and <strong>client secret</strong> "
+            "must be saved in Settings before authenticating.</p>",
+            400,
+        )
+
+    try:
+        from stravalib.client import Client
+
+        client = Client()
+        redirect_uri = f"{request.scheme}://{request.host}/api/auth/strava/callback"
+        authorize_url = client.authorization_url(
+            client_id=int(client_id),
+            redirect_uri=redirect_uri,
+            scope=["activity:read_all", "activity:write", "profile:read_all", "profile:write"],
+        )
+        return flask_redirect(str(authorize_url))
+    except Exception as e:
+        return f"<h3>Error</h3><p>{e}</p>", 500
+
+
+@app.route("/api/auth/strava/callback")
+def api_auth_strava_callback():
+    """Handle Strava OAuth callback — exchange code for tokens and save."""
+    error = request.args.get("error")
+    if error:
+        return _strava_callback_page(False, f"Strava authorization denied: {error}")
+
+    code = request.args.get("code")
+    if not code:
+        return _strava_callback_page(False, "No authorization code received from Strava.")
+
+    try:
+        _init_db()
+        from tracekit.appconfig import load_config, save_config
+
+        config = load_config()
+        strava_cfg = config.get("providers", {}).get("strava", {})
+        client_id = strava_cfg.get("client_id", "").strip()
+        client_secret = strava_cfg.get("client_secret", "").strip()
+
+        if not client_id or not client_secret:
+            return _strava_callback_page(False, "Strava client_id and client_secret not configured.")
+
+        from stravalib.client import Client
+
+        client = Client()
+        token_dict = client.exchange_code_for_token(
+            client_id=int(client_id),
+            client_secret=client_secret,
+            code=code,
+        )
+
+        providers = config.get("providers", {})
+        strava_updated = providers.get("strava", {}).copy()
+        strava_updated["access_token"] = str(token_dict["access_token"])
+        strava_updated["refresh_token"] = str(token_dict.get("refresh_token", ""))
+        strava_updated["token_expires"] = str(token_dict.get("expires_at", "0"))
+        providers["strava"] = strava_updated
+        save_config({**config, "providers": providers})
+
+        return _strava_callback_page(True, "Strava authentication successful!")
+    except Exception as e:
+        return _strava_callback_page(False, f"Token exchange failed: {e}")
 
 
 @app.route("/health")

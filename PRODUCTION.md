@@ -87,45 +87,21 @@ No CLI step needed. Enter your email, password, and API key directly in the Sett
 
 ### Strava
 
-1. **In the Settings UI**, enter your Strava `client_id` and `client_secret` under the Strava provider card and save.
+1. **Register the callback URL** in your Strava developer app at [strava.com/settings/api](https://www.strava.com/settings/api). Set the **Authorization Callback Domain** to the domain you are hosting tracekit on (e.g. `tracekit.example.com`). The exact callback path used is `/api/auth/strava/callback`.
 
-2. **Expose port 8000 temporarily.** The auth command opens a local HTTP listener to capture the OAuth redirect. Add a temporary port binding to the `tracekit` service in `docker-compose.yml`:
-   ```yaml
-   ports:
-     - "127.0.0.1:5000:5000"
-     - "127.0.0.1:8000:8000"   # temporary — remove after auth
-   ```
-   Then restart: `docker compose up -d tracekit`
+2. **In the Settings UI**, enter your Strava `client_id` and `client_secret` under the Strava provider card and save.
 
-3. **Set up an SSH tunnel** from your local machine so the OAuth redirect reaches you:
-   ```bash
-   ssh -L 8000:localhost:8000 user@your-server
-   ```
+3. **Click "Authenticate with Strava"** on the Strava provider card. A popup opens, redirects to Strava for authorization, and saves the tokens automatically on return.
 
-4. **Run the auth command** inside the container:
-   ```bash
-   docker exec -it tracekit python -m tracekit auth-strava
-   ```
-   It prints a Strava authorization URL. Open it in your local browser, authorize the app, and the browser's redirect to `http://localhost:8000/...` is captured through the SSH tunnel. Tokens are saved directly to the database.
-
-5. **Clean up** — remove the temporary `8000` port line from `docker-compose.yml` and restart:
-   ```bash
-   docker compose up -d tracekit
-   ```
-
-> Re-authenticate any time tokens expire by repeating steps 2–5.
+> Re-authenticate any time tokens expire by clicking the button again.
 
 ### Garmin
 
 Garmin uses garth for OAuth. Tokens are stored in the database and valid for roughly a year.
 
-```bash
-docker exec -it tracekit python -m tracekit auth-garmin
-```
+**In the Settings UI**, click **Authenticate** on the Garmin provider card. Enter your Garmin Connect email and password in the popup. If your account has MFA enabled, you will be prompted for the one-time code sent to your email. Tokens are saved automatically on success.
 
-The command checks the database for existing tokens first. If none are found (or you choose to re-authenticate), it prompts for your Garmin email, password, and MFA code if enabled. Tokens are saved directly to the database — no filesystem token files are used.
-
-To re-authenticate after tokens expire, simply re-run the same command.
+To re-authenticate after tokens expire, click the **Re-authenticate** button on the card.
 
 ---
 

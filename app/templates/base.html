@@ -28,5 +28,133 @@ fetch('/api/recent-activity')
     })
     .catch(() => {});
 </script>
+<script>
+/* ── Notifications ──────────────────────────────────────────────── */
+(function () {
+    const bell    = document.getElementById('notif-bell');
+    const badge   = document.getElementById('notif-badge');
+    const dropdown = document.getElementById('notif-dropdown');
+    const list    = document.getElementById('notif-list');
+    const readAll = document.getElementById('notif-read-all');
+    if (!bell) return;
+
+    function relTime(ts) {
+        const diff = Math.floor(Date.now() / 1000) - ts;
+        if (diff < 60)  return 'just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        return Math.floor(diff / 86400) + 'd ago';
+    }
+
+    function renderList(notifications) {
+        list.innerHTML = '';
+        if (!notifications.length) {
+            const li = document.createElement('li');
+            li.className = 'notif-empty';
+            li.textContent = 'No notifications';
+            list.appendChild(li);
+            return;
+        }
+        notifications.forEach(n => {
+            const li = document.createElement('li');
+            li.className = 'notif-item' + (n.read ? ' notif-read' : '') + (n.category === 'error' ? ' notif-error' : '');
+            li.dataset.id = n.id;
+
+            const msg = document.createElement('span');
+            msg.className = 'notif-msg';
+            msg.textContent = n.message;
+
+            const meta = document.createElement('span');
+            meta.className = 'notif-meta';
+            meta.textContent = relTime(n.created);
+
+            const actions = document.createElement('span');
+            actions.className = 'notif-actions';
+
+            if (!n.read) {
+                const markBtn = document.createElement('button');
+                markBtn.className = 'notif-btn';
+                markBtn.title = 'Mark as read';
+                markBtn.textContent = '✓';
+                markBtn.addEventListener('click', e => { e.stopPropagation(); markRead(n.id); });
+                actions.appendChild(markBtn);
+            }
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'notif-btn notif-btn-del';
+            delBtn.title = 'Delete';
+            delBtn.textContent = '✕';
+            delBtn.addEventListener('click', e => { e.stopPropagation(); deleteNotif(n.id); });
+            actions.appendChild(delBtn);
+
+            li.appendChild(msg);
+            li.appendChild(meta);
+            li.appendChild(actions);
+            list.appendChild(li);
+        });
+    }
+
+    function updateBadge(notifications) {
+        const unread = notifications.filter(n => !n.read).length;
+        if (unread > 0) {
+            badge.textContent = unread > 99 ? '99+' : unread;
+            badge.hidden = false;
+        } else {
+            badge.hidden = true;
+        }
+        bell.classList.toggle('notif-bell-has-unread', unread > 0);
+    }
+
+    let _cached = [];
+
+    function loadNotifications() {
+        fetch('/api/notifications')
+            .then(r => r.json())
+            .then(data => {
+                _cached = Array.isArray(data) ? data : [];
+                updateBadge(_cached);
+                if (!dropdown.hidden) renderList(_cached);
+            })
+            .catch(() => {});
+    }
+
+    function markRead(id) {
+        fetch(`/api/notifications/${id}/read`, { method: 'POST' })
+            .then(() => loadNotifications())
+            .catch(() => {});
+    }
+
+    function deleteNotif(id) {
+        fetch(`/api/notifications/${id}`, { method: 'DELETE' })
+            .then(() => loadNotifications())
+            .catch(() => {});
+    }
+
+    readAll.addEventListener('click', () => {
+        fetch('/api/notifications/read-all', { method: 'POST' })
+            .then(() => loadNotifications())
+            .catch(() => {});
+    });
+
+    bell.addEventListener('click', e => {
+        e.stopPropagation();
+        dropdown.hidden = !dropdown.hidden;
+        if (!dropdown.hidden) renderList(_cached);
+    });
+
+    document.addEventListener('click', e => {
+        if (!dropdown.hidden && !document.getElementById('notif-wrap').contains(e.target)) {
+            dropdown.hidden = true;
+        }
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') dropdown.hidden = true;
+    });
+
+    loadNotifications();
+    setInterval(loadNotifications, 30000);
+})();
+</script>
 </body>
 </html>

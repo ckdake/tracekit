@@ -208,6 +208,15 @@ class Tracekit:
                 except Exception as e:
                     print(f"Error pulling from {provider_name}: {e}")
                     activities[provider_name] = []
+                    try:
+                        from tracekit.notification import create_notification
+
+                        create_notification(
+                            f"{provider_name} error pulling {year_month}: {e}",
+                            category="error",
+                        )
+                    except Exception:
+                        pass
             else:
                 activities[provider_name] = []
 

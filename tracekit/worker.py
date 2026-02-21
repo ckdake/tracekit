@@ -41,11 +41,63 @@ celery_app.conf.update(
 @celery_app.task(bind=True, name="tracekit.worker.pull_month")
 def pull_month(self, year_month: str):
     """Pull activities for a given YYYY-MM from all enabled providers."""
-    from tracekit.commands.pull import run
+    try:
+        from tracekit.notification import create_notification
 
-    run(["--date", year_month])
+        create_notification(f"Pull started for {year_month}", category="info")
+    except Exception:
+        pass
+
+    try:
+        from tracekit.commands.pull import run
+
+        run(["--date", year_month])
+
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Pull finished for {year_month}", category="info")
+        except Exception:
+            pass
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Pull failed for {year_month}: {exc}", category="error")
+        except Exception:
+            pass
+        raise
 
 
 @celery_app.task(name="tracekit.worker.daily")
 def daily():
-    """Daily heartbeat — currently a no-op, extend with scheduled pull logic here."""
+    """Daily heartbeat — pull current month and notify."""
+    from datetime import UTC, datetime
+
+    year_month = datetime.now(UTC).strftime("%Y-%m")
+    try:
+        from tracekit.notification import create_notification
+
+        create_notification(f"Daily sync running for {year_month}", category="info")
+    except Exception:
+        pass
+
+    try:
+        from tracekit.commands.pull import run
+
+        run(["--date", year_month])
+
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Daily sync finished for {year_month}", category="info")
+        except Exception:
+            pass
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Daily sync failed for {year_month}: {exc}", category="error")
+        except Exception:
+            pass
+        raise
