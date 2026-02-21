@@ -3,7 +3,7 @@
 This documents how to self-host tracekit on a cloud server as a single individual. The setup is:
 
 - Docker container running the Flask web app on HTTP (port 5000), bound to localhost only
-- A config file on the host filesystem that you control
+- Configuration stored in PostgreSQL — no config file required; use the Settings UI after first boot
 - A reverse proxy in front doing SSL termination (not covered here — use Caddy, nginx, etc.)
 
 The published image is `ghcr.io/ckdake/tracekit:latest`.
@@ -14,7 +14,6 @@ The published image is `ghcr.io/ckdake/tracekit:latest`.
 
 - A Linux server (VPS, EC2, Droplet, etc.) with Docker installed
 - A domain name pointed at your server's IP
-- Your `tracekit_config.json` already configured
 
 ---
 
@@ -42,14 +41,13 @@ echo "TRACEKIT_GID=$(id -g)" >> ~/.env
 
 ---
 
-## Config File
+## First-Boot Setup
 
-As the `tracekit` user, create the subdirectories and copy in your config and compose file:
+Create the directories and copy in the compose file:
 
 ```bash
-mkdir -p ~/config ~/data/activities ~/pgdata ~/redis
-chown -R tracekit:tracekit ~/config ~/data ~/pgdata ~/redis
-cp tracekit_config.json ~/config/tracekit_config.json
+mkdir -p ~/data/activities ~/pgdata ~/redis ~/.garminconnect
+chown -R tracekit:tracekit ~/data ~/pgdata ~/redis ~/.garminconnect
 cp docker-compose.yml ~/docker-compose.yml
 ```
 
@@ -60,7 +58,7 @@ touch ~/.env
 chmod 600 ~/.env
 ```
 
-Edit `~/.env` with your credentials:
+Edit `~/.env`:
 
 ```sh
 # Strava
@@ -91,30 +89,9 @@ TRACEKIT_GID=
 POSTGRES_PASSWORD=change_me_to_a_strong_random_password
 ```
 
-> **Database backend:** When `DATABASE_URL` is set (which `docker-compose.yml` does automatically using `POSTGRES_PASSWORD`), tracekit connects to PostgreSQL instead of SQLite. The `metadata_db` field in `tracekit_config.json` is ignored in this mode.
+Docker Compose picks this up automatically from the working directory and injects it into each container via `env_file` in `docker-compose.yml`.
 
-Tables are created (and safely re-created if already present) automatically on every container start via `python -m tracekit migrate`, which runs in `docker-entrypoint.sh` before the Flask process starts. It retries the connection for up to 60 s so the app container and the database container can start in any order.
-
-> **Dev / local:** SQLite remains the default when `DATABASE_URL` is not set, so local development and the CLI work exactly as before with zero extra setup.
-
-Docker Compose picks this up automatically from the working directory and injects it into the container via `env_file` in `docker-compose.yml`.
-
-Update paths inside `tracekit_config.json` to reflect the data directory:
-
-```json
-{
-  "metadata_db": "/opt/tracekit/data/metadata.sqlite3",
-  "providers": {
-    "file": {
-      "glob": "/opt/tracekit/data/activities/*"
-    }
-  }
-}
-```
-
-> `metadata_db` is only used when `DATABASE_URL` is **not** set. In production (with `DATABASE_URL` pointing at the postgres container) this field is ignored — all data goes to PostgreSQL.
-
----
+Tables are created automatically on every container start — the app retries the DB connection for up to 60 s, so containers can start in any order.
 
 ## Garmin Authentication
 
@@ -148,14 +125,17 @@ cd /opt/tracekit
 docker compose up -d
 ```
 
+On first boot, visit `http://your-domain/settings` to configure your timezone, enabled providers, and debug mode. Configuration is stored in PostgreSQL and persists across restarts.
+
 The compose file binds to `127.0.0.1:5000` only, so the port is **not** publicly exposed. Your reverse proxy connects to it internally.
 
 Key volume mounts (defined in `docker-compose.yml`):
-- `/opt/tracekit/config/tracekit_config.json` → `/app/tracekit_config.json` (read-only) — config file, mounted directly
 - `/opt/tracekit/data` → `/opt/tracekit/data` (read-write) — activity files (FIT/GPX/TCX exports)
 - `/opt/tracekit/.garminconnect` → `/opt/tracekit/.garminconnect` (read-write) — Garmin OAuth tokens (garth refreshes these in-place)
 - `/opt/tracekit/pgdata` → PostgreSQL data directory — all database files live here
 - `/opt/tracekit/redis` → Redis persistence directory
+
+> **Config** is stored in PostgreSQL (the `appconfig` table) and managed entirely through the Settings UI at `/settings`. No config file needs to be mounted or maintained on the host.
 
 Services started by `docker compose up -d`:
 | Container | Role |

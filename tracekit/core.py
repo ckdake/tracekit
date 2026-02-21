@@ -3,9 +3,9 @@
 import json
 import os
 from pathlib import Path
-from typing import Any
 from zoneinfo import ZoneInfo
 
+from .appconfig import DEFAULT_CONFIG, load_config
 from .database import get_all_models, migrate_tables
 from .db import configure_db, get_db
 from .providers.base_provider_activity import BaseProviderActivity
@@ -23,20 +23,19 @@ class Tracekit:
     """Main tracekit class that handles configuration and provider management."""
 
     def __init__(self):
-        # Load config first
-        self.config = self._load_config()
-        self.home_tz = ZoneInfo(self.config.get("home_timezone", "US/Eastern"))
+        # Determine the SQLite path before the DB is configured.
+        # Priority: DATABASE_URL env (Postgres), METADATA_DB env, JSON file, default.
+        db_path = self._resolve_db_path()
+        configure_db(db_path)
 
-        # Configure database with path from config
-        metadata_db_path = self.config.get("metadata_db", "metadata.sqlite3")
-        configure_db(metadata_db_path)
-
-        # Initialize database
+        # Ensure schema exists before load_config() tries to read appconfig.
         db = get_db()
         db.connect(reuse_if_open=True)
-
-        # Always migrate tables on startup
         migrate_tables(get_all_models())
+
+        # load_config() syncs JSON file -> DB if they differ, then returns DB.
+        self.config = load_config()
+        self.home_tz = ZoneInfo(self.config.get("home_timezone", "US/Eastern"))
 
         # Initialize providers
         self._spreadsheet = None
@@ -46,18 +45,28 @@ class Tracekit:
         self._file = None
         self._stravajson = None
 
-    def _load_config(self) -> dict[str, Any]:
-        """Load configuration from tracekit_config.json."""
-        with open(CONFIG_PATH) as f:
-            config = json.load(f)
+    @staticmethod
+    def _resolve_db_path() -> str:
+        """Return the SQLite path to use when DATABASE_URL is not set."""
+        import os
 
-        # Set defaults if not present
-        if "debug" not in config:
-            config["debug"] = False
-        if "provider_priority" not in config:
-            config["provider_priority"] = "spreadsheet,ridewithgps,strava,garmin"
+        # Explicit env override
+        env_path = os.environ.get("METADATA_DB")
+        if env_path:
+            return env_path
 
-        return config
+        # Fall back to JSON file's metadata_db key if the file exists
+        if CONFIG_PATH.exists():
+            try:
+                with open(CONFIG_PATH) as f:
+                    raw = json.load(f)
+                file_path = raw.get("metadata_db")
+                if file_path:
+                    return file_path
+            except Exception:
+                pass
+
+        return DEFAULT_CONFIG.get("metadata_db", "metadata.sqlite3")
 
     @property
     def spreadsheet(self) -> SpreadsheetProvider | None:

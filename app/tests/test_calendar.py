@@ -5,8 +5,6 @@ import json
 import os
 import sys
 import tempfile
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -65,9 +63,15 @@ def temp_config():
 
 
 @pytest.fixture
-def temp_database():
-    """Create a temporary database with test data using peewee models."""
+def temp_database(monkeypatch):
+    """Create a temporary database with test data using peewee models.
+
+    Also seeds appconfig and blocks _FILE_PATHS so the real config file on disk
+    cannot interfere via the file-sync logic.
+    """
+    import tracekit.appconfig as tcfg
     import tracekit.db as tdb
+    from tracekit.appconfig import save_config
     from tracekit.database import get_all_models, migrate_tables
     from tracekit.db import configure_db
     from tracekit.provider_sync import ProviderSync
@@ -77,6 +81,9 @@ def temp_database():
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
 
+    # Prevent real config file from overwriting test config
+    monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
+
     with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
         db_path = f.name
 
@@ -85,6 +92,9 @@ def temp_database():
     db = tdb.get_db()
     db.connect(reuse_if_open=True)
     migrate_tables(get_all_models())
+
+    # Seed default config so load_config() returns something sane
+    save_config({"home_timezone": "US/Pacific", "debug": False, "providers": {}})
 
     # Insert ProviderSync records
     sync_records = [
@@ -260,36 +270,25 @@ class TestTimezone:
 class TestCalendarIntegration:
     """Integration tests for calendar page."""
 
-    def test_calendar_page_renders(self, client, temp_config, temp_database):
+    def test_calendar_page_renders(self, client, temp_database):
         """Test that the calendar page renders successfully."""
-        temp_file, config_data = temp_config
-        config_data["metadata_db"] = temp_database
+        response = client.get("/calendar")
+        assert response.status_code == 200
+        assert b"Sync Calendar" in response.data
 
-        with open(temp_file, "w") as f:
-            json.dump(config_data, f)
+        content = response.data.decode()
+        assert "2024-01" in content or "2024-02" in content or "2024-03" in content
+        assert "activities" in content or "total" in content
 
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            response = client.get("/calendar")
-            assert response.status_code == 200
-            assert b"Sync Calendar" in response.data
+    def test_calendar_page_with_timezone(self, client, temp_database):
+        """Test calendar page with a specific timezone seeded in the DB."""
+        from tracekit.appconfig import save_config
 
-            content = response.data.decode()
-            assert "2024-01" in content or "2024-02" in content or "2024-03" in content
-            assert "activities" in content or "total" in content
+        save_config({"home_timezone": "US/Eastern", "debug": False, "providers": {}})
 
-    def test_calendar_page_with_timezone(self, client, temp_config, temp_database):
-        """Test calendar page with specific timezone configuration."""
-        temp_file, config_data = temp_config
-        config_data["metadata_db"] = temp_database
-        config_data["home_timezone"] = "US/Eastern"
+        response = client.get("/calendar")
+        assert response.status_code == 200
 
-        with open(temp_file, "w") as f:
-            json.dump(config_data, f)
-
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            response = client.get("/calendar")
-            assert response.status_code == 200
-
-            content = response.data.decode()
-            assert "Sync Calendar" in content
-            assert len(content) > 1000
+        content = response.data.decode()
+        assert "Sync Calendar" in content
+        assert len(content) > 1000

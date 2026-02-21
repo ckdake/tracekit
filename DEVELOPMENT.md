@@ -108,10 +108,12 @@ tracekit includes a local Flask web dashboard for inspecting configuration and d
 ```
 
 Visit http://localhost:5000 to see:
-- Configuration status from `tracekit_config.json`
+- Configuration status (loaded from the database; visit `/settings` to edit)
 - Provider settings (enabled/disabled, priorities)
 - Database information (size, tables, row counts)
 - API endpoints for programmatic access
+
+Configuration is stored in the `appconfig` table and seeded from `tracekit_config.json` on first boot if the file is present — after that the database is the source of truth.
 
 ## Running via Docker
 
@@ -121,7 +123,11 @@ A pre-built image is available at `ghcr.io/ckdake/tracekit:latest`.
 # Pull the latest published image
 docker pull ghcr.io/ckdake/tracekit:latest
 
-# Run with your local config mounted
+# Run the web dashboard (config stored in DB; no config file needed)
+docker run --rm -p 5000:5000 \
+  ghcr.io/ckdake/tracekit:latest
+
+# Optionally seed initial config from a JSON file (only used when DB is empty)
 docker run --rm -p 5000:5000 \
   -v $(pwd)/tracekit_config.json:/app/tracekit_config.json \
   ghcr.io/ckdake/tracekit:latest

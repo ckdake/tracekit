@@ -83,11 +83,13 @@ python -m tracekit auth-garmin
 
 ```bash
 python -m tracekit --help
-python -m tracekit configure
+python -m tracekit configure   # interactive wizard — writes tracekit_config.json (seeds DB on first boot)
 python -m tracekit pull --date 2025-08
 python -m tracekit sync-month 2025-08
 python -m tracekit reset --date 2025-08
 ```
+
+> **Web dashboard:** For Docker deployments, configuration is stored in PostgreSQL and managed through the Settings UI at `/settings`. `tracekit_config.json` is only used as a one-time seed if present when the DB is empty.
 
 ---
 

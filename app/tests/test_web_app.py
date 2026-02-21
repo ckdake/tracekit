@@ -19,6 +19,27 @@ from main import (
     sort_providers,
 )
 
+# ---------------------------------------------------------------------------
+# Shared config data used across fixtures
+# ---------------------------------------------------------------------------
+
+_CONFIG_DATA = {
+    "home_timezone": "US/Pacific",
+    "debug": True,
+    "providers": {
+        "strava": {"enabled": True, "priority": 1},
+        "garmin": {"enabled": True, "priority": 2},
+        "spreadsheet": {"enabled": True, "priority": 3},
+        "file": {"enabled": True},
+        "disabled_provider": {"enabled": False, "priority": 999},
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def reset_db_state():
@@ -41,38 +62,32 @@ def client():
 
 
 @pytest.fixture
-def temp_config():
-    """Create a temporary config file for testing."""
-    config_data = {
-        "home_timezone": "US/Pacific",
-        "metadata_db": "test_metadata.sqlite3",
-        "debug": True,
-        "providers": {
-            "strava": {"enabled": True, "priority": 1},
-            "garmin": {"enabled": True, "priority": 2},
-            "spreadsheet": {"enabled": True, "priority": 3},
-            "file": {"enabled": True},
-            "disabled_provider": {"enabled": False, "priority": 999},
-        },
-    }
-
+def temp_config_file():
+    """Write _CONFIG_DATA to a temporary JSON file; yield its path."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump(config_data, f)
-        temp_file = f.name
-
-    yield temp_file, config_data
-
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
+        json.dump(_CONFIG_DATA, f)
+        path = f.name
+    yield path
+    if os.path.exists(path):
+        os.remove(path)
 
 
 @pytest.fixture
-def temp_database():
-    """Create a temporary database with test data using peewee models."""
+def temp_database(monkeypatch):
+    """Create a temporary database seeded with sync rows *and* appconfig.
+
+    Also patches _FILE_PATHS to [] so the real tracekit_config.json on disk
+    can't interfere with the test DB via the file-sync logic.
+    """
+    import tracekit.appconfig as tcfg
     import tracekit.db as tdb
+    from tracekit.appconfig import save_config
     from tracekit.database import get_all_models, migrate_tables
     from tracekit.db import configure_db
     from tracekit.provider_sync import ProviderSync
+
+    # Prevent the real config file from overwriting the test-seeded config
+    monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
 
     with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
         db_path = f.name
@@ -83,6 +98,10 @@ def temp_database():
     db.connect(reuse_if_open=True)
     migrate_tables(get_all_models())
 
+    # Seed config into appconfig table
+    save_config(_CONFIG_DATA)
+
+    # Seed sync rows
     sync_data = [
         ("2024-01", "strava"),
         ("2024-01", "garmin"),
@@ -94,8 +113,7 @@ def temp_database():
     for year_month, provider in sync_data:
         ProviderSync.get_or_create(year_month=year_month, provider=provider)
 
-    config = {"metadata_db": db_path, "home_timezone": "US/Pacific"}
-    yield db_path, config
+    yield db_path
 
     with contextlib.suppress(Exception):
         db.close()
@@ -104,53 +122,83 @@ def temp_database():
         os.remove(db_path)
 
 
+# ---------------------------------------------------------------------------
+# TestConfigLoading
+# ---------------------------------------------------------------------------
+
+
 class TestConfigLoading:
-    """Test configuration loading functionality."""
+    """Config is always stored in the DB; the JSON file syncs *into* the DB."""
 
-    def test_load_valid_config(self, temp_config):
-        """Test loading a valid configuration file."""
-        temp_file, _expected_data = temp_config
-
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            config = load_tracekit_config()
+    def test_config_loads_from_db(self, temp_database):
+        """Config seeded in DB is returned by load_tracekit_config()."""
+        config = load_tracekit_config()
 
         assert config["home_timezone"] == "US/Pacific"
-        assert config["metadata_db"] == "test_metadata.sqlite3"
         assert config["debug"] is True
         assert "providers" in config
         assert len(config["providers"]) == 5
 
-    def test_load_missing_config(self):
-        """Test loading when config file is missing."""
-        with patch("main.CONFIG_PATH", Path("nonexistent_file.json")):
+    def test_config_file_synced_to_db_on_boot(self, temp_database, temp_config_file):
+        """If a JSON config file differs from the DB, the DB is updated to match."""
+        import tracekit.appconfig as tcfg
+        from tracekit.appconfig import _load_from_db, save_config
+
+        # Overwrite DB with a different timezone so we can detect the sync
+        save_config({**_CONFIG_DATA, "home_timezone": "UTC"})
+
+        # Point _FILE_PATHS at our temp file (which has "US/Pacific")
+        with patch.object(tcfg, "_FILE_PATHS", [Path(temp_config_file)]):
             config = load_tracekit_config()
 
-        assert "error" in config
-        assert "not found" in config["error"]
+        assert config["home_timezone"] == "US/Pacific"
 
-    def test_load_invalid_json(self):
-        """Test loading an invalid JSON file."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write("{ invalid json }")
-            temp_file = f.name
+        # DB should now reflect the file value
+        db_cfg = _load_from_db()
+        assert db_cfg is not None
+        assert db_cfg["home_timezone"] == "US/Pacific"
+
+    def test_defaults_seeded_when_db_empty(self):
+        """First boot with empty DB and no file seeds built-in defaults."""
+        import tracekit.appconfig as tcfg
+        import tracekit.db as tdb
+        from tracekit.database import get_all_models, migrate_tables
+        from tracekit.db import configure_db
+
+        with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
+            db_path = f.name
 
         try:
-            with patch("main.CONFIG_PATH", Path(temp_file)):
+            tdb._configured = False
+            configure_db(db_path)
+            db = tdb.get_db()
+            db.connect(reuse_if_open=True)
+            migrate_tables(get_all_models())
+
+            with patch.object(tcfg, "_FILE_PATHS", []):
                 config = load_tracekit_config()
 
-            assert "error" in config
-            assert "Invalid JSON" in config["error"]
+            assert config["home_timezone"] == "UTC"  # built-in default
+            assert isinstance(config.get("providers"), dict)
         finally:
-            os.remove(temp_file)
+            tdb._configured = False
+            with contextlib.suppress(Exception):
+                db.close()
+            if os.path.exists(db_path):
+                os.remove(db_path)
+
+
+# ---------------------------------------------------------------------------
+# TestDatabaseInfo
+# ---------------------------------------------------------------------------
 
 
 class TestDatabaseInfo:
     """Test database information functionality."""
 
     def test_get_database_info_valid_db(self, temp_database):
-        """Test getting info from a valid database."""
-        _db_path, config = temp_database
-        db_info = get_database_info(config)
+        """Returns table row counts when the DB is configured and populated."""
+        db_info = get_database_info()
 
         assert "error" not in db_info
         assert "tables" in db_info
@@ -159,29 +207,26 @@ class TestDatabaseInfo:
         assert db_info["tables"]["providersync"] == 6
         assert db_info["total_tables"] > 0
 
-    def test_get_database_info_empty_db(self):
-        """Test getting info from an empty (unconfigured) DB gracefully."""
-        import tracekit.db as tdb
+    def test_get_database_info_unavailable(self):
+        """Returns a dict gracefully when DB cannot be initialised."""
+        import main as main_module
 
-        with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
-            empty_path = f.name
+        main_module._db_initialized = False
+        with patch.dict(os.environ, {"DATABASE_URL": "", "METADATA_DB": "/no/such/path.db"}):
+            db_info = get_database_info()
 
-        try:
-            # empty DB — tables haven't been created, queries should error gracefully
-            tdb._configured = False
-            config = {"metadata_db": empty_path, "home_timezone": "UTC"}
-            db_info = get_database_info(config)
-            assert isinstance(db_info, dict)
-        finally:
-            tdb._configured = False
-            os.remove(empty_path)
+        assert isinstance(db_info, dict)
+
+
+# ---------------------------------------------------------------------------
+# TestProviderSorting
+# ---------------------------------------------------------------------------
 
 
 class TestProviderSorting:
     """Test provider sorting functionality."""
 
     def test_sort_providers_by_priority(self):
-        """Test sorting providers by priority."""
         providers = {
             "strava": {"enabled": True, "priority": 3},
             "garmin": {"enabled": True, "priority": 1},
@@ -200,7 +245,6 @@ class TestProviderSorting:
         assert sorted_providers[4][0] == "disabled"
 
     def test_sort_providers_all_disabled(self):
-        """Test sorting when all providers are disabled."""
         providers = {
             "strava": {"enabled": False},
             "garmin": {"enabled": False},
@@ -213,61 +257,46 @@ class TestProviderSorting:
         assert sorted_providers[1][0] in ["strava", "garmin"]
 
     def test_sort_providers_empty(self):
-        """Test sorting empty providers dict."""
-        sorted_providers = sort_providers({})
-        assert sorted_providers == []
+        assert sort_providers({}) == []
+
+
+# ---------------------------------------------------------------------------
+# TestWebRoutes
+# ---------------------------------------------------------------------------
 
 
 class TestWebRoutes:
     """Test Flask web routes."""
 
-    def test_index_route_success(self, client, temp_config, temp_database):
-        """Test the index route with valid config and database."""
-        temp_file, config_data = temp_config
-        _db_path, db_config = temp_database
-        config_data["metadata_db"] = db_config["metadata_db"]
-
-        with open(temp_file, "w") as f:
-            json.dump(config_data, f)
-
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            response = client.get("/")
+    def test_index_route_success(self, client, temp_database):
+        """Index renders with config values from the DB."""
+        response = client.get("/")
 
         assert response.status_code == 200
         assert b"tracekit Dashboard" in response.data
         assert b"US/Pacific" in response.data
 
-    def test_index_route_config_error(self, client):
-        """Test the index route with config error."""
-        with patch("main.CONFIG_PATH", Path("nonexistent.json")):
+    def test_index_route_no_db_still_serves(self, client):
+        """Index always responds 200 even with no external config — uses defaults."""
+        import tracekit.appconfig as tcfg
+
+        with patch.object(tcfg, "_FILE_PATHS", []):
             response = client.get("/")
 
         assert response.status_code == 200
-        assert b"Configuration Error" in response.data
 
-    def test_calendar_route_success(self, client, temp_config, temp_database):
-        """Test the calendar route with valid data."""
-        temp_file, config_data = temp_config
-        _db_path, db_config = temp_database
-        config_data["metadata_db"] = db_config["metadata_db"]
-
-        with open(temp_file, "w") as f:
-            json.dump(config_data, f)
-
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            response = client.get("/calendar")
+    def test_calendar_route_success(self, client, temp_database):
+        """Calendar page renders with sync data from DB."""
+        response = client.get("/calendar")
 
         assert response.status_code == 200
         assert b"tracekit Sync Calendar" in response.data
         assert b"strava" in response.data
         assert b"garmin" in response.data
 
-    def test_api_config_route(self, client, temp_config):
-        """Test the API config route."""
-        temp_file, _config_data = temp_config
-
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            response = client.get("/api/config")
+    def test_api_config_route(self, client, temp_database):
+        """GET /api/config returns the config stored in the DB."""
+        response = client.get("/api/config")
 
         assert response.status_code == 200
         assert response.is_json
@@ -275,17 +304,25 @@ class TestWebRoutes:
         assert data["home_timezone"] == "US/Pacific"
         assert "providers" in data
 
-    def test_api_database_route(self, client, temp_config, temp_database):
-        """Test the API database route."""
-        temp_file, config_data = temp_config
-        _db_path, db_config = temp_database
-        config_data["metadata_db"] = db_config["metadata_db"]
+    def test_api_config_put(self, client, temp_database):
+        """PUT /api/config persists a new config and subsequent GET reflects it."""
+        new_cfg = {**_CONFIG_DATA, "home_timezone": "US/Mountain"}
 
-        with open(temp_file, "w") as f:
-            json.dump(config_data, f)
+        response = client.put(
+            "/api/config",
+            data=json.dumps(new_cfg),
+            content_type="application/json",
+        )
 
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            response = client.get("/api/database")
+        assert response.status_code == 200
+        assert response.get_json()["status"] == "saved"
+
+        resp2 = client.get("/api/config")
+        assert resp2.get_json()["home_timezone"] == "US/Mountain"
+
+    def test_api_database_route(self, client, temp_database):
+        """GET /api/database returns table counts."""
+        response = client.get("/api/database")
 
         assert response.status_code == 200
         assert response.is_json
@@ -293,18 +330,7 @@ class TestWebRoutes:
         assert "tables" in data
         assert "providersync" in data["tables"]
 
-    def test_api_database_route_no_config(self, client):
-        """Test the API database route with no valid config."""
-        with patch("main.CONFIG_PATH", Path("nonexistent.json")):
-            response = client.get("/api/database")
-
-        assert response.status_code == 200
-        assert response.is_json
-        data = response.get_json()
-        assert "error" in data
-
     def test_health_route(self, client):
-        """Test the health check route."""
         response = client.get("/health")
 
         assert response.status_code == 200
@@ -314,39 +340,211 @@ class TestWebRoutes:
         assert data["app"] == "tracekit-web"
 
     def test_404_route(self, client):
-        """Test a non-existent route returns 404."""
         response = client.get("/nonexistent")
         assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# TestSettingsRoute
+# ---------------------------------------------------------------------------
+
+
+class TestSettingsRoute:
+    """Tests for GET /settings and the PUT /api/config round-trip it relies on."""
+
+    def test_settings_route_returns_200(self, client, temp_database):
+        response = client.get("/settings")
+        assert response.status_code == 200
+
+    def test_settings_route_without_db_still_serves(self, client):
+        """Settings page renders even when no external database is configured."""
+        import tracekit.appconfig as tcfg
+
+        with patch.object(tcfg, "_FILE_PATHS", []):
+            response = client.get("/settings")
+        assert response.status_code == 200
+
+    def test_settings_has_timezone_select(self, client, temp_database):
+        response = client.get("/settings")
+        assert b'<select id="timezone">' in response.data
+
+    def test_settings_timezone_preselected(self, client, temp_database):
+        """The current timezone from config is pre-selected in the <select>."""
+        response = client.get("/settings")
+        # _CONFIG_DATA sets home_timezone = "US/Pacific"
+        assert b'value="US/Pacific" selected' in response.data
+
+    def test_settings_has_debug_toggle(self, client, temp_database):
+        response = client.get("/settings")
+        assert b'id="debug-toggle"' in response.data
+
+    def test_settings_debug_toggle_reflects_config(self, client, temp_database):
+        """debug=True in config → checkbox rendered as checked."""
+        # _CONFIG_DATA has debug=True
+        response = client.get("/settings")
+        assert b'id="debug-toggle" checked' in response.data
+
+    def test_settings_debug_unchecked_when_false(self, client, temp_database):
+        """debug=False in config → checkbox rendered without checked attribute."""
+        import tracekit.appconfig as tcfg
+        from tracekit.appconfig import save_config
+
+        save_config({**_CONFIG_DATA, "debug": False})
+        tcfg._FILE_PATHS = []
+        response = client.get("/settings")
+        body = response.data.decode()
+        # The checked attribute should not appear on the debug toggle
+        assert 'id="debug-toggle" checked' not in body
+        assert 'id="debug-toggle"' in body
+
+    def test_settings_has_provider_list(self, client, temp_database):
+        response = client.get("/settings")
+        assert b'id="provider-list"' in response.data
+
+    def test_settings_has_save_button(self, client, temp_database):
+        response = client.get("/settings")
+        assert b'id="save-btn"' in response.data
+
+    def test_settings_has_back_link_to_dashboard(self, client, temp_database):
+        response = client.get("/settings")
+        assert b'href="/"' in response.data
+
+    def test_settings_providers_injected_into_page(self, client, temp_database):
+        """Provider names from config are embedded as JS data in the page."""
+        response = client.get("/settings")
+        body = response.data.decode()
+        # INITIAL_CONFIG is serialised into the page via tojson
+        assert "strava" in body
+        assert "garmin" in body
+
+    def test_settings_explains_enabled_field(self, client, temp_database):
+        """Page contains copy explaining what the Enabled toggle does."""
+        response = client.get("/settings")
+        body = response.data.decode().lower()
+        assert "pull" in body and "push" in body
+
+    def test_settings_explains_sync_equipment(self, client, temp_database):
+        """Page contains copy explaining what sync_equipment does."""
+        response = client.get("/settings")
+        body = response.data.decode().lower()
+        assert "equipment" in body
+
+    def test_settings_explains_sync_name(self, client, temp_database):
+        """Page contains copy explaining what sync_name does."""
+        response = client.get("/settings")
+        body = response.data.decode().lower()
+        assert "name" in body
+
+    def test_settings_explains_priority(self, client, temp_database):
+        """Page contains copy explaining how priority ordering works."""
+        response = client.get("/settings")
+        body = response.data.decode().lower()
+        assert "priority" in body and "override" in body
+
+    def test_settings_page_includes_timezone_options(self, client, temp_database):
+        """Timezone select is populated with multiple options."""
+        response = client.get("/settings")
+        # There should be at least ~400 timezones; check for some well-known ones
+        body = response.data.decode()
+        assert "US/Pacific" in body
+        assert "US/Eastern" in body
+        assert "Europe/London" in body
+
+    def test_api_config_put_roundtrip(self, client, temp_database):
+        """PUT /api/config persists; subsequent GET /api/config reflects the change."""
+        new_cfg = {
+            **_CONFIG_DATA,
+            "home_timezone": "US/Mountain",
+            "debug": False,
+        }
+        put_resp = client.put(
+            "/api/config",
+            data=json.dumps(new_cfg),
+            content_type="application/json",
+        )
+        assert put_resp.status_code == 200
+        assert put_resp.get_json()["status"] == "saved"
+
+        get_resp = client.get("/api/config")
+        saved = get_resp.get_json()
+        assert saved["home_timezone"] == "US/Mountain"
+        assert saved["debug"] is False
+
+    def test_api_config_put_updates_providers(self, client, temp_database):
+        """PUT /api/config with changed provider priority is persisted."""
+        updated = {
+            **_CONFIG_DATA,
+            "providers": {
+                "strava": {"enabled": True, "priority": 1, "sync_equipment": True, "sync_name": True},
+                "garmin": {"enabled": False, "priority": 2, "sync_equipment": False, "sync_name": True},
+            },
+        }
+        client.put("/api/config", data=json.dumps(updated), content_type="application/json")
+
+        resp = client.get("/api/config")
+        providers = resp.get_json()["providers"]
+        assert providers["garmin"]["enabled"] is False
+        assert providers["strava"]["priority"] == 1
+
+    def test_api_config_put_invalid_body_returns_400(self, client, temp_database):
+        """PUT /api/config with non-JSON body returns 400."""
+        resp = client.put("/api/config", data="not json", content_type="text/plain")
+        assert resp.status_code == 400
+
+    def test_api_config_put_empty_body_returns_400(self, client, temp_database):
+        """PUT /api/config with a JSON array (not object) returns 400."""
+        resp = client.put("/api/config", data="[]", content_type="application/json")
+        assert resp.status_code == 400
+
+    def test_settings_page_reflects_updated_config(self, client, temp_database):
+        """After a PUT /api/config, GET /settings shows the new timezone pre-selected."""
+        new_cfg = {**_CONFIG_DATA, "home_timezone": "Asia/Tokyo"}
+        client.put("/api/config", data=json.dumps(new_cfg), content_type="application/json")
+
+        # Force reload (new request picks up fresh load_config() call)
+        import main as main_module
+
+        main_module._db_initialized = False  # allow re-init against same DB
+
+        # Re-init against the same temp DB
+        import tracekit.db as tdb
+
+        tdb._configured = False
+        from tracekit.db import configure_db
+
+        configure_db(temp_database)
+        main_module._db_initialized = True
+
+        response = client.get("/settings")
+        body = response.data.decode()
+        assert 'value="Asia/Tokyo" selected' in body
+
+
+# ---------------------------------------------------------------------------
+# TestIntegration
+# ---------------------------------------------------------------------------
 
 
 class TestIntegration:
     """Integration tests for the web application."""
 
-    def test_full_application_flow(self, client, temp_config, temp_database):
-        """Test a complete flow through the application."""
-        temp_file, config_data = temp_config
-        _db_path, db_config = temp_database
-        config_data["metadata_db"] = db_config["metadata_db"]
+    def test_full_application_flow(self, client, temp_database):
+        """Full request flow: dashboard, config API, database API, health."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert b"tracekit Dashboard" in response.data
 
-        with open(temp_file, "w") as f:
-            json.dump(config_data, f)
+        response = client.get("/api/config")
+        assert response.status_code == 200
+        api_cfg = response.get_json()
+        assert "providers" in api_cfg
+        assert api_cfg["home_timezone"] == "US/Pacific"
 
-        with patch("main.CONFIG_PATH", Path(temp_file)):
-            response = client.get("/")
-            assert response.status_code == 200
-            assert b"tracekit Dashboard" in response.data
+        response = client.get("/api/database")
+        assert response.status_code == 200
+        db_data = response.get_json()
+        assert "tables" in db_data
 
-            response = client.get("/api/config")
-            assert response.status_code == 200
-            api_config = response.get_json()
-            assert "providers" in api_config
-
-            response = client.get("/api/database")
-            assert response.status_code == 200
-            db_data = response.get_json()
-            assert "tables" in db_data
-
-            response = client.get("/health")
-            assert response.status_code == 200
-            health_data = response.get_json()
-            assert health_data["status"] == "healthy"
+        response = client.get("/health")
+        assert response.status_code == 200
+        assert response.get_json()["status"] == "healthy"

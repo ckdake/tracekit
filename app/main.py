@@ -1,22 +1,16 @@
 """Simple Flask web application to view tracekit configuration and database status."""
 
 import calendar as _cal
-import json
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 import pytz
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 
 # Get the directory where this script is located
 app_dir = Path(__file__).parent
-app = Flask(__name__, template_folder=str(app_dir / "templates"))
-
-# Look for config file in current directory, then parent directory
-CONFIG_PATH = Path("tracekit_config.json")
-if not CONFIG_PATH.exists():
-    CONFIG_PATH = Path("../tracekit_config.json")
+app = Flask(__name__, template_folder=str(app_dir / "templates"), static_folder=str(app_dir / "static"))
 
 # ---------------------------------------------------------------------------
 # Database initialisation
@@ -25,15 +19,23 @@ if not CONFIG_PATH.exists():
 _db_initialized = False
 
 
-def _init_db(config: dict[str, Any]) -> bool:
-    """Lazily initialise the tracekit DB (honours DATABASE_URL for Postgres)."""
+def _init_db() -> bool:
+    """Configure the DB and ensure all tables exist.
+
+    Resolution order (no config file needed):
+      1. DATABASE_URL env var  → PostgreSQL
+      2. METADATA_DB env var   → SQLite at that path
+      3. Default               → metadata.sqlite3 in cwd
+    """
     global _db_initialized
     if not _db_initialized:
         try:
+            from tracekit.appconfig import get_db_path_from_env
+            from tracekit.database import get_all_models, migrate_tables
             from tracekit.db import configure_db
 
-            db_path = config.get("metadata_db", "metadata.sqlite3")
-            configure_db(db_path)
+            configure_db(get_db_path_from_env())
+            migrate_tables(get_all_models())
             _db_initialized = True
         except Exception as e:
             print(f"DB init failed: {e}")
@@ -42,14 +44,15 @@ def _init_db(config: dict[str, Any]) -> bool:
 
 
 def load_tracekit_config() -> dict[str, Any]:
-    """Load tracekit configuration from tracekit_config.json."""
-    try:
-        with open(CONFIG_PATH) as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"error": "tracekit_config.json not found"}
-    except json.JSONDecodeError as e:
-        return {"error": f"Invalid JSON: {e}"}
+    """Load tracekit config — always returns a valid dict.
+
+    Priority: DB rows → JSON file (migrated in on first call) → built-in defaults.
+    Never returns an error dict; the app always has a working config.
+    """
+    _init_db()
+    from tracekit.appconfig import load_config
+
+    return load_config()
 
 
 def get_current_date_in_timezone(config: dict[str, Any]) -> date:
@@ -64,9 +67,9 @@ def get_current_date_in_timezone(config: dict[str, Any]) -> date:
         return datetime.now(pytz.UTC).date()
 
 
-def get_database_info(config: dict[str, Any]) -> dict[str, Any]:
+def get_database_info(config: dict[str, Any] | None = None) -> dict[str, Any]:
     """Get basic information about the configured database."""
-    if not _init_db(config):
+    if not _init_db():
         return {"error": "Database not available"}
 
     try:
@@ -117,9 +120,9 @@ def get_sync_calendar_data(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def get_calendar_shell(config: dict[str, Any]) -> dict[str, Any]:
+def get_calendar_shell(config: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return month stubs and providers list — no activity table scans."""
-    if not _init_db(config):
+    if not _init_db():
         return {"error": "Database not available"}
 
     try:
@@ -176,13 +179,13 @@ def get_calendar_shell(config: dict[str, Any]) -> dict[str, Any]:
         return {"error": f"Database error: {e}"}
 
 
-def get_single_month_data(config: dict[str, Any], year_month: str) -> dict[str, Any]:
+def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dict[str, Any]:
     """Return sync status and activity counts for one month.
 
     Activity queries are scoped to the month's timestamp range so this is
     fast even for large databases.
     """
-    if not _init_db(config):
+    if not _init_db():
         return {"error": "Database not available"}
 
     try:
@@ -252,6 +255,16 @@ def get_single_month_data(config: dict[str, Any], year_month: str) -> dict[str, 
         return {"error": f"Database error: {e}"}
 
 
+@app.route("/settings")
+def settings():
+    """Settings page — edit providers, timezone and debug flag."""
+    config = load_tracekit_config()
+    import pytz
+
+    timezones = pytz.common_timezones
+    return render_template("settings.html", config=config, timezones=timezones)
+
+
 @app.route("/calendar")
 def calendar():
     """Sync calendar page — renders card shells; each card loads via /api/calendar/<ym>."""
@@ -300,26 +313,34 @@ def index():
     if "providers" in config and not config.get("error"):
         sorted_providers = sort_providers(config["providers"])
 
-    db_info = {}
-    if not config.get("error"):
-        db_info = get_database_info(config)
+    db_info = get_database_info(config)
 
     return render_template("index.html", config=config, sorted_providers=sorted_providers, db_info=db_info)
 
 
-@app.route("/api/config")
+@app.route("/api/config", methods=["GET"])
 def api_config():
-    """API endpoint for configuration data."""
+    """Return the current configuration as JSON."""
     return jsonify(load_tracekit_config())
+
+
+@app.route("/api/config", methods=["PUT"])
+def api_config_save():
+    """Persist a new configuration to the DB."""
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({"error": "Expected a JSON object"}), 400
+    _init_db()
+    from tracekit.appconfig import save_config
+
+    save_config(data)
+    return jsonify({"status": "saved"})
 
 
 @app.route("/api/database")
 def api_database():
     """API endpoint for database information."""
-    config = load_tracekit_config()
-    if not config.get("error"):
-        return jsonify(get_database_info(config))
-    return jsonify({"error": "Config error"})
+    return jsonify(get_database_info())
 
 
 @app.route("/api/calendar/<year_month>")
@@ -330,8 +351,6 @@ def api_calendar_month(year_month: str):
     if not re.fullmatch(r"\d{4}-\d{2}", year_month):
         return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
     config = load_tracekit_config()
-    if config.get("error"):
-        return jsonify({"error": "Config error"}), 503
     return jsonify(get_single_month_data(config, year_month))
 
 
@@ -375,35 +394,21 @@ def health():
 
 
 if __name__ == "__main__":
-    print("🚀 Starting tracekit Web App...")
+    print("Starting tracekit Web App...")
 
-    # Test that everything works before starting server
-    print("� Testing configuration...")
     config = load_tracekit_config()
-    if config.get("error"):
-        print(f"❌ Config error: {config['error']}")
-        exit(1)
-    else:
-        print(f"✅ Config loaded: {config.get('home_timezone')}")
+    print(f"Config loaded: timezone={config.get('home_timezone')}, debug={config.get('debug')}")
 
-    print("📋 Testing template rendering...")
-    with app.test_client() as client:
-        response = client.get("/")
-        if response.status_code == 200:
-            print("✅ Template rendering works")
-        else:
-            print("❌ Template rendering failed")
-            exit(1)
-
-    print("�📍 Server starting at: http://localhost:5000")
-    print("🔧 Dashboard: http://localhost:5000")
-    print("🔧 Config API: http://localhost:5000/api/config")
-    print("💾 Database API: http://localhost:5000/api/database")
-    print("❤️  Health Check: http://localhost:5000/health")
+    print("Server starting at: http://localhost:5000")
+    print("  Dashboard:    http://localhost:5000")
+    print("  Settings:     http://localhost:5000/settings")
+    print("  Config API:   http://localhost:5000/api/config")
+    print("  Database API: http://localhost:5000/api/database")
+    print("  Health:       http://localhost:5000/health")
     print("\nPress Ctrl+C to stop")
 
     try:
-        app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)
+        app.run(debug=config.get("debug", False), host="0.0.0.0", port=5000, threaded=True)
     except Exception as e:
-        print(f"❌ Server failed to start: {e}")
+        print(f"Server failed to start: {e}")
         exit(1)

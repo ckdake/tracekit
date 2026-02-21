@@ -1,231 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>tracekit Dashboard</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background: #f5f5f5;
-            color: #333;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
-        }
-        h2 {
-            color: #34495e;
-            margin-top: 30px;
-        }
-        .section {
-            margin: 20px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #3498db;
-        }
-        .error {
-            background: #fee;
-            border-left-color: #e74c3c;
-            color: #c0392b;
-        }
-        .success {
-            background: #efe;
-            border-left-color: #27ae60;
-            color: #27ae60;
-        }
-        .config-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .config-item:last-child {
-            border-bottom: none;
-        }
-        .config-key {
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        .config-value {
-            font-family: 'Courier New', monospace;
-            background: #ecf0f1;
-            padding: 2px 6px;
-            border-radius: 3px;
-        }
-        .provider {
-            margin: 10px 0;
-            padding: 15px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        .provider-name {
-            font-weight: bold;
-            color: #2980b9;
-            margin-bottom: 8px;
-        }
-        .enabled {
-            color: #27ae60;
-            font-weight: bold;
-        }
-        .disabled {
-            color: #e74c3c;
-            font-weight: bold;
-        }
-        .table-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .table-item {
-            background: white;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        .table-name {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        .table-count {
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-        .api-links {
-            margin-top: 30px;
-            padding: 20px;
-            background: #e8f4f8;
-            border-radius: 6px;
-        }
-        .api-link {
-            display: inline-block;
-            margin: 5px 10px 5px 0;
-            padding: 8px 12px;
-            background: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        .api-link:hover {
-            background: #2980b9;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🏃‍♂️ tracekit Dashboard</h1>
+{% extends "base.html" %}
+{% block title %}tracekit Dashboard{% endblock %}
 
-        <div class="section">
-            <h2>📍 Quick Links</h2>
-            <div class="api-links">
-                <a href="/calendar" class="api-link">📅 Sync Calendar</a>
-                <a href="/api/config" class="api-link">⚙️ Config API</a>
-                <a href="/api/database" class="api-link">💾 Database API</a>
-                <a href="/health" class="api-link">❤️ Health Check</a>
-            </div>
-        </div>
+{% block body %}
+<div class="container">
+    <h1>🏃‍♂️ tracekit</h1>
 
-        {% if config.error %}
-        <div class="section error">
-            <h2>❌ Configuration Error</h2>
-            <p><strong>Error:</strong> {{ config.error }}</p>
-            <p>Make sure <code>tracekit_config.json</code> exists in the parent directory and is valid JSON.</p>
+    {% include 'partials/_nav.html' %}
+
+    <div class="section">
+        <h2>🗓 Current Config</h2>
+        <div class="config-item">
+            <span class="config-key">Timezone</span>
+            <span class="config-value">{{ config.home_timezone or '—' }}</span>
         </div>
+        <div class="config-item">
+            <span class="config-key">Debug</span>
+            <span class="config-value">{{ 'on' if config.debug else 'off' }}</span>
+        </div>
+        <div class="config-item">
+            <span class="config-key">Providers enabled</span>
+            <span class="config-value">
+                {%- set enabled = namespace(names=[]) -%}
+                {%- for name, p in (config.providers or {}).items() -%}
+                    {%- if p.enabled -%}{%- set enabled.names = enabled.names + [name] -%}{%- endif -%}
+                {%- endfor -%}
+                {{ enabled.names | join(', ') or '(none)' }}
+            </span>
+        </div>
+        <div style="margin-top:14px">
+            <a href="/settings" class="nav-link sm">Edit in Settings →</a>
+        </div>
+    </div>
+
+    {% if db_info %}
+    <div class="section{% if db_info.error %} error{% endif %}">
+        <h2>💾 Database</h2>
+        {% if db_info.error %}
+            <p><strong>Error:</strong> {{ db_info.error }}</p>
         {% else %}
-        <div class="section success">
-            <h2>⚙️ Configuration Status</h2>
             <div class="config-item">
-                <span class="config-key">Home Timezone:</span>
-                <span class="config-value">{{ config.home_timezone }}</span>
-            </div>
-            <div class="config-item">
-                <span class="config-key">Database Path:</span>
-                <span class="config-value">{{ config.metadata_db }}</span>
-            </div>
-            <div class="config-item">
-                <span class="config-key">Debug Mode:</span>
-                <span class="config-value">{{ config.debug }}</span>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>🔌 Providers</h2>
-            {% for provider_name, provider_config in sorted_providers %}
-            <div class="provider">
-                <div class="provider-name">{{ provider_name.title() }}</div>
-                <div class="config-item">
-                    <span class="config-key">Status:</span>
-                    <span class="{% if provider_config.enabled %}enabled{% else %}disabled{% endif %}">
-                        {% if provider_config.enabled %}✅ Enabled{% else %}❌ Disabled{% endif %}
-                    </span>
-                </div>
-                {% if provider_config.priority %}
-                <div class="config-item">
-                    <span class="config-key">Priority:</span>
-                    <span class="config-value">{{ provider_config.priority }}</span>
-                </div>
-                {% endif %}
-                {% if provider_config.path %}
-                <div class="config-item">
-                    <span class="config-key">Path:</span>
-                    <span class="config-value">{{ provider_config.path }}</span>
-                </div>
-                {% endif %}
-                {% if provider_config.glob %}
-                <div class="config-item">
-                    <span class="config-key">Glob Pattern:</span>
-                    <span class="config-value">{{ provider_config.glob }}</span>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if db_info %}
-        <div class="section">
-            <h2>💾 Database Information</h2>
-            {% if db_info.error %}
-            <div class="error">
-                <p><strong>Error:</strong> {{ db_info.error }}</p>
-                {% if db_info.path %}
-                <p><strong>Path:</strong> <code>{{ db_info.path }}</code></p>
-                {% endif %}
-            </div>
-            {% else %}
-            <div class="config-item">
-                <span class="config-key">Database Path:</span>
-                <span class="config-value">{{ db_info.path }}</span>
-            </div>
-            <div class="config-item">
-                <span class="config-key">File Size:</span>
-                <span class="config-value">{{ db_info.file_size_mb }} MB ({{ db_info.file_size_bytes }} bytes)</span>
-            </div>
-            <div class="config-item">
-                <span class="config-key">Total Tables:</span>
+                <span class="config-key">Total tables</span>
                 <span class="config-value">{{ db_info.total_tables }}</span>
             </div>
-
             {% if db_info.tables %}
-            <h3>📊 Table Information</h3>
-            <div class="table-info">
+            <div class="table-grid">
                 {% for table_name, row_count in db_info.tables.items() %}
                 <div class="table-item">
                     <div class="table-name">{{ table_name }}</div>
@@ -234,16 +52,8 @@
                 {% endfor %}
             </div>
             {% endif %}
-            {% endif %}
-        </div>
         {% endif %}
-
-        <div class="section">
-            <h2>ℹ️ About</h2>
-            <p>This is the tracekit local development dashboard. It provides a quick overview of your tracekit configuration and database status.</p>
-            <p><strong>Version:</strong> Local Development</p>
-            <p><strong>Environment:</strong> {{ config.home_timezone or 'Not configured' }}</p>
-        </div>
     </div>
-</body>
-</html>
+    {% endif %}
+</div>
+{% endblock %}
