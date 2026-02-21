@@ -195,13 +195,14 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
                 create_notification(f"Sync change failed: {msg}", category="error")
             except Exception:
                 pass
-            raise RuntimeError(msg)
+            return {"success": False, "message": msg}
 
     except Exception as exc:
+        msg = str(exc)
         try:
             from tracekit.notification import create_notification
 
-            create_notification(f"Sync change error for {year_month}: {exc}", category="error")
+            create_notification(f"Sync change error for {year_month}: {msg}", category="error")
         except Exception:
             pass
         raise

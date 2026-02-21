@@ -283,7 +283,7 @@ class StravaProvider(FitnessProvider):
 
         except Exception as e:
             print(f"Error updating Strava activity {provider_id}: {e}")
-            return False
+            raise
 
     def get_all_gear(self) -> dict[str, str]:
         """Get all gear from Strava athlete profile."""

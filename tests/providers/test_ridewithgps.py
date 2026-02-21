@@ -105,7 +105,7 @@ def test_update_activity_multiple_fields():
 
 
 def test_update_activity_api_failure():
-    """Test handling of API failure during update."""
+    """Test that API failure during update raises the exception."""
     provider = RideWithGPSProvider()
 
     # Mock API failure
@@ -114,18 +114,16 @@ def test_update_activity_api_failure():
     # Test data
     activity_data = {"ridewithgps_id": "12345", "name": "Updated Name"}
 
-    # Call update_activity and expect it to handle the exception
-    result = provider.update_activity(activity_data)
-
-    # Verify the result is False due to the exception
-    assert result is False
+    # update_activity should raise so callers get the real error message
+    with pytest.raises(Exception, match="API Error"):
+        provider.update_activity(activity_data)
 
     # Verify the API was called
     provider.client.patch.assert_called_once()
 
 
 def test_update_activity_api_error_response():
-    """Test handling of API error response during update."""
+    """Test that an API error response during update raises a RuntimeError."""
     provider = RideWithGPSProvider()
 
     # Mock API response with error
@@ -135,11 +133,9 @@ def test_update_activity_api_error_response():
     # Test data
     activity_data = {"ridewithgps_id": "12345", "name": "Updated Name"}
 
-    # Call update_activity
-    result = provider.update_activity(activity_data)
-
-    # Verify the result is False due to the error response
-    assert result is False
+    # update_activity should raise so callers get the real error message
+    with pytest.raises(RuntimeError, match="Some API error"):
+        provider.update_activity(activity_data)
 
 
 def test_update_activity_removes_provider_id():

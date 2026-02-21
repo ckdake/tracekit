@@ -75,7 +75,7 @@ class TestStravaProviderUpdate:
         )
 
     def test_update_activity_api_failure(self):
-        """Test handling of API failure during update."""
+        """Test that API failure during update raises the exception."""
         # Mock the stravalib client to raise an exception
         mock_client = Mock()
         mock_client.update_activity = Mock(side_effect=Exception("API Error"))
@@ -87,11 +87,9 @@ class TestStravaProviderUpdate:
         # Test data
         activity_data = {"strava_id": "12345", "name": "Updated Name"}
 
-        # Call update_activity and expect it to handle the exception
-        result = provider.update_activity(activity_data)
-
-        # Verify the result is False due to the exception
-        assert result is False
+        # update_activity should raise so callers get the real error message
+        with pytest.raises(Exception, match="API Error"):
+            provider.update_activity(activity_data)
 
         # Verify the API was called
         mock_client.update_activity.assert_called_once()

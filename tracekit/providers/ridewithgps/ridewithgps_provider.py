@@ -143,14 +143,13 @@ class RideWithGPSProvider(FitnessProvider):
 
             # Check if there's an error in the response
             if hasattr(response, "error"):
-                print(f"API returned error: {response.error}")
-                return False
+                raise RuntimeError(f"RideWithGPS API error: {response.error}")
 
             return True
 
         except Exception as e:
             print(f"Error updating RideWithGPS trip {provider_id}: {e}")
-            return False
+            raise
 
     def get_all_gear(self) -> dict[str, str]:
         """Get gear from RideWithGPS user info."""
