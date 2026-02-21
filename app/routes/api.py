@@ -39,6 +39,17 @@ def api_recent_activity():
     return jsonify(get_most_recent_activity(config))
 
 
+@api_bp.route("/api/provider-status")
+def api_provider_status():
+    """Return per-provider operational status (last op, success, rate limits)."""
+    try:
+        from tracekit.provider_status import get_all_statuses
+
+        return jsonify(get_all_statuses())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @api_bp.route("/health")
 def health():
     """Health check endpoint."""

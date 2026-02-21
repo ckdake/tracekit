@@ -12,7 +12,14 @@ from typing import Any
 import pytz
 from dateutil.relativedelta import relativedelta
 from stravalib import Client
+from stravalib.exc import RateLimitExceeded, RateLimitTimeout
 
+from tracekit.provider_status import (
+    RATE_LIMIT_LONG_TERM,
+    RATE_LIMIT_SHORT_TERM,
+    ProviderRateLimitError,
+    next_midnight_utc,
+)
 from tracekit.provider_sync import ProviderSync
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.strava.strava_activity import StravaActivity
@@ -40,6 +47,31 @@ class StravaProvider(FitnessProvider):
             refresh_token=refresh_token,
             token_expires=int(token_expires),
         )
+
+    def _raise_rate_limit(self, exc: RateLimitExceeded, operation: str) -> None:
+        """Convert a stravalib rate-limit exception into a ProviderRateLimitError.
+
+        RateLimitTimeout (short-term, has a wait timeout) → RATE_LIMIT_SHORT_TERM.
+        RateLimitExceeded without a short timeout      → RATE_LIMIT_LONG_TERM.
+        """
+        timeout = getattr(exc, "timeout", None)
+        if isinstance(exc, RateLimitTimeout) and timeout and timeout <= 920:
+            raise ProviderRateLimitError(
+                f"Strava short-term rate limit hit during {operation} — retrying in {timeout}s. "
+                f"See https://developers.strava.com/docs/rate-limits/",
+                provider="strava",
+                limit_type=RATE_LIMIT_SHORT_TERM,
+                reset_at=int(__import__("time").time()) + int(timeout),
+                retry_after=int(timeout),
+            ) from exc
+        raise ProviderRateLimitError(
+            f"Strava daily rate limit exceeded during {operation} — resets at midnight UTC. "
+            f"See https://developers.strava.com/docs/rate-limits/",
+            provider="strava",
+            limit_type=RATE_LIMIT_LONG_TERM,
+            reset_at=next_midnight_utc(),
+            retry_after=None,
+        ) from exc
 
     def _ensure_fresh_token(self) -> None:
         """Silently refresh the access token if it is expired or about to expire.
@@ -193,11 +225,13 @@ class StravaProvider(FitnessProvider):
         start_date = tz.localize(datetime.datetime(year, month, 1))
         end_date = start_date + relativedelta(months=1)
 
-        activities = []
-        for activity in self.client.get_activities(after=start_date, before=end_date, limit=None):
-            activities.append(activity)
-
-        return activities
+        try:
+            activities = []
+            for activity in self.client.get_activities(after=start_date, before=end_date, limit=None):
+                activities.append(activity)
+            return activities
+        except (RateLimitExceeded, RateLimitTimeout) as exc:
+            self._raise_rate_limit(exc, "fetch_activities")
 
     def _convert_to_strava_activity(self, strava_lib_activity) -> StravaActivity:
         """Convert a stravalib activity to our StravaActivity object"""
@@ -208,7 +242,10 @@ class StravaProvider(FitnessProvider):
 
         if activity_id is not None:
             time.sleep(1)  # Throttle API calls to avoid rate limit
-            full_activity = self.client.get_activity(int(activity_id))
+            try:
+                full_activity = self.client.get_activity(int(activity_id))
+            except (RateLimitExceeded, RateLimitTimeout) as exc:
+                self._raise_rate_limit(exc, "get_activity")
 
         # Basic fields
         strava_activity.strava_id = str(getattr(full_activity, "id", ""))
@@ -281,6 +318,8 @@ class StravaProvider(FitnessProvider):
 
             return True
 
+        except (RateLimitExceeded, RateLimitTimeout) as exc:
+            self._raise_rate_limit(exc, "update_activity")
         except Exception as e:
             print(f"Error updating Strava activity {provider_id}: {e}")
             raise

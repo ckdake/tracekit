@@ -43,7 +43,7 @@ celery_app.conf.update(
 )
 
 
-@celery_app.task(bind=True, name="tracekit.worker.pull_month")
+@celery_app.task(bind=True, max_retries=1, name="tracekit.worker.pull_month")
 def pull_month(self, year_month: str):
     """Pull activities for a given YYYY-MM from all enabled providers."""
     try:
@@ -78,6 +78,35 @@ def pull_month(self, year_month: str):
         except Exception:
             pass
     except Exception as exc:
+        from tracekit.provider_status import RATE_LIMIT_SHORT_TERM, ProviderRateLimitError
+
+        if isinstance(exc, ProviderRateLimitError):
+            if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
+                # Short-term: notify and retry after the cooldown
+                try:
+                    from tracekit.notification import create_notification
+
+                    create_notification(
+                        f"Strava short-term rate limit hit — retrying pull for {year_month} in {exc.retry_after}s.",
+                        category="info",
+                    )
+                except Exception:
+                    pass
+                raise self.retry(countdown=exc.retry_after, exc=exc)
+            else:
+                # Long-term: fail immediately
+                try:
+                    from tracekit.notification import create_notification
+
+                    create_notification(
+                        f"Strava daily rate limit exceeded — pull for {year_month} will not be retried. "
+                        f"Limit resets at midnight UTC. See https://developers.strava.com/docs/rate-limits/",
+                        category="error",
+                    )
+                except Exception:
+                    pass
+                raise
+
         try:
             from tracekit.notification import create_notification
 
@@ -149,7 +178,7 @@ def reset_all(self):
         raise
 
 
-@celery_app.task(bind=True, name="tracekit.worker.apply_sync_change")
+@celery_app.task(bind=True, max_retries=1, name="tracekit.worker.apply_sync_change")
 def apply_sync_change(self, change_dict: dict, year_month: str):
     """Apply a single ActivityChange for *year_month*.
 
@@ -180,10 +209,13 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
             grouped, _ = compute_month_changes(tk, year_month)
             success, msg = apply_change(change, tk, grouped=grouped)
 
+        provider = change_dict.get("provider", "unknown")
         if success:
             try:
                 from tracekit.notification import create_notification
+                from tracekit.provider_status import record_operation
 
+                record_operation(provider, change_dict.get("change_type", "apply_change"), True, msg)
                 create_notification(f"Sync change applied: {msg}", category="info")
             except Exception:
                 pass
@@ -191,17 +223,49 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
         else:
             try:
                 from tracekit.notification import create_notification
+                from tracekit.provider_status import record_operation
 
+                record_operation(provider, change_dict.get("change_type", "apply_change"), False, msg)
                 create_notification(f"Sync change failed: {msg}", category="error")
             except Exception:
                 pass
             return {"success": False, "message": msg}
 
     except Exception as exc:
+        from tracekit.provider_status import RATE_LIMIT_SHORT_TERM, ProviderRateLimitError
+
+        if isinstance(exc, ProviderRateLimitError):
+            if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
+                try:
+                    from tracekit.notification import create_notification
+
+                    create_notification(
+                        f"Strava short-term rate limit hit — retrying in {exc.retry_after}s.",
+                        category="info",
+                    )
+                except Exception:
+                    pass
+                raise self.retry(countdown=exc.retry_after, exc=exc)
+            else:
+                try:
+                    from tracekit.notification import create_notification
+
+                    create_notification(
+                        "Strava daily rate limit exceeded — sync change not applied. "
+                        "Resets at midnight UTC. See https://developers.strava.com/docs/rate-limits/",
+                        category="error",
+                    )
+                except Exception:
+                    pass
+                raise
+
         msg = str(exc)
         try:
             from tracekit.notification import create_notification
+            from tracekit.provider_status import record_operation
 
+            provider = change_dict.get("provider", "unknown")
+            record_operation(provider, change_dict.get("change_type", "apply_change"), False, msg)
             create_notification(f"Sync change error for {year_month}: {msg}", category="error")
         except Exception:
             pass

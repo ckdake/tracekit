@@ -7,6 +7,7 @@ from .activity import Activity
 from .appconfig import AppConfig
 from .db import get_db
 from .notification import Notification
+from .provider_status import ProviderStatus
 from .provider_sync import ProviderSync
 from .providers.base_provider_activity import BaseProviderActivity
 
@@ -28,6 +29,8 @@ def _run_schema_upgrades() -> None:
     pending = [
         ("garmin_activities", "device_name", "VARCHAR(255)"),
         ("notification", "expires", "INTEGER"),
+        ("provider_status", "rate_limit_type", "VARCHAR(64)"),
+        ("provider_status", "rate_limit_reset_at", "INTEGER"),
     ]
 
     db = get_db()
@@ -54,6 +57,7 @@ def get_all_models() -> list[type[Model]]:
         AppConfig,
         Activity,
         ProviderSync,
+        ProviderStatus,
         Notification,
         *list(cast(list[type[Model]], BaseProviderActivity.__subclasses__())),
     ]

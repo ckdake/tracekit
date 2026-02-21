@@ -238,12 +238,36 @@ class Tracekit:
                     provider_activities = provider.pull_activities(year_month)
                     activities[provider_name] = provider_activities
                     print(f"Pulled {len(provider_activities)} activities from {provider_name}")
+                    try:
+                        from tracekit.provider_status import record_operation
+
+                        record_operation(
+                            provider_name,
+                            "pull",
+                            True,
+                            f"Pulled {len(provider_activities)} activities for {year_month}",
+                        )
+                    except Exception:
+                        pass
                 except Exception as e:
+                    from tracekit.provider_status import ProviderRateLimitError
+
+                    # Rate limit errors must propagate so the worker can retry/fail cleanly
+                    if isinstance(e, ProviderRateLimitError):
+                        try:
+                            from tracekit.provider_status import record_rate_limit
+
+                            record_rate_limit(e.provider, e.limit_type, e.reset_at, "pull", str(e))
+                        except Exception:
+                            pass
+                        raise
                     print(f"Error pulling from {provider_name}: {e}")
                     activities[provider_name] = []
                     try:
                         from tracekit.notification import create_notification
+                        from tracekit.provider_status import record_operation
 
+                        record_operation(provider_name, "pull", False, str(e))
                         create_notification(
                             f"{provider_name} error pulling {year_month}: {e}",
                             category="error",

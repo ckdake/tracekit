@@ -297,6 +297,55 @@ select#timezone:focus {
 }
 .provider-card.disabled-card { opacity: .7; }
 
+/* Provider operational status strip */
+.provider-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .78rem;
+    color: #666;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #ebebeb;
+    flex-wrap: wrap;
+}
+.provider-status .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.provider-status .status-dot.ok   { background: #27ae60; }
+.provider-status .status-dot.error { background: #e74c3c; }
+.provider-status .status-dot.unknown { background: #bbb; }
+.provider-status .status-op   { font-weight: 500; color: #444; }
+.provider-status .status-time { color: #999; }
+.provider-status .status-msg  { color: #777; font-style: italic; }
+
+/* Rate-limit warning banner inside provider card */
+.provider-rate-limit {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-size: .8rem;
+    line-height: 1.4;
+}
+.provider-rate-limit.short-term {
+    background: #fff8e1;
+    border: 1px solid #f0c040;
+    color: #7a5c00;
+}
+.provider-rate-limit.long-term {
+    background: #fdecea;
+    border: 1px solid #e57373;
+    color: #8b1c1c;
+}
+.provider-rate-limit .rl-icon { font-size: 1rem; flex-shrink: 0; }
+.provider-rate-limit a { color: inherit; text-decoration: underline; }
+
 .provider-header {
     display: flex;
     align-items: center;

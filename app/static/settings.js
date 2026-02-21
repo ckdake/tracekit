@@ -251,6 +251,7 @@ function showFieldCheck(inputEl) {
 
 async function autoSave(triggerEl) {
     const tz    = document.getElementById('timezone').value;
+    const debug = document.getElementById('debug-toggle')?.checked ?? INITIAL_CONFIG.debug ?? false;
 
     const cards = document.querySelectorAll('.provider-card');
     const newProviders = {};
@@ -278,7 +279,7 @@ async function autoSave(triggerEl) {
         priority++;
     });
 
-    const newConfig = { ...INITIAL_CONFIG, home_timezone: tz, providers: newProviders };
+    const newConfig = { ...INITIAL_CONFIG, home_timezone: tz, debug, providers: newProviders };
 
     try {
         const resp = await fetch('/api/config', {
@@ -531,9 +532,111 @@ function openGarminModal(card, data, providerName) {
     _modal.classList.remove('hidden');
 }
 
+// ── Provider status ───────────────────────────────────────────────────────────
+function formatRelativeTime(ts) {
+    if (!ts) return null;
+    const diff = Math.floor(Date.now() / 1000) - ts;
+    if (diff < 60)  return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function formatAbsTime(ts) {
+    if (!ts) return null;
+    return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatCountdown(ts) {
+    const secs = ts - Math.floor(Date.now() / 1000);
+    if (secs <= 0) return 'soon';
+    if (secs < 3600) return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+    return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`;
+}
+
+function renderProviderStatuses(statuses) {
+    document.querySelectorAll('.provider-card').forEach(card => {
+        const name = card.dataset.provider;
+        const status = statuses[name];
+
+        // Remove old status elements if re-rendering
+        card.querySelectorAll('.provider-status, .provider-rate-limit').forEach(el => el.remove());
+
+        // Rate limit banner (shown first / most prominently if present)
+        if (status?.rate_limit_type) {
+            const isLong = status.rate_limit_type === 'long_term';
+            const banner = document.createElement('div');
+            banner.className = `provider-rate-limit ${isLong ? 'long-term' : 'short-term'}`;
+            const resetIn  = formatCountdown(status.rate_limit_reset_at);
+            const resetAt  = formatAbsTime(status.rate_limit_reset_at);
+            if (isLong) {
+                banner.innerHTML =
+                    `<span class="rl-icon">⚠</span>` +
+                    `<span>Daily rate limit exceeded — resets at midnight UTC` +
+                    (resetAt ? ` (~${resetIn}, at ${resetAt})` : '') +
+                    `. <a href="https://developers.strava.com/docs/rate-limits/" target="_blank" rel="noopener">Strava rate limit docs</a></span>`;
+            } else {
+                banner.innerHTML =
+                    `<span class="rl-icon">⏱</span>` +
+                    `<span>Short-term rate limit — retrying in ~${resetIn}.</span>`;
+            }
+            card.appendChild(banner);
+        }
+
+        // Status strip
+        if (status) {
+            const strip = document.createElement('div');
+            strip.className = 'provider-status';
+
+            const hasStatus = status.last_operation !== null && status.last_operation !== undefined;
+            const dotClass  = !hasStatus ? 'unknown' : status.last_success ? 'ok' : 'error';
+
+            const dot  = document.createElement('span');
+            dot.className = `status-dot ${dotClass}`;
+            strip.appendChild(dot);
+
+            if (hasStatus) {
+                const op = document.createElement('span');
+                op.className = 'status-op';
+                op.textContent = status.last_operation;
+                strip.appendChild(op);
+
+                const t = formatRelativeTime(status.last_operation_at);
+                if (t) {
+                    const time = document.createElement('span');
+                    time.className = 'status-time';
+                    time.textContent = `· ${t}`;
+                    strip.appendChild(time);
+                }
+
+                if (status.last_message) {
+                    const msg = document.createElement('span');
+                    msg.className = 'status-msg';
+                    msg.textContent = `· ${status.last_message.slice(0, 120)}`;
+                    strip.appendChild(msg);
+                }
+            } else {
+                const never = document.createElement('span');
+                never.className = 'status-time';
+                never.textContent = 'No operations recorded yet';
+                strip.appendChild(never);
+            }
+
+            card.appendChild(strip);
+        }
+    });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderProviders(INITIAL_CONFIG);
 document.getElementById('timezone').addEventListener('change', autoSave);
+
+// Fetch and render provider status after initial render
+fetch('/api/provider-status')
+    .then(r => r.json())
+    .then(statuses => renderProviderStatuses(statuses))
+    .catch(() => {}); // non-fatal
+document.getElementById('debug-toggle').addEventListener('change', autoSave);
 
 // ── Reset All Data ─────────────────────────────────────────────────────────────
 function openResetAllModal() {
