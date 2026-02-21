@@ -41,6 +41,69 @@ class StravaProvider(FitnessProvider):
             token_expires=int(token_expires),
         )
 
+    def _ensure_fresh_token(self) -> None:
+        """Silently refresh the access token if it is expired or about to expire.
+
+        Requires client_id and client_secret to be present in self.config.
+        On success the new tokens are written back to the DB so subsequent
+        provider instances (and the web app) see the updated values.
+        Does nothing if the token is still valid or if credentials are missing.
+        """
+        try:
+            expires_at = int(getattr(self.client, "token_expires", 0) or 0)
+        except (TypeError, ValueError):
+            expires_at = 0
+
+        # Still valid with a 60-second buffer — nothing to do.
+        if expires_at > 0 and time.time() < expires_at - 60:
+            return
+
+        cfg = self.config or {}
+        client_id = cfg.get("client_id", "").strip()
+        client_secret = cfg.get("client_secret", "").strip()
+        refresh_token = cfg.get("refresh_token", "").strip()
+
+        if not (client_id and client_secret and refresh_token):
+            return  # Can't refresh; let the API call fail naturally.
+
+        try:
+            print("Strava access token expired — refreshing automatically…")
+            token_info = self.client.refresh_access_token(
+                client_id=int(client_id),
+                client_secret=client_secret,
+                refresh_token=refresh_token,
+            )
+
+            new_access = str(token_info["access_token"])
+            new_refresh = str(token_info.get("refresh_token", refresh_token))
+            new_expires = str(token_info.get("expires_at", "0"))
+
+            # Update the in-memory client.
+            self.client.access_token = new_access
+            self.client.refresh_token = new_refresh
+            self.client.token_expires = int(new_expires)
+
+            # Update our config dict so future calls within the same instance are correct.
+            cfg["access_token"] = new_access
+            cfg["refresh_token"] = new_refresh
+            cfg["token_expires"] = new_expires
+
+            # Persist to DB so the web app and future instances see the new tokens.
+            from tracekit.appconfig import load_config, save_config
+
+            saved_config = load_config()
+            providers = saved_config.get("providers", {})
+            strava_updated = providers.get("strava", {}).copy()
+            strava_updated["access_token"] = new_access
+            strava_updated["refresh_token"] = new_refresh
+            strava_updated["token_expires"] = new_expires
+            providers["strava"] = strava_updated
+            save_config({**saved_config, "providers": providers})
+
+            print("Strava token refreshed and saved.")
+        except Exception as e:
+            print(f"Strava token refresh failed: {e}. Proceeding with existing token.")
+
     @property
     def provider_name(self) -> str:
         """Return the name of this provider."""
@@ -124,6 +187,7 @@ class StravaProvider(FitnessProvider):
 
     def _fetch_strava_activities_for_month(self, year_month: str):
         """Fetch raw stravalib activities for the given year_month."""
+        self._ensure_fresh_token()
         year, month = map(int, year_month.split("-"))
         tz = pytz.UTC
         start_date = tz.localize(datetime.datetime(year, month, 1))
@@ -205,6 +269,7 @@ class StravaProvider(FitnessProvider):
 
     def update_activity(self, activity_data: dict[str, Any]) -> bool:
         """Update an existing Strava activity via API."""
+        self._ensure_fresh_token()
         provider_id = activity_data["strava_id"]
 
         try:
@@ -222,6 +287,7 @@ class StravaProvider(FitnessProvider):
 
     def get_all_gear(self) -> dict[str, str]:
         """Get all gear from Strava athlete profile."""
+        self._ensure_fresh_token()
         try:
             athlete = self.client.get_athlete()
             gear_dict = {}

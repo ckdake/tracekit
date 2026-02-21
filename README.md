@@ -11,7 +11,9 @@ tracekit is a Python toolkit for aggregating, syncing, and analyzing fitness act
 [![ruff](https://github.com/ckdake/tracekit/actions/workflows/ruff.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/ruff.yml)
 [![pytest](https://github.com/ckdake/tracekit/actions/workflows/pytest.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/pytest.yml)
 [![mypy](https://github.com/ckdake/tracekit/actions/workflows/mypy.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/mypy.yml)
-[![deploy-site](https://github.com/ckdake/tracekit/actions/workflows/deploy-site.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/deploy-site.yml)
+[![deploy https://tracekit.app](https://github.com/ckdake/tracekit/actions/workflows/deploy-site.yml/badge.svg)](https://github.com/ckdake/tracekit/actions/workflows/deploy-site.yml)
+
+![tracekit screenshot](site/src/assets/img/screenshot.png)
 
 ---
 

@@ -31,6 +31,7 @@ const PROVIDER_META = {
         ],
     },
     garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,
+        instructions: 'Garmin authentication tokens are valid for approximately one year. Re-authenticate before they expire to avoid interruption.',
         text_fields: [] },
     spreadsheet: {
         label: 'Spreadsheet', sync_equipment: true, sync_name: true,
