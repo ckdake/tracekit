@@ -655,7 +655,7 @@ function renderProviderStatuses(statuses) {
             const dotClass  = !status || !hasStatus ? 'unknown' : status.last_success ? 'ok' : 'error';
 
             const dot = document.createElement('span');
-            dot.className = `status-dot ${dotClass}`;
+            dot.className = `status-dot ${dotClass}-dot`;
             inlineStatus.appendChild(dot);
 
             if (status && hasStatus) {

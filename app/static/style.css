@@ -312,9 +312,9 @@ select#timezone:focus {
     border-radius: 50%;
     flex-shrink: 0;
 }
-.provider-inline-status .status-dot.ok      { background: #27ae60; }
-.provider-inline-status .status-dot.error   { background: #e74c3c; }
-.provider-inline-status .status-dot.unknown { background: #bbb; }
+.provider-inline-status .status-dot.ok-dot      { background: #27ae60; }
+.provider-inline-status .status-dot.error-dot   { background: #e74c3c; }
+.provider-inline-status .status-dot.unknown-dot { background: #bbb; }
 .status-inline-text {
     font-size: .78rem;
     color: #888;
