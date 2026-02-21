@@ -34,6 +34,7 @@ h2 { color: #34495e; margin-top: 30px; }
 
 .container-wide {
     max-width: 1400px;
+    width: 100%;
     margin: 0 auto;
     padding: 24px 20px;
 }
@@ -878,7 +879,7 @@ select#timezone:focus {
 .mc-active {
     background: rgba(255,255,255,0.95);
 }
-.mc-empty {
+.mc-dot.mc-empty {
     background: rgba(255,255,255,0.18);
 }
 
