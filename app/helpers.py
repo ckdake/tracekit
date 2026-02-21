@@ -52,8 +52,12 @@ def get_most_recent_activity(config: dict[str, Any] | None = None) -> dict[str, 
     try:
         from tracekit.providers.file.file_activity import FileActivity
         from tracekit.providers.garmin.garmin_activity import GarminActivity
-        from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
-        from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+        from tracekit.providers.ridewithgps.ridewithgps_activity import (
+            RideWithGPSActivity,
+        )
+        from tracekit.providers.spreadsheet.spreadsheet_activity import (
+            SpreadsheetActivity,
+        )
         from tracekit.providers.strava.strava_activity import StravaActivity
         from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
 

@@ -49,7 +49,11 @@ def pull_month(self, year_month: str):
     try:
         from tracekit.notification import create_notification, expiry_timestamp
 
-        create_notification(f"Pull started for {year_month}", category="info", expires=expiry_timestamp(24))
+        create_notification(
+            f"Pull started for {year_month}",
+            category="info",
+            expires=expiry_timestamp(24),
+        )
     except Exception:
         pass
 
@@ -66,7 +70,11 @@ def pull_month(self, year_month: str):
         try:
             from tracekit.notification import create_notification, expiry_timestamp
 
-            create_notification(f"Pull finished for {year_month}", category="info", expires=expiry_timestamp(24))
+            create_notification(
+                f"Pull finished for {year_month}",
+                category="info",
+                expires=expiry_timestamp(24),
+            )
         except Exception:
             pass
     except Exception as exc:
@@ -208,7 +216,11 @@ def daily():
     try:
         from tracekit.notification import create_notification, expiry_timestamp
 
-        create_notification(f"Daily sync running for {year_month}", category="info", expires=expiry_timestamp(24))
+        create_notification(
+            f"Daily sync running for {year_month}",
+            category="info",
+            expires=expiry_timestamp(24),
+        )
     except Exception:
         pass
 
@@ -220,7 +232,11 @@ def daily():
         try:
             from tracekit.notification import create_notification, expiry_timestamp
 
-            create_notification(f"Daily sync finished for {year_month}", category="info", expires=expiry_timestamp(24))
+            create_notification(
+                f"Daily sync finished for {year_month}",
+                category="info",
+                expires=expiry_timestamp(24),
+            )
         except Exception:
             pass
     except Exception as exc:

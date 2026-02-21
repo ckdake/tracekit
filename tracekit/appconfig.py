@@ -68,13 +68,21 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "sync_equipment": True,
             "sync_name": True,
         },
-        "file": {"enabled": False, "glob": "", "sync_equipment": False, "sync_name": False},
+        "file": {
+            "enabled": False,
+            "glob": "",
+            "sync_equipment": False,
+            "sync_name": False,
+        },
         "stravajson": {"enabled": False},
     },
 }
 
 # Candidate JSON config file locations (searched in order)
-_FILE_PATHS: list[Path] = [Path("tracekit_config.json"), Path("../tracekit_config.json")]
+_FILE_PATHS: list[Path] = [
+    Path("tracekit_config.json"),
+    Path("../tracekit_config.json"),
+]
 
 
 # ---------------------------------------------------------------------------

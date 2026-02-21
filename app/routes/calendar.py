@@ -27,7 +27,11 @@ def sync_month(year_month: str):
         from tracekit.notification import create_notification, expiry_timestamp
         from tracekit.worker import pull_month
 
-        create_notification(f"Pull scheduled for {year_month}", category="info", expires=expiry_timestamp(24))
+        create_notification(
+            f"Pull scheduled for {year_month}",
+            category="info",
+            expires=expiry_timestamp(24),
+        )
         task = pull_month.delay(year_month)
         return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
     except Exception as e:

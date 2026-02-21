@@ -78,7 +78,10 @@ def api_auth_garmin():
     except GarminConnectAuthenticationError as e:
         return jsonify({"error": f"Authentication failed: {e}"}), 401
     except GarminConnectTooManyRequestsError as e:
-        return jsonify({"error": f"Rate limit exceeded, please wait and try again: {e}"}), 429
+        return (
+            jsonify({"error": f"Rate limit exceeded, please wait and try again: {e}"}),
+            429,
+        )
     except GarminConnectConnectionError as e:
         return jsonify({"error": f"Connection error: {e}"}), 502
     except Exception as e:
@@ -96,12 +99,18 @@ def api_auth_garmin_mfa():
 
     entry = _pending_garmin_sessions.get(session_id)
     if not entry:
-        return jsonify({"error": "Session not found or expired. Please start authentication again."}), 404
+        return (
+            jsonify({"error": "Session not found or expired. Please start authentication again."}),
+            404,
+        )
 
     garmin, client_state, email, expires_at = entry
     if time.time() > expires_at:
         del _pending_garmin_sessions[session_id]
-        return jsonify({"error": "Session expired. Please start authentication again."}), 410
+        return (
+            jsonify({"error": "Session expired. Please start authentication again."}),
+            410,
+        )
 
     try:
         from garminconnect import (

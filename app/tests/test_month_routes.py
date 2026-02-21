@@ -39,8 +39,18 @@ _CONFIG = {
     "home_timezone": "US/Eastern",
     "debug": False,
     "providers": {
-        "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-        "spreadsheet": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+        "strava": {
+            "enabled": True,
+            "priority": 1,
+            "sync_name": True,
+            "sync_equipment": True,
+        },
+        "spreadsheet": {
+            "enabled": True,
+            "priority": 2,
+            "sync_name": True,
+            "sync_equipment": True,
+        },
     },
 }
 

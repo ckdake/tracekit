@@ -320,7 +320,10 @@ def compute_month_changes(
             # ── Equipment sync ──────────────────────────────────────────
             if sync_equipment and provider != auth_provider and auth_equipment:
                 equip_val = (activity["equipment"] or "").strip().lower()
-                equip_wrong = activity["equipment"] != auth_equipment or equip_val in ("", "no equipment")
+                equip_wrong = activity["equipment"] != auth_equipment or equip_val in (
+                    "",
+                    "no equipment",
+                )
                 if equip_wrong:
                     all_changes.append(
                         ActivityChange(
@@ -427,9 +430,17 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
             if provider in ("ridewithgps", "strava"):
                 ok = prov.set_gear(change.new_value, change.activity_id)
             elif provider == "spreadsheet":
-                ok = prov.update_activity({"spreadsheet_id": change.activity_id, "equipment": change.new_value})
+                ok = prov.update_activity(
+                    {
+                        "spreadsheet_id": change.activity_id,
+                        "equipment": change.new_value,
+                    }
+                )
             else:
-                return False, f"Equipment update not supported for provider '{provider}'"
+                return (
+                    False,
+                    f"Equipment update not supported for provider '{provider}'",
+                )
             return (
                 (True, f"Equipment updated for {change.activity_id}")
                 if ok
@@ -441,7 +452,12 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
             if not prov:
                 return False, f"{provider} provider not available"
             if provider == "spreadsheet":
-                ok = prov.update_activity({"spreadsheet_id": change.activity_id, "duration_hms": change.new_value})
+                ok = prov.update_activity(
+                    {
+                        "spreadsheet_id": change.activity_id,
+                        "duration_hms": change.new_value,
+                    }
+                )
                 return (
                     (True, f"Metadata updated for {change.activity_id}")
                     if ok

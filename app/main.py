@@ -22,7 +22,11 @@ from helpers import (
 # ---------------------------------------------------------------------------
 
 app_dir = Path(__file__).parent
-app = Flask(__name__, template_folder=str(app_dir / "templates"), static_folder=str(app_dir / "static"))
+app = Flask(
+    __name__,
+    template_folder=str(app_dir / "templates"),
+    static_folder=str(app_dir / "static"),
+)
 
 # ---------------------------------------------------------------------------
 # Blueprint registration

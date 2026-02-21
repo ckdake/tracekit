@@ -168,10 +168,10 @@ def api_month_changes(year_month: str):
                         "present": True,
                         "id": str(act["id"]),
                         "name": current_name,
-                        "display_name": current_name if name_status not in ("missing",) else auth_name,
+                        "display_name": (current_name if name_status not in ("missing",) else auth_name),
                         "name_status": name_status,
                         "equipment": act["equipment"],
-                        "display_equipment": act["equipment"] if equip_status not in ("missing",) else auth_equipment,
+                        "display_equipment": (act["equipment"] if equip_status not in ("missing",) else auth_equipment),
                         "equip_status": equip_status,
                     }
                 else:
@@ -214,7 +214,10 @@ def api_apply_change():
     """Enqueue a background task to apply a single ActivityChange."""
     data = request.get_json(silent=True)
     if not data or "change" not in data or "year_month" not in data:
-        return jsonify({"error": "Expected JSON with 'change' and 'year_month' fields"}), 400
+        return (
+            jsonify({"error": "Expected JSON with 'change' and 'year_month' fields"}),
+            400,
+        )
 
     year_month = data["year_month"]
     if not re.fullmatch(r"\d{4}-\d{2}", year_month):

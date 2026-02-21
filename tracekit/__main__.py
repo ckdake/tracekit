@@ -21,7 +21,10 @@ def main():
     subparsers.add_parser("auth-strava", help="Authenticate with Strava and get an access token")
     subparsers.add_parser("auth-garmin", help="Authenticate with Garmin Connect and store tokens")
     subparsers.add_parser("configure", help="Configure tracekit for your environment")
-    subparsers.add_parser("migrate", help="Bootstrap / migrate the database schema (safe to run on every start)")
+    subparsers.add_parser(
+        "migrate",
+        help="Bootstrap / migrate the database schema (safe to run on every start)",
+    )
 
     sync_month_parser = subparsers.add_parser(
         "sync-month",

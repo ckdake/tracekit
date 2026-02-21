@@ -113,7 +113,12 @@ def temp_database(monkeypatch):
         1706745600,  # 2024-02-01
         1709251200,  # 2024-03-01
     ]
-    for model in (StravaActivity, GarminActivity, RideWithGPSActivity, SpreadsheetActivity):
+    for model in (
+        StravaActivity,
+        GarminActivity,
+        RideWithGPSActivity,
+        SpreadsheetActivity,
+    ):
         for i, ts in enumerate(timestamps):
             model.create(provider_id=f"test-{model.__name__}-{i}", start_time=ts)
 

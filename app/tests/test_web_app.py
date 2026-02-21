@@ -490,8 +490,18 @@ class TestSettingsRoute:
         updated = {
             **_CONFIG_DATA,
             "providers": {
-                "strava": {"enabled": True, "priority": 1, "sync_equipment": True, "sync_name": True},
-                "garmin": {"enabled": False, "priority": 2, "sync_equipment": False, "sync_name": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_equipment": True,
+                    "sync_name": True,
+                },
+                "garmin": {
+                    "enabled": False,
+                    "priority": 2,
+                    "sync_equipment": False,
+                    "sync_name": True,
+                },
             },
         }
         client.put("/api/config", data=json.dumps(updated), content_type="application/json")

@@ -70,7 +70,12 @@ def api_auth_strava_authorize():
         authorize_url = client.authorization_url(
             client_id=int(client_id),
             redirect_uri=redirect_uri,
-            scope=["activity:read_all", "activity:write", "profile:read_all", "profile:write"],
+            scope=[
+                "activity:read_all",
+                "activity:write",
+                "profile:read_all",
+                "profile:write",
+            ],
         )
         return redirect(str(authorize_url))
     except Exception as e:

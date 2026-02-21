@@ -53,7 +53,12 @@ def get_calendar_shell(config: dict[str, Any] | None = None) -> dict[str, Any]:
         records = [(r.year_month, r.provider) for r in rows]
 
         if not records:
-            return {"months": [], "providers": [], "date_range": (None, None), "total_months": 0}
+            return {
+                "months": [],
+                "providers": [],
+                "date_range": (None, None),
+                "total_months": 0,
+            }
 
         year_months_all = [r[0] for r in records]
         date_range = (min(year_months_all), max(year_months_all))
@@ -108,8 +113,12 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
         from tracekit.provider_sync import ProviderSync
         from tracekit.providers.file.file_activity import FileActivity
         from tracekit.providers.garmin.garmin_activity import GarminActivity
-        from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
-        from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+        from tracekit.providers.ridewithgps.ridewithgps_activity import (
+            RideWithGPSActivity,
+        )
+        from tracekit.providers.spreadsheet.spreadsheet_activity import (
+            SpreadsheetActivity,
+        )
         from tracekit.providers.strava.strava_activity import StravaActivity
         from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
 

@@ -138,7 +138,11 @@ class TestProcessActivityForDisplay:
 
     def test_basic_fields(self):
         act = self._make_act(
-            provider_id="99", start_time=1720411200, distance=15.5, name="Hill Climb", equipment="Trek"
+            provider_id="99",
+            start_time=1720411200,
+            distance=15.5,
+            name="Hill Climb",
+            equipment="Trek",
         )
         result = process_activity_for_display(act, "strava")
         assert result["provider"] == "strava"
@@ -150,7 +154,11 @@ class TestProcessActivityForDisplay:
 
     def test_spreadsheet_uses_notes_as_name(self):
         act = self._make_act(
-            provider_id="5", start_time=1720411200, distance=10.0, notes="Spreadsheet name", name="ignored"
+            provider_id="5",
+            start_time=1720411200,
+            distance=10.0,
+            notes="Spreadsheet name",
+            name="ignored",
         )
         result = process_activity_for_display(act, "spreadsheet")
         assert result["name"] == "Spreadsheet name"
@@ -212,7 +220,14 @@ class TestGenerateCorrelationKey:
 
 
 class TestConvertActivityToSpreadsheetFormat:
-    def _make_source(self, provider="strava", ts=1720411200, distance=15.5, name="Test", equipment="Trek"):
+    def _make_source(
+        self,
+        provider="strava",
+        ts=1720411200,
+        distance=15.5,
+        name="Test",
+        equipment="Trek",
+    ):
         obj = MagicMock()
         obj.activity_type = "Ride"
         obj.location_name = "Loc"
@@ -290,7 +305,12 @@ def _make_tracekit_mock(activities_by_provider: dict, provider_config: dict | No
     tk.pull_activities.return_value = activities_by_provider
     if provider_config is None:
         provider_config = {
-            p: {"enabled": True, "priority": i, "sync_name": True, "sync_equipment": True}
+            p: {
+                "enabled": True,
+                "priority": i,
+                "sync_name": True,
+                "sync_equipment": True,
+            }
             for i, p in enumerate(activities_by_provider.keys())
         }
     tk.config = {"providers": provider_config, "home_timezone": "US/Eastern"}
@@ -336,8 +356,18 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [act1], "ridewithgps": [act2]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "ridewithgps": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -351,8 +381,18 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [act1], "ridewithgps": [act2]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "ridewithgps": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -368,8 +408,18 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [act1], "ridewithgps": [act2]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "ridewithgps": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -384,9 +434,24 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [act], "ridewithgps": [act2]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
-                "spreadsheet": {"enabled": True, "priority": 3, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "ridewithgps": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "spreadsheet": {
+                    "enabled": True,
+                    "priority": 3,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -402,8 +467,18 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [strava_act], "spreadsheet": [spreadsheet_act]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "spreadsheet": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "spreadsheet": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -420,8 +495,18 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [strava_act], "spreadsheet": [spreadsheet_act]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "spreadsheet": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "spreadsheet": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -435,9 +520,19 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [act1], "ridewithgps": [act2]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
                 # sync_name=False → no UPDATE_NAME changes for rwgps
-                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": False, "sync_equipment": True},
+                "ridewithgps": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": False,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -494,14 +589,26 @@ class TestApplyChange:
 
     def test_add_activity_requires_grouped(self):
         tk = self._make_tk()
-        ch = ActivityChange(ChangeType.ADD_ACTIVITY, "spreadsheet", "99", new_value="Ride", source_provider="strava")
+        ch = ActivityChange(
+            ChangeType.ADD_ACTIVITY,
+            "spreadsheet",
+            "99",
+            new_value="Ride",
+            source_provider="strava",
+        )
         ok, msg = apply_change(ch, tk, grouped=None)
         assert not ok
         assert "grouped" in msg
 
     def test_add_activity_source_not_found(self):
         tk = self._make_tk()
-        ch = ActivityChange(ChangeType.ADD_ACTIVITY, "spreadsheet", "99", new_value="Ride", source_provider="strava")
+        ch = ActivityChange(
+            ChangeType.ADD_ACTIVITY,
+            "spreadsheet",
+            "99",
+            new_value="Ride",
+            source_provider="strava",
+        )
         ok, msg = apply_change(ch, tk, grouped={})
         assert not ok
         assert "not found" in msg
@@ -536,7 +643,13 @@ class TestApplyChange:
         }
         key = generate_correlation_key(1720411200, 15.0)
         grouped = {key: [source_act]}
-        ch = ActivityChange(ChangeType.ADD_ACTIVITY, "spreadsheet", "99", new_value="Ride", source_provider="strava")
+        ch = ActivityChange(
+            ChangeType.ADD_ACTIVITY,
+            "spreadsheet",
+            "99",
+            new_value="Ride",
+            source_provider="strava",
+        )
         ok, msg = apply_change(ch, tk, grouped=grouped)
         assert ok
         assert "123" in msg
