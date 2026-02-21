@@ -27,6 +27,7 @@ def _run_schema_upgrades() -> None:
     """
     pending = [
         ("garmin_activities", "device_name", "VARCHAR(255)"),
+        ("notification", "expires", "INTEGER"),
     ]
 
     db = get_db()

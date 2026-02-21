@@ -556,10 +556,46 @@ select#timezone:focus {
 .pull-btn:hover:not(:disabled) { color: #3498db; background: #eaf4fb; }
 .pull-btn:disabled { cursor: default; color: #ccc; }
 
+.month-btn-group {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.reset-btn {
+    background: none;
+    border: none;
+    color: #aab;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color .15s, background .15s;
+    flex-shrink: 0;
+}
+.reset-btn:hover:not(:disabled) { color: #e74c3c; background: #fdecea; }
+.reset-btn:disabled { cursor: default; color: #ccc; }
+
 .pull-status { margin-top: 5px; font-size: 11px; text-align: center; min-height: 14px; }
 .pull-status.ok      { color: #28a745; }
 .pull-status.err     { color: #dc3545; }
 .pull-status.running { color: #3498db; }
+.pull-status.confirm { color: #e74c3c; display: flex; align-items: center; gap: 5px; justify-content: center; flex-wrap: wrap; }
+.confirm-yes, .confirm-no {
+    border: none;
+    border-radius: 3px;
+    padding: 1px 7px;
+    font-size: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    line-height: 1.6;
+}
+.confirm-yes { background: #e74c3c; color: white; }
+.confirm-yes:hover { background: #c0392b; }
+.confirm-no  { background: #ecf0f1; color: #2c3e50; }
+.confirm-no:hover { background: #dde1e3; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
@@ -654,6 +690,15 @@ select#timezone:focus {
 .btn-primary:disabled { opacity: .55; cursor: default; }
 .btn-secondary { background: #ecf0f1; color: #2c3e50; }
 .btn-secondary:hover { background: #dde1e3; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-danger:hover:not(:disabled) { background: #c0392b; }
+.btn-danger:disabled { opacity: .55; cursor: default; }
+
+.card-danger {
+    border: 1px solid #f5c6cb;
+    background: #fff8f8;
+}
+.card-danger h2 { color: #c0392b; }
 .modal-error {
     font-size: 0.83rem;
     color: #e74c3c;

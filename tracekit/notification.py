@@ -1,10 +1,12 @@
 """Notification model — lightweight in-DB bell-icon notifications."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from peewee import BooleanField, CharField, IntegerField, Model
 
 from tracekit.db import db
+
+EXPIRY_24H = int(timedelta(hours=24).total_seconds())
 
 
 class Notification(Model):
@@ -14,6 +16,7 @@ class Notification(Model):
     category = CharField(default="info")  # "info" | "error"
     read = BooleanField(default=False)
     created = IntegerField()  # Unix timestamp
+    expires = IntegerField(null=True, default=None)  # Unix timestamp; NULL = never expires
 
     class Meta:
         database = db
@@ -26,11 +29,20 @@ class Notification(Model):
             "category": self.category,
             "read": self.read,
             "created": self.created,
+            "expires": self.expires,
         }
 
 
-def create_notification(message: str, category: str = "info") -> Notification:
-    """Insert a new notification row.  Safe to call from anywhere."""
+def create_notification(
+    message: str,
+    category: str = "info",
+    expires: int | None = None,
+) -> Notification:
+    """Insert a new notification row.  Safe to call from anywhere.
+
+    Pass ``expires`` as a Unix timestamp to automatically hide the notification
+    after that time.  Use ``expiry_timestamp()`` for convenience.
+    """
     try:
         from tracekit.db import get_db
 
@@ -40,8 +52,14 @@ def create_notification(message: str, category: str = "info") -> Notification:
             message=message,
             category=category,
             created=int(datetime.now(UTC).timestamp()),
+            expires=expires,
         )
     except Exception as e:
         # Never let notification creation crash the caller
         print(f"[notification] failed to create: {e}")
         return None  # type: ignore[return-value]
+
+
+def expiry_timestamp(hours: int = 24) -> int:
+    """Return a Unix timestamp ``hours`` from now."""
+    return int((datetime.now(UTC) + timedelta(hours=hours)).timestamp())

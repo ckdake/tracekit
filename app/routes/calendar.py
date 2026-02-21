@@ -24,12 +24,42 @@ def sync_month(year_month: str):
     if not re.fullmatch(r"\d{4}-\d{2}", year_month):
         return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
     try:
-        from tracekit.notification import create_notification
+        from tracekit.notification import create_notification, expiry_timestamp
         from tracekit.worker import pull_month
 
-        create_notification(f"Pull scheduled for {year_month}", category="info")
+        create_notification(f"Pull scheduled for {year_month}", category="info", expires=expiry_timestamp(24))
         task = pull_month.delay(year_month)
         return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
+
+
+@calendar_bp.route("/api/reset/<year_month>", methods=["POST"])
+def reset_month(year_month: str):
+    """Enqueue a reset job for the given YYYY-MM month."""
+    if not re.fullmatch(r"\d{4}-\d{2}", year_month):
+        return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
+    try:
+        from tracekit.notification import create_notification
+        from tracekit.worker import reset_month as reset_month_task
+
+        create_notification(f"Reset scheduled for {year_month}", category="info")
+        task = reset_month_task.delay(year_month)
+        return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
+
+
+@calendar_bp.route("/api/reset", methods=["POST"])
+def reset_all():
+    """Enqueue a reset-all job that deletes all activities and sync records."""
+    try:
+        from tracekit.notification import create_notification
+        from tracekit.worker import reset_all as reset_all_task
+
+        create_notification("Reset all scheduled", category="info")
+        task = reset_all_task.delay()
+        return jsonify({"task_id": task.id, "status": "queued"})
     except Exception as e:
         return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
 

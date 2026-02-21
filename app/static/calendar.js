@@ -175,6 +175,77 @@ async function pullMonth(btn) {
     }, 2000);
 }
 
+// ── Reset a month and refresh the card ────────────────────────────────────────
+function resetMonth(btn) {
+    const month  = btn.dataset.month;
+    const status = document.getElementById('status-' + month);
+
+    // Show inline confirmation
+    btn.disabled = true;
+    status.className = 'pull-status confirm';
+    status.innerHTML =
+        'Reset ' + month + '? ' +
+        '<button class="confirm-yes" onclick="confirmResetMonth(\'' + month + '\', true)">Yes</button>' +
+        '<button class="confirm-no"  onclick="confirmResetMonth(\'' + month + '\', false)">No</button>';
+}
+
+async function confirmResetMonth(month, confirmed) {
+    const status  = document.getElementById('status-' + month);
+    const card    = document.getElementById('card-' + month);
+    const resetBtn = card ? card.querySelector('.reset-btn') : null;
+
+    if (!confirmed) {
+        if (resetBtn) resetBtn.disabled = false;
+        status.textContent = '';
+        status.className = 'pull-status';
+        return;
+    }
+
+    if (resetBtn) {
+        resetBtn.innerHTML = '<span class="spinner spinner-sm"></span>';
+    }
+    status.textContent = 'Resetting…';
+    status.className = 'pull-status running';
+
+    let taskId;
+    try {
+        const res  = await fetch('/api/reset/' + month, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            status.textContent = data.error || 'Error';
+            status.className = 'pull-status err';
+            if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
+            return;
+        }
+        taskId = data.task_id;
+    } catch (e) {
+        status.textContent = 'Network error';
+        status.className = 'pull-status err';
+        if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
+        return;
+    }
+
+    _polling['reset-' + month] = setInterval(async () => {
+        try {
+            const res  = await fetch('/api/sync/status/' + taskId);
+            const data = await res.json();
+            if (data.state === 'SUCCESS') {
+                clearInterval(_polling['reset-' + month]);
+                if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
+                status.textContent = 'Reset ✓';
+                status.className = 'pull-status ok';
+                loadCard(month);
+                setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
+            } else if (data.state === 'FAILURE') {
+                clearInterval(_polling['reset-' + month]);
+                if (resetBtn) { resetBtn.disabled = false; resetBtn.textContent = '↺'; }
+                status.textContent = data.info || 'Reset failed';
+                status.className = 'pull-status err';
+            }
+        } catch (_) { /* ignore transient fetch errors */ }
+    }, 2000);
+}
+
 // ── On page load: fetch all cards in parallel ─────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.month-card[id^="card-"]').forEach(card => {
@@ -191,7 +262,10 @@ function appendMonthCard(ym, year, month) {
         <div class="month-header">
             <div class="month-title-row">
                 <span>${monthName} ${year}</span>
-                <button class="pull-btn" data-month="${ym}" onclick="pullMonth(this)" title="Pull">⬇</button>
+                <div class="month-btn-group">
+                    <button class="pull-btn" data-month="${ym}" onclick="pullMonth(this)" title="Pull">⬇</button>
+                    <button class="reset-btn" data-month="${ym}" onclick="resetMonth(this)" title="Reset month data">↺</button>
+                </div>
             </div>
             <div class="total-label" id="total-${ym}"></div>
         </div>

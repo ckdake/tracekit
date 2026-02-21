@@ -30,9 +30,31 @@
         </p>
         <div id="provider-list"></div>
     </div>
+    <div class="card card-danger">
+        <h2>Danger Zone</h2>
+        <p class="field-help">Permanently delete all synced activities and sync records from the database. This cannot be undone.</p>
+        <button class="btn btn-danger" onclick="openResetAllModal()">Reset All Data</button>
+    </div>
 
 </div>
 <div id="status-msg"></div>
+
+<!-- Reset All confirmation modal -->
+<div id="reset-all-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <h3>Reset All Data</h3>
+        <p class="modal-subtitle">This will permanently delete <strong>all activities</strong> and sync records from the database. This cannot be undone.</p>
+        <p class="field-help">Type <strong>reset</strong> to confirm:</p>
+        <div class="modal-field">
+            <input type="text" id="reset-confirm-input" placeholder="reset" autocomplete="off">
+        </div>
+        <div id="reset-modal-error" class="modal-error"></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeResetAllModal()">Cancel</button>
+            <button class="btn btn-danger" id="reset-confirm-btn" onclick="submitResetAll()">Reset All Data</button>
+        </div>
+    </div>
+</div>
 
 <script>const INITIAL_CONFIG = {{ config | tojson }};</script>
 <script src="{{ url_for('static', filename='settings.js') }}"></script>

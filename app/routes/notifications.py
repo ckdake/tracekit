@@ -7,15 +7,22 @@ notifications_bp = Blueprint("notifications", __name__)
 
 
 def _get_notifications_list() -> list[dict]:
-    """Return all notifications ordered newest-first."""
+    """Return all non-expired notifications ordered newest-first."""
     if not _init_db():
         return []
     try:
+        from datetime import UTC, datetime
+
         from tracekit.db import get_db
         from tracekit.notification import Notification
 
         get_db().connect(reuse_if_open=True)
-        rows = Notification.select().order_by(Notification.created.desc())
+        now = int(datetime.now(UTC).timestamp())
+        rows = (
+            Notification.select()
+            .where((Notification.expires.is_null()) | (Notification.expires > now))
+            .order_by(Notification.created.desc())
+        )
         return [r.to_dict() for r in rows]
     except Exception as e:
         print(f"notifications list error: {e}")

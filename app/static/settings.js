@@ -534,3 +534,76 @@ function openGarminModal(card, data, providerName) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderProviders(INITIAL_CONFIG);
 document.getElementById('timezone').addEventListener('change', autoSave);
+
+// ── Reset All Data ─────────────────────────────────────────────────────────────
+function openResetAllModal() {
+    document.getElementById('reset-confirm-input').value = '';
+    document.getElementById('reset-modal-error').textContent = '';
+    document.getElementById('reset-confirm-btn').disabled = false;
+    document.getElementById('reset-all-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('reset-confirm-input').focus(), 50);
+}
+
+function closeResetAllModal() {
+    document.getElementById('reset-all-modal').classList.add('hidden');
+}
+
+async function submitResetAll() {
+    const input = document.getElementById('reset-confirm-input').value.trim().toLowerCase();
+    const errorEl = document.getElementById('reset-modal-error');
+    const btn = document.getElementById('reset-confirm-btn');
+
+    if (input !== 'reset') {
+        errorEl.textContent = 'Type "reset" to confirm.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Resetting…';
+    errorEl.textContent = '';
+
+    try {
+        const res  = await fetch('/api/reset', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            errorEl.textContent = data.error || 'Error starting reset.';
+            btn.disabled = false;
+            btn.textContent = 'Reset All Data';
+            return;
+        }
+        // Poll for completion
+        const taskId = data.task_id;
+        const poll = setInterval(async () => {
+            try {
+                const sr   = await fetch('/api/sync/status/' + taskId);
+                const sd   = await sr.json();
+                if (sd.state === 'SUCCESS') {
+                    clearInterval(poll);
+                    closeResetAllModal();
+                    showStatus('All data reset successfully.', 'ok');
+                } else if (sd.state === 'FAILURE') {
+                    clearInterval(poll);
+                    errorEl.textContent = sd.info || 'Reset failed.';
+                    btn.disabled = false;
+                    btn.textContent = 'Reset All Data';
+                }
+            } catch (_) { /* ignore transient errors */ }
+        }, 2000);
+    } catch (e) {
+        errorEl.textContent = 'Network error.';
+        btn.disabled = false;
+        btn.textContent = 'Reset All Data';
+    }
+}
+
+// Close modal on backdrop click
+document.getElementById('reset-all-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('reset-all-modal')) closeResetAllModal();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('reset-all-modal').classList.contains('hidden')) {
+        closeResetAllModal();
+    }
+});

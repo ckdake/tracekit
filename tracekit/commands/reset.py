@@ -13,6 +13,11 @@ def run(args=None):
         "--date",
         help="Date filter in YYYY-MM format (if not specified, resets all activities)",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Skip confirmation prompt when resetting all data",
+    )
     parsed_args = parser.parse_args(args)
     year_month = parsed_args.date
 
@@ -26,10 +31,11 @@ def run(args=None):
             print(f"Resetting data for {year_month}...")
         else:
             print("Resetting ALL data...")
-            confirm = input("This will delete ALL activities and sync records. Are you sure? (yes/no): ")
-            if confirm.lower() != "yes":
-                print("Reset cancelled.")
-                return
+            if not parsed_args.force:
+                confirm = input("This will delete ALL activities and sync records. Are you sure? (yes/no): ")
+                if confirm.lower() != "yes":
+                    print("Reset cancelled.")
+                    return
 
         total_deleted = 0
         for provider_name in enabled_providers:

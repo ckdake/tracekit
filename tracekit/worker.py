@@ -42,9 +42,9 @@ celery_app.conf.update(
 def pull_month(self, year_month: str):
     """Pull activities for a given YYYY-MM from all enabled providers."""
     try:
-        from tracekit.notification import create_notification
+        from tracekit.notification import create_notification, expiry_timestamp
 
-        create_notification(f"Pull started for {year_month}", category="info")
+        create_notification(f"Pull started for {year_month}", category="info", expires=expiry_timestamp(24))
     except Exception:
         pass
 
@@ -59,9 +59,9 @@ def pull_month(self, year_month: str):
         run(["--date", year_month])
 
         try:
-            from tracekit.notification import create_notification
+            from tracekit.notification import create_notification, expiry_timestamp
 
-            create_notification(f"Pull finished for {year_month}", category="info")
+            create_notification(f"Pull finished for {year_month}", category="info", expires=expiry_timestamp(24))
         except Exception:
             pass
     except Exception as exc:
@@ -74,6 +74,68 @@ def pull_month(self, year_month: str):
         raise
 
 
+@celery_app.task(bind=True, name="tracekit.worker.reset_month")
+def reset_month(self, year_month: str):
+    """Reset (delete) all activities and sync records for a given YYYY-MM."""
+    try:
+        from tracekit.notification import create_notification
+
+        create_notification(f"Reset started for {year_month}", category="info")
+    except Exception:
+        pass
+
+    try:
+        from tracekit.commands.reset import run
+
+        run(["--date", year_month])
+
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Reset finished for {year_month}", category="info")
+        except Exception:
+            pass
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Reset failed for {year_month}: {exc}", category="error")
+        except Exception:
+            pass
+        raise
+
+
+@celery_app.task(bind=True, name="tracekit.worker.reset_all")
+def reset_all(self):
+    """Reset (delete) ALL activities and sync records."""
+    try:
+        from tracekit.notification import create_notification
+
+        create_notification("Reset all started", category="info")
+    except Exception:
+        pass
+
+    try:
+        from tracekit.commands.reset import run
+
+        run(["--force"])
+
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification("Reset all finished", category="info")
+        except Exception:
+            pass
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Reset all failed: {exc}", category="error")
+        except Exception:
+            pass
+        raise
+
+
 @celery_app.task(name="tracekit.worker.daily")
 def daily():
     """Daily heartbeat — pull current month and notify."""
@@ -81,9 +143,9 @@ def daily():
 
     year_month = datetime.now(UTC).strftime("%Y-%m")
     try:
-        from tracekit.notification import create_notification
+        from tracekit.notification import create_notification, expiry_timestamp
 
-        create_notification(f"Daily sync running for {year_month}", category="info")
+        create_notification(f"Daily sync running for {year_month}", category="info", expires=expiry_timestamp(24))
     except Exception:
         pass
 
@@ -93,9 +155,9 @@ def daily():
         run(["--date", year_month])
 
         try:
-            from tracekit.notification import create_notification
+            from tracekit.notification import create_notification, expiry_timestamp
 
-            create_notification(f"Daily sync finished for {year_month}", category="info")
+            create_notification(f"Daily sync finished for {year_month}", category="info", expires=expiry_timestamp(24))
         except Exception:
             pass
     except Exception as exc:

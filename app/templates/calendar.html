@@ -26,8 +26,12 @@
             <div class="month-header">
                 <div class="month-title-row">
                     <span>{{ month.month_name }} {{ month.year }}</span>
-                    <button class="pull-btn" data-month="{{ month.year_month }}"
-                            onclick="pullMonth(this)" title="Pull">⬇</button>
+                    <div class="month-btn-group">
+                        <button class="pull-btn" data-month="{{ month.year_month }}"
+                                onclick="pullMonth(this)" title="Pull">⬇</button>
+                        <button class="reset-btn" data-month="{{ month.year_month }}"
+                                onclick="resetMonth(this)" title="Reset month data">↺</button>
+                    </div>
                 </div>
                 <div class="total-label" id="total-{{ month.year_month }}"></div>
             </div>
