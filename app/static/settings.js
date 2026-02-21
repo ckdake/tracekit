@@ -35,7 +35,33 @@ const PROVIDER_META = {
         { key: 'email',        label: 'Email' },
         { key: 'garth_tokens', label: 'Garth Tokens', field_type: 'password' },
     ] },
-    spreadsheet: { label: 'Spreadsheet',  sync_equipment: true,  sync_name: true,  text_fields: [{ key: 'path', label: 'path' }] },
+    spreadsheet: {
+        label: 'Spreadsheet', sync_equipment: true, sync_name: true,
+        instructions: `Point <strong>path</strong> at an <code>.xlsx</code> file. Row 1 is a header row (skipped). Each subsequent row is one activity.<br>
+Columns (A–U):
+<code>A</code> date/datetime <em>(required)</em> &nbsp;
+<code>B</code> activity type &nbsp;
+<code>C</code> location name &nbsp;
+<code>D</code> city &nbsp;
+<code>E</code> state &nbsp;
+<code>F</code> temperature &nbsp;
+<code>G</code> equipment &nbsp;
+<code>H</code> duration (HH:MM:SS) &nbsp;
+<code>I</code> distance &nbsp;
+<code>J</code> max speed &nbsp;
+<code>K</code> avg heart rate &nbsp;
+<code>L</code> max heart rate &nbsp;
+<code>M</code> calories &nbsp;
+<code>N</code> max elevation &nbsp;
+<code>O</code> total elevation gain &nbsp;
+<code>P</code> with (names) &nbsp;
+<code>Q</code> avg cadence &nbsp;
+<code>R</code> strava id &nbsp;
+<code>S</code> garmin id &nbsp;
+<code>T</code> ridewithgps id &nbsp;
+<code>U</code> notes / name`,
+        text_fields: [{ key: 'path', label: 'path' }],
+    },
     file:        { label: 'File',         sync_equipment: true,  sync_name: true,  text_fields: [{ key: 'glob', label: 'glob' }] },
     stravajson:  { label: 'StravaJSON',   sync_equipment: false, sync_name: false, text_fields: [] },
 };
@@ -161,12 +187,21 @@ function makeProviderCard(name, data) {
     if (name === 'strava') {
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
-        authBtn.className = 'provider-auth-btn';
+        authBtn.className = 'strava-auth-btn';
         authBtn.textContent = data.access_token ? 'Re-authenticate with Strava' : 'Connect with Strava';
         authBtn.addEventListener('click', () => {
             window.location.href = '/api/auth/strava/authorize';
         });
         card.appendChild(authBtn);
+
+        const callbackUrl = `${window.location.origin}/api/auth/strava/callback`;
+        const redirectNote = document.createElement('p');
+        redirectNote.className = 'strava-redirect-note';
+        redirectNote.innerHTML =
+            `<strong>Before authenticating:</strong> in your <a href="https://www.strava.com/settings/api" target="_blank" rel="noopener">Strava API app settings</a>, ` +
+            `set the <strong>Authorization Callback Domain</strong> to <code>${window.location.hostname}</code>. ` +
+            `The full callback URL tracekit uses is <code>${callbackUrl}</code>.`;
+        card.appendChild(redirectNote);
     }
 
     if (name === 'garmin') {

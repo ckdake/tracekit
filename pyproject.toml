@@ -39,6 +39,8 @@ production = [
     "psycopg2-binary>=2.9",
     # Task queue + Redis broker/backend
     "celery[redis]>=5.3",
+    # Production WSGI server
+    "gunicorn>=23.0",
 ]
 
 [project.urls]

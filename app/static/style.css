@@ -525,7 +525,17 @@ select#timezone:focus {
     border: 2px solid rgba(255,255,255,.4);
     border-top-color: white;
     border-radius: 50%;
-    anAuth modal ─────────────────────────────────────────────────────────────── */
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+.spinner-sm {
+    border-color: rgba(52,152,219,.25);
+    border-top-color: #3498db;
+    margin-right: 0;
+}
+
+/* ── GarminAuth modal ───────────────────────────────────────────────────────── */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -628,14 +638,37 @@ select#timezone:focus {
 }
 .provider-auth-btn:hover { background: #2980b9; }
 
-/* ── imation: spin .7s linear infinite;
-    vertical-align: middle;
-    margin-right: 4px;
+/* Strava-branded auth button */
+.strava-auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 1rem;
+    padding: 11px 22px;
+    border-radius: 4px;
+    background: #FC4C02;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: .015em;
+    transition: background .15s;
 }
-.spinner-sm {
-    border-color: rgba(52,152,219,.25);
-    border-top-color: #3498db;
-    margin-right: 0;
+.strava-auth-btn:hover { background: #e04300; }
+
+.strava-redirect-note {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #555;
+    line-height: 1.5;
+}
+.strava-redirect-note code {
+    background: #f0f0f0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.78rem;
+    word-break: break-all;
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────────────── */

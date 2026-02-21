@@ -21,11 +21,11 @@ from main import (
 def reset_db_state():
     """Reset DB initialisation state between tests to prevent leakage."""
     yield
-    import main as main_module
+    import db_init as db_init_module
 
     import tracekit.db as tdb
 
-    main_module._db_initialized = False
+    db_init_module._db_initialized = False
     tdb._configured = False
 
 

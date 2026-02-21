@@ -45,11 +45,11 @@ _CONFIG_DATA = {
 def reset_db_state():
     """Reset DB initialisation state between tests to prevent leakage."""
     yield
-    import main as main_module
+    import db_init as db_init_module
 
     import tracekit.db as tdb
 
-    main_module._db_initialized = False
+    db_init_module._db_initialized = False
     tdb._configured = False
 
 
@@ -209,9 +209,9 @@ class TestDatabaseInfo:
 
     def test_get_database_info_unavailable(self):
         """Returns a dict gracefully when DB cannot be initialised."""
-        import main as main_module
+        import db_init as db_init_module
 
-        main_module._db_initialized = False
+        db_init_module._db_initialized = False
         with patch.dict(os.environ, {"DATABASE_URL": "", "METADATA_DB": "/no/such/path.db"}):
             db_info = get_database_info()
 
@@ -517,9 +517,9 @@ class TestSettingsRoute:
         client.put("/api/config", data=json.dumps(new_cfg), content_type="application/json")
 
         # Force reload (new request picks up fresh load_config() call)
-        import main as main_module
+        import db_init as db_init_module
 
-        main_module._db_initialized = False  # allow re-init against same DB
+        db_init_module._db_initialized = False  # allow re-init against same DB
 
         # Re-init against the same temp DB
         import tracekit.db as tdb
@@ -528,7 +528,7 @@ class TestSettingsRoute:
         from tracekit.db import configure_db
 
         configure_db(temp_database)
-        main_module._db_initialized = True
+        db_init_module._db_initialized = True
 
         response = client.get("/settings")
         body = response.data.decode()
