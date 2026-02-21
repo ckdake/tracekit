@@ -424,20 +424,21 @@ select#timezone:focus {
 /* ── Calendar page ───────────────────────────────────────────────────────────── */
 .load-more-bar {
     text-align: center;
-    padding: 24px 0 12px;
+    padding: 20px 0;
 }
 .btn-load-more {
-    padding: 10px 28px;
-    background: #f0f4f8;
-    color: #2c3e50;
-    border: 1px solid #cdd5de;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 500;
+    padding: 5px 16px;
+    background: transparent;
+    color: #8a96a3;
+    border: 1px solid #d0d5da;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 400;
     cursor: pointer;
-    transition: background .15s, border-color .15s;
+    transition: background .15s, border-color .15s, color .15s;
+    letter-spacing: 0.02em;
 }
-.btn-load-more:hover { background: #e2ebf4; border-color: #b0bec5; }
+.btn-load-more:hover { background: #f0f4f8; border-color: #b0bec5; color: #2c3e50; }
 
 .calendar-grid {
     display: grid;
