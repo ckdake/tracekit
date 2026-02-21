@@ -135,12 +135,15 @@ class Tracekit:
         provider_config = self.config.get("providers", {}).get("file", {})
 
         if not self._file and provider_config.get("enabled", False):
-            glob_pattern = provider_config.get("glob")
-            if glob_pattern:
-                # Add home_timezone to provider config
-                enhanced_config = provider_config.copy()
-                enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
-                self._file = FileProvider(glob_pattern, config=enhanced_config)
+            # The data folder is fixed: $TRACEKIT_DATA_DIR/activities (or the
+            # default /opt/tracekit/data/activities used in production).  There
+            # is no user-configurable glob — all supported files in the folder
+            # are picked up automatically.
+            data_dir = os.environ.get("TRACEKIT_DATA_DIR", "/opt/tracekit/data")
+            data_folder = os.path.join(data_dir, "activities")
+            enhanced_config = provider_config.copy()
+            enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
+            self._file = FileProvider(data_folder, config=enhanced_config)
         return self._file
 
     @property

@@ -70,7 +70,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         },
         "file": {
             "enabled": False,
-            "glob": "",
             "sync_equipment": False,
             "sync_name": False,
         },

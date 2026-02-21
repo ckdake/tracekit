@@ -18,7 +18,6 @@ def test_run_creates_config_file(monkeypatch):
             "/tmp/fake_spreadsheet.xlsx",  # Spreadsheet path
             "1",  # Spreadsheet priority
             "Y",  # Enable file provider
-            "./fake_glob/*",  # File glob
             "Y",  # Enable Strava provider
             "3",  # Strava priority
             "Y",  # Enable RideWithGPS provider
@@ -54,7 +53,6 @@ def test_run_creates_config_file(monkeypatch):
 
         # Check file provider
         assert config["providers"]["file"]["enabled"]
-        assert config["providers"]["file"]["glob"] == "./fake_glob/*"
 
         # Check Strava provider
         assert config["providers"]["strava"]["enabled"]

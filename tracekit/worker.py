@@ -299,9 +299,141 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
         raise
 
 
+@celery_app.task(bind=True, name="tracekit.worker.pull_file")
+def pull_file(self):
+    """Scan the activities data folder and enqueue one process_file task per new file.
+
+    Files already in the database (matched by basename + checksum) are skipped
+    immediately — no parse work is queued for them.  This task is a lightweight
+    fan-out; the actual parsing happens in process_file.
+    """
+    try:
+        from tracekit.core import tracekit as tracekit_class
+
+        with tracekit_class() as tk:
+            if not tk.file:
+                return {"queued": 0, "reason": "file provider not enabled"}
+            unprocessed = tk.file.list_unprocessed_files()
+
+        count = len(unprocessed)
+        try:
+            from tracekit.notification import create_notification, expiry_timestamp
+
+            create_notification(
+                f"File scan complete — queuing {count} new file{'s' if count != 1 else ''}",
+                category="info",
+                expires=expiry_timestamp(24),
+            )
+        except Exception:
+            pass
+
+        for file_path in unprocessed:
+            process_file.delay(file_path)
+
+        return {"queued": count}
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"File pull scan failed: {exc}", category="error")
+        except Exception:
+            pass
+        raise
+
+
+@celery_app.task(bind=True, name="tracekit.worker.process_file")
+def process_file(self, file_path: str):
+    """Parse and ingest a single activity file.
+
+    Idempotent: if the file has already been processed (matched by checksum)
+    this task exits without writing to the database.
+    """
+    import os as _os
+
+    try:
+        from tracekit.core import tracekit as tracekit_class
+
+        with tracekit_class() as tk:
+            if not tk.file:
+                return {"status": "skipped", "reason": "file provider not enabled"}
+            result = tk.file.process_single_file(file_path)
+
+        if result.get("status") == "ok":
+            try:
+                from tracekit.notification import create_notification, expiry_timestamp
+
+                create_notification(
+                    f"Processed file: {result['file']}",
+                    category="info",
+                    expires=expiry_timestamp(24),
+                )
+            except Exception:
+                pass
+
+        return result
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(
+                f"Failed to process file {_os.path.basename(file_path)}: {exc}",
+                category="error",
+            )
+        except Exception:
+            pass
+        raise
+
+
+@celery_app.task(bind=True, name="tracekit.worker.reset_provider")
+def reset_provider(self, provider_name: str):
+    """Delete all activities and sync records for a single named provider.
+
+    Does not touch any files on disk — only removes this tracekit\'s stored
+    copy of the provider\'s activities and the associated sync records.
+    """
+    try:
+        from tracekit.notification import create_notification
+
+        create_notification(f"Reset started for {provider_name}", category="info")
+    except Exception:
+        pass
+
+    try:
+        from tracekit.core import tracekit as tracekit_class
+        from tracekit.provider_sync import ProviderSync
+
+        with tracekit_class() as tk:
+            provider = tk.get_provider(provider_name)
+            if provider is None:
+                raise ValueError(f"Provider not found or not enabled: {provider_name}")
+            deleted = provider.reset_activities(date_filter=None)
+
+        sync_deleted = ProviderSync.delete().where(ProviderSync.provider == provider_name).execute()
+
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(
+                f"Reset {provider_name}: {deleted} activities and {sync_deleted} sync records deleted",
+                category="info",
+            )
+        except Exception:
+            pass
+
+        return {"provider": provider_name, "activities_deleted": deleted, "sync_records_deleted": sync_deleted}
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Reset {provider_name} failed: {exc}", category="error")
+        except Exception:
+            pass
+        raise
+
+
 @celery_app.task(name="tracekit.worker.daily")
 def daily():
-    """Daily heartbeat — fan out a pull for the current month."""
+    """Daily heartbeat — pull the current month and scan all activity files."""
     from datetime import UTC, datetime
 
     year_month = datetime.now(UTC).strftime("%Y-%m")
@@ -317,3 +449,4 @@ def daily():
         pass
 
     pull_month.delay(year_month)
+    pull_file.delay()

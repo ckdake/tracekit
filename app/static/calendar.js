@@ -99,7 +99,10 @@ function renderGrid(yearMonth, data) {
             ? '<div class="provider-logo-row"><a href="' + info.logoHref + '" target="_blank" rel="noopener"><img src="' + info.logo + '" alt="' + info.logoAlt + '" class="provider-logo-img"></a></div>'
             : '<div class="provider-name-label">' + (info.label || p) + '</div>';
 
-        const provPullBtn = '<button class="provider-pull-btn" data-month="' + yearMonth + '" data-provider="' + p + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">⬇</button>';
+        // File provider does not support per-month pulls — the pull button lives on the Settings page.
+        const provPullBtn = p !== 'file'
+            ? '<button class="provider-pull-btn" data-month="' + yearMonth + '" data-provider="' + p + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">⬇</button>'
+            : '';
 
         return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + provPullBtn + '<div class="provider-content">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div></div>';
     }).join('');

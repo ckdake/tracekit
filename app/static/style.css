@@ -635,7 +635,7 @@ select#timezone:focus {
 .provider-status.provider-garmin.synced      { background: #007CC3; }
 .provider-status.provider-ridewithgps.synced { background: #52AF4A; }
 .provider-status.provider-spreadsheet.synced { background: #5a6b7c; }
-.provider-status.provider-file.synced        { background: #5a6b7c; }
+.provider-status.provider-file.synced        { background: #7a7f84; }
 
 .card-loading { color: #999; font-size: 12px; text-align: center; padding: 6px 0; }
 
@@ -707,6 +707,11 @@ select#timezone:focus {
 .pull-status.ok      { color: #28a745; }
 .pull-status.err     { color: #dc3545; }
 .pull-status.running { color: #3498db; }
+/* File pull status in settings (mirrors .pull-status) */
+.file-pull-status { font-size: 11px; min-height: 14px; margin-top: 4px; }
+.file-pull-status.ok      { color: #28a745; }
+.file-pull-status.err     { color: #dc3545; }
+.file-pull-status.running { color: #3498db; }
 .pull-status.confirm { color: #e74c3c; display: flex; align-items: center; gap: 5px; justify-content: center; flex-wrap: wrap; }
 .confirm-yes, .confirm-no {
     border: none;
@@ -824,6 +829,22 @@ select#timezone:focus {
     background: #fff8f8;
 }
 .card-danger h2 { color: #c0392b; }
+.danger-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.danger-provider-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
 .modal-error {
     font-size: 0.83rem;
     color: #e74c3c;

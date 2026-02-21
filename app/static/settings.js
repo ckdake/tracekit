@@ -60,7 +60,16 @@ Columns (A–U):
 <code>U</code> notes / name`,
         text_fields: [{ key: 'path', label: 'path' }],
     },
-    file:        { label: 'File',         sync_equipment: true,  sync_name: true,  text_fields: [{ key: 'glob', label: 'glob' }] },
+    file: {
+        label: 'File',
+        sync_equipment: false,
+        sync_name: false,
+        instructions: 'Drop any supported activity file (<code>.gpx</code>, <code>.fit</code>, <code>.tcx</code>, or their <code>.gz</code> variants) ' +
+            'into <code>~/data/activities</code> and it will be picked up on the next sync. ' +
+            'Intended for importing files directly or hydrating activities with their original source data. ' +
+            '<strong>Equipment and name are not synced from files</strong> — use Strava, Garmin, RideWithGPS, or the Spreadsheet provider for those.',
+        text_fields: [],
+    },
     stravajson:  { label: 'StravaJSON',   sync_equipment: false, sync_name: false, text_fields: [] },
 };
 
@@ -209,6 +218,19 @@ function makeProviderCard(name, data) {
         authBtn.textContent = data.garth_tokens ? 'Re-authenticate with Garmin' : 'Authenticate with Garmin';
         authBtn.addEventListener('click', () => openGarminModal(card, data, name));
         card.appendChild(authBtn);
+    }
+
+    if (name === 'file') {
+        const pullBtn = document.createElement('button');
+        pullBtn.type = 'button';
+        pullBtn.className = 'provider-auth-btn';
+        pullBtn.textContent = 'Pull Files';
+        pullBtn.addEventListener('click', () => pullFileActivities(pullBtn));
+        card.appendChild(pullBtn);
+
+        const statusEl = document.createElement('div');
+        statusEl.className = 'file-pull-status';
+        card.appendChild(statusEl);
     }
 
     for (const f of meta.text_fields) {
@@ -532,6 +554,57 @@ function openGarminModal(card, data, providerName) {
     _modal.classList.remove('hidden');
 }
 
+// ── File provider pull ────────────────────────────────────────────────────────
+async function pullFileActivities(btn) {
+    const card     = btn.closest('.provider-card');
+    const statusEl = card ? card.querySelector('.file-pull-status') : null;
+
+    btn.disabled = true;
+    btn.textContent = 'Pulling…';
+    if (statusEl) { statusEl.textContent = ''; statusEl.className = 'file-pull-status'; }
+
+    let taskId;
+    try {
+        const res  = await fetch('/api/sync/file', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            if (statusEl) { statusEl.textContent = data.error || 'Error'; statusEl.className = 'file-pull-status err'; }
+            btn.disabled = false;
+            btn.textContent = 'Pull Files';
+            return;
+        }
+        taskId = data.task_id;
+    } catch (e) {
+        if (statusEl) { statusEl.textContent = 'Network error'; statusEl.className = 'file-pull-status err'; }
+        btn.disabled = false;
+        btn.textContent = 'Pull Files';
+        return;
+    }
+
+    if (statusEl) { statusEl.textContent = 'In progress…'; statusEl.className = 'file-pull-status running'; }
+
+    const poll = setInterval(async () => {
+        try {
+            const sr = await fetch('/api/sync/status/' + taskId);
+            const sd = await sr.json();
+            if (sd.state === 'SUCCESS') {
+                clearInterval(poll);
+                btn.disabled = false;
+                btn.textContent = 'Pull Files';
+                if (statusEl) { statusEl.textContent = 'Done ✓'; statusEl.className = 'file-pull-status ok'; }
+                setTimeout(() => {
+                    if (statusEl) { statusEl.textContent = ''; statusEl.className = 'file-pull-status'; }
+                }, 30000);
+            } else if (sd.state === 'FAILURE') {
+                clearInterval(poll);
+                btn.disabled = false;
+                btn.textContent = 'Pull Files';
+                if (statusEl) { statusEl.textContent = sd.info || 'Failed'; statusEl.className = 'file-pull-status err'; }
+            }
+        } catch (_) { /* transient */ }
+    }, 2000);
+}
+
 // ── Provider status ───────────────────────────────────────────────────────────
 function formatRelativeTime(ts) {
     if (!ts) return null;
@@ -614,8 +687,7 @@ function renderProviderStatuses(statuses) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-renderProviders(INITIAL_CONFIG);
-document.getElementById('timezone').addEventListener('change', autoSave);
+renderProviders(INITIAL_CONFIG);renderProviderResetButtons(INITIAL_CONFIG);document.getElementById('timezone').addEventListener('change', autoSave);
 
 // Fetch and render provider status after initial render
 fetch('/api/provider-status')
@@ -623,6 +695,93 @@ fetch('/api/provider-status')
     .then(statuses => renderProviderStatuses(statuses))
     .catch(() => {}); // non-fatal
 document.getElementById('debug-toggle').addEventListener('change', autoSave);
+
+// ── Per-provider reset (Danger Zone) ─────────────────────────────────────────
+let _resetProviderName = null;
+
+function renderProviderResetButtons(config) {
+    const list = document.getElementById('provider-reset-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const pconf = config.providers || {};
+    let shown = 0;
+    for (const [name, data] of Object.entries(pconf)) {
+        if (!data.enabled) continue;
+        const meta = PROVIDER_META[name] || {};
+        const label = meta.label || (name.charAt(0).toUpperCase() + name.slice(1));
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm';
+        btn.textContent = label;
+        btn.addEventListener('click', () => openResetProviderModal(name, label));
+        list.appendChild(btn);
+        shown++;
+    }
+    if (!shown) {
+        list.innerHTML = '<span class="field-help" style="margin:0;color:#999">No providers enabled.</span>';
+    }
+}
+
+function openResetProviderModal(name, label) {
+    _resetProviderName = name;
+    document.getElementById('reset-provider-title').textContent = `Reset ${label}`;
+    document.getElementById('reset-provider-subtitle').innerHTML =
+        `This will permanently delete all <strong>${escHtml(label)}</strong> activities and sync records ` +
+        `from the database. Files on disk are never touched.`;
+    document.getElementById('reset-provider-error').textContent = '';
+    const btn = document.getElementById('reset-provider-confirm-btn');
+    btn.disabled = false;
+    btn.textContent = 'Reset';
+    document.getElementById('reset-provider-modal').classList.remove('hidden');
+}
+
+function closeResetProviderModal() {
+    document.getElementById('reset-provider-modal').classList.add('hidden');
+    _resetProviderName = null;
+}
+
+async function submitResetProvider() {
+    const name = _resetProviderName;
+    if (!name) return;
+    const errorEl = document.getElementById('reset-provider-error');
+    const btn     = document.getElementById('reset-provider-confirm-btn');
+
+    btn.disabled = true;
+    btn.textContent = 'Resetting…';
+    errorEl.textContent = '';
+
+    try {
+        const res  = await fetch('/api/reset/provider/' + name, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            errorEl.textContent = data.error || 'Error starting reset.';
+            btn.disabled = false;
+            btn.textContent = 'Reset';
+            return;
+        }
+        const taskId = data.task_id;
+        const poll = setInterval(async () => {
+            try {
+                const sr = await fetch('/api/sync/status/' + taskId);
+                const sd = await sr.json();
+                if (sd.state === 'SUCCESS') {
+                    clearInterval(poll);
+                    closeResetProviderModal();
+                    showStatus(`${name} data reset successfully.`, 'ok');
+                } else if (sd.state === 'FAILURE') {
+                    clearInterval(poll);
+                    errorEl.textContent = sd.info || 'Reset failed.';
+                    btn.disabled = false;
+                    btn.textContent = 'Reset';
+                }
+            } catch (_) { /* transient */ }
+        }, 2000);
+    } catch (e) {
+        errorEl.textContent = 'Network error.';
+        btn.disabled = false;
+        btn.textContent = 'Reset';
+    }
+}
 
 // ── Reset All Data ─────────────────────────────────────────────────────────────
 function openResetAllModal() {
@@ -689,10 +848,14 @@ async function submitResetAll() {
 document.getElementById('reset-all-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('reset-all-modal')) closeResetAllModal();
 });
+document.getElementById('reset-provider-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('reset-provider-modal')) closeResetProviderModal();
+});
 
 // Close modal on Escape
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !document.getElementById('reset-all-modal').classList.contains('hidden')) {
-        closeResetAllModal();
+    if (e.key === 'Escape') {
+        if (!document.getElementById('reset-all-modal').classList.contains('hidden')) closeResetAllModal();
+        if (!document.getElementById('reset-provider-modal').classList.contains('hidden')) closeResetProviderModal();
     }
 });

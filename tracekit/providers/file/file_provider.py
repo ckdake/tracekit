@@ -1,6 +1,11 @@
 """File provider for tracekit.
 This module defines the FileProvider class, which provides an interface
-for processing activity files from the filesystem (GPX, FIT, TCX, etc).
+for processing activity files from the filesystem.
+
+Drop any supported activity file (.gpx, .gpx.gz, .fit, .fit.gz, .tcx, .tcx.gz)
+into the data folder and it will be picked up automatically on the next sync.
+Equipment and name are not set from files — use Strava, Garmin, RideWithGPS,
+or the Spreadsheet provider for that.
 """
 
 import datetime
@@ -9,7 +14,6 @@ import gzip
 import hashlib
 import json
 import logging
-import multiprocessing
 import os
 import tempfile
 from typing import Any, Optional
@@ -29,10 +33,17 @@ from .formats.tcx import parse_tcx
 class FileProvider(FitnessProvider):
     """File provider for processing activity files from filesystem."""
 
-    def __init__(self, file_glob: str, config: dict[str, Any] | None = None):
-        """Initialize with file glob pattern for finding activity files."""
+    # All file extensions the provider recognises
+    SUPPORTED_EXTENSIONS = (".gpx", ".gpx.gz", ".fit", ".fit.gz", ".tcx", ".tcx.gz")
+
+    def __init__(self, data_folder: str, config: dict[str, Any] | None = None):
+        """Initialize with the activities data folder.
+
+        All supported activity files (.gpx, .gpx.gz, .fit, .fit.gz, .tcx,
+        .tcx.gz) found anywhere under *data_folder* are processed.
+        """
         super().__init__(config)
-        self.file_glob = file_glob
+        self.data_folder = data_folder
 
         if self.config:
             self.debug = self.config.get("debug", False)
@@ -131,69 +142,96 @@ class FileProvider(FitnessProvider):
             if fp:
                 fp.close()
 
-    @staticmethod
-    def _file_processing_worker(args):
-        (file_path,) = args
-        try:
-            parsed_data = FileProvider._parse_file(file_path)
-            return (file_path, parsed_data)
-        except Exception as e:
-            print(f"Error parsing file {file_path}: {e}")
-            return (file_path, None)
+    def _collect_file_paths(self) -> list[str]:
+        """Return all supported activity files found under the data folder."""
+        found: list[str] = []
+        for ext in self.SUPPORTED_EXTENSIONS:
+            # Use glob with ** for recursive discovery; strip the leading dot
+            # from the extension to build "**/*<ext>" patterns.
+            pattern = os.path.join(self.data_folder, "**", f"*{ext}")
+            found.extend(glob.glob(pattern, recursive=True))
+        return found
 
-    def _pull_all_activities(self) -> list["FileActivity"]:
-        """Process all files matching the glob pattern without date filtering."""
-        file_paths = glob.glob(self.file_glob)
-        print(f"Found {len(file_paths)} files matching pattern: {self.file_glob}")
+    def list_unprocessed_files(self) -> list[str]:
+        """Return paths of files in the data folder not yet ingested into the database.
 
-        unprocessed_file_paths = []
-        for file_path in file_paths:
+        Files are matched by (basename, checksum) so a renamed or modified file
+        is treated as new.
+        """
+        unprocessed: list[str] = []
+        for file_path in self._collect_file_paths():
             try:
                 checksum = FileProvider._calculate_checksum(file_path)
-
                 FileActivity.get(
                     FileActivity.file_path == os.path.basename(file_path),
                     FileActivity.file_checksum == checksum,
                 )
-                continue
+                # Already in the database — skip.
             except DoesNotExist:
-                unprocessed_file_paths.append(file_path)
+                unprocessed.append(file_path)
+        return unprocessed
 
-        print(f"Processing {len(unprocessed_file_paths)} new files...")
+    def process_single_file(self, file_path: str) -> dict:
+        """Parse and store one activity file.  Idempotent — safe to call twice.
+
+        Returns a status dict::
+
+            {"status": "ok" | "skipped" | "error", "file": <basename>}
+        """
+        basename = os.path.basename(file_path)
+        try:
+            checksum = FileProvider._calculate_checksum(file_path)
+        except OSError as exc:
+            return {"status": "error", "file": basename, "reason": str(exc)}
+
+        # Pre-check: already in DB?
+        if (
+            FileActivity.get_or_none(
+                FileActivity.file_path == basename,
+                FileActivity.file_checksum == checksum,
+            )
+            is not None
+        ):
+            return {"status": "skipped", "file": basename}
+
+        parsed_data = FileProvider._parse_file(file_path)
+        if not parsed_data:
+            return {"status": "error", "file": basename, "reason": "parse failed"}
+
+        # Post-parse idempotency check (handles concurrent worker races).
+        if (
+            FileActivity.get_or_none(
+                FileActivity.file_path == parsed_data.get("file_path"),
+                FileActivity.file_checksum == parsed_data.get("file_checksum"),
+            )
+            is not None
+        ):
+            return {"status": "skipped", "file": basename}
+
+        self._process_parsed_data(parsed_data)
+        self._mark_all_months_as_synced()
+        print(f"Processed file: {basename}")
+        return {"status": "ok", "file": basename}
+
+    def _pull_all_activities(self) -> list["FileActivity"]:
+        """Process all supported files in the data folder without date filtering.
+
+        Used by the CLI path.  In production, prefer the Celery fan-out via
+        pull_file → process_file so each file runs as an independent task.
+        """
+        file_paths = self._collect_file_paths()
+        print(f"Found {len(file_paths)} activity files in: {self.data_folder}")
+
+        unprocessed = self.list_unprocessed_files()
+        print(f"Processing {len(unprocessed)} new files...")
 
         processed_count = 0
+        for file_path in unprocessed:
+            result = self.process_single_file(file_path)
+            if result.get("status") == "ok":
+                processed_count += 1
 
-        if unprocessed_file_paths:
-            # Use "spawn" start method instead of the default "fork" on Linux.
-            # fork() inherits open SQLite/Peewee connections from the parent
-            # process, which causes EDEADLK (errno 35) when those connections
-            # hold pthread mutex locks at fork time. Spawned processes start
-            # fresh with no inherited file descriptors or mutex state.
-            spawn_ctx = multiprocessing.get_context("spawn")
-            with spawn_ctx.Pool(processes=multiprocessing.cpu_count()) as pool:
-                results = pool.map(
-                    self._file_processing_worker,
-                    [(fp,) for fp in unprocessed_file_paths],
-                )
-
-            for file_path, parsed_data in results:
-                if not parsed_data:
-                    continue
-                try:
-                    existing_file_activity = FileActivity.get_or_none(
-                        FileActivity.file_path == parsed_data.get("file_path"),
-                        FileActivity.file_checksum == parsed_data.get("file_checksum"),
-                    )
-                    if existing_file_activity is None:
-                        file_activity = self._process_parsed_data(parsed_data)
-                        if file_activity:
-                            processed_count += 1
-                except Exception as e:
-                    print(f"Error processing file {file_path}: {e}")
-                    continue
-
-            print(f"Processed {processed_count} new file activities")
-
+        print(f"Processed {processed_count} new file activities")
         return self._get_activities()
 
     def _get_activities(self, date_filter: str | None = None) -> list["FileActivity"]:

@@ -6,6 +6,7 @@ Tracked here for visibility. PRs and issues welcome.
 
 - [ ] users. database should have 'em and we should have to log in when in production
 - [ ] know which months are pulling, show that
+- [ ] add new source data files to file data when found in other places
 
 ## Providers & Sync
 

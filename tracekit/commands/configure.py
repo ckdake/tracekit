@@ -49,11 +49,8 @@ def run():
     # File provider
     print("\nFile Provider:")
     enable_file = input("Enable file provider? (Y/n): ").strip().lower() != "n"
-    file_glob = ""
-    if enable_file:
-        file_glob = input("Glob for activity files (e.g: ./export*/activities/*): ").strip()
 
-    config["providers"]["file"] = {"enabled": enable_file, "glob": file_glob}
+    config["providers"]["file"] = {"enabled": enable_file}
 
     # Strava provider
     print("\nStrava Provider:")

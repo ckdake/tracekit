@@ -61,6 +61,41 @@ def sync_provider_month(year_month: str, provider_name: str):
         return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
 
 
+@calendar_bp.route("/api/sync/file", methods=["POST"])
+def sync_file():
+    """Enqueue a full scan of the activities data folder."""
+    try:
+        from tracekit.notification import create_notification, expiry_timestamp
+        from tracekit.worker import pull_file
+
+        create_notification(
+            "File pull scheduled",
+            category="info",
+            expires=expiry_timestamp(24),
+        )
+        task = pull_file.delay()
+        return jsonify({"task_id": task.id, "status": "queued"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
+
+
+@calendar_bp.route("/api/reset/provider/<provider_name>", methods=["POST"])
+def reset_provider_data(provider_name: str):
+    """Enqueue a reset job for all activities from a single named provider."""
+    valid_providers = {"strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"}
+    if provider_name not in valid_providers:
+        return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
+    try:
+        from tracekit.notification import create_notification
+        from tracekit.worker import reset_provider as reset_provider_task
+
+        create_notification(f"Reset scheduled for {provider_name}", category="info")
+        task = reset_provider_task.delay(provider_name)
+        return jsonify({"task_id": task.id, "provider": provider_name, "status": "queued"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
+
+
 @calendar_bp.route("/api/reset/<year_month>", methods=["POST"])
 def reset_month(year_month: str):
     """Enqueue a reset job for the given YYYY-MM month."""

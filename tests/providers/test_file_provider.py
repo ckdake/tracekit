@@ -50,7 +50,7 @@ def test_file_provider_parses_gpx(mock_create, mock_get, mock_select, mock_sync_
     mock_select.return_value = [mock_activity]
 
     gpx_file = create_sample_gpx_file(tmp_path)
-    provider = FileProvider(gpx_file, config={"home_timezone": "US/Eastern", "test_mode": True})
+    provider = FileProvider(str(tmp_path), config={"home_timezone": "US/Eastern", "test_mode": True})
 
     # Call pull_activities - it should process the file into database
     activities = provider.pull_activities("2024-05")  # Match the date in our test data
@@ -106,7 +106,7 @@ def test_file_provider_processes_multiple_files(
 
     # Use FileProvider to process multiple files
     provider = FileProvider(
-        os.path.join(tmp_path, "*.gpx"),
+        str(tmp_path),
         config={"home_timezone": "US/Eastern", "test_mode": True},
     )
     activities = provider.pull_activities("2024-05")  # Match the date in our test data
@@ -123,7 +123,7 @@ def test_file_provider_processes_multiple_files(
 
 def test_activity_file_determines_format():
     """Test file format detection."""
-    provider = FileProvider("*.gpx", config={"home_timezone": "US/Eastern", "test_mode": True})
+    provider = FileProvider("/tmp", config={"home_timezone": "US/Eastern", "test_mode": True})
 
     format_type, is_gzipped = provider._determine_file_format("test.gpx")
     assert format_type == "gpx"
@@ -172,7 +172,7 @@ def test_file_provider_handles_gzipped(mock_create, mock_get, mock_sync_get, moc
     with gzip.open(gpx_gz_path, "wt") as f:
         f.write(gpx_content)
 
-    provider = FileProvider(gpx_gz_path, config={"home_timezone": "US/Eastern", "test_mode": True})
+    provider = FileProvider(str(tmp_path), config={"home_timezone": "US/Eastern", "test_mode": True})
 
     # Test format detection
     format_type, is_gzipped = provider._determine_file_format(gpx_gz_path)
@@ -186,36 +186,36 @@ def test_file_provider_handles_gzipped(mock_create, mock_get, mock_sync_get, moc
 
 def test_file_provider_initialization():
     """Test FileProvider initialization."""
-    provider = FileProvider("/tmp/*.gpx", config={"home_timezone": "US/Eastern", "test_mode": True})
-    assert provider.file_glob == "/tmp/*.gpx"
+    provider = FileProvider("/tmp", config={"home_timezone": "US/Eastern", "test_mode": True})
+    assert provider.data_folder == "/tmp"
     assert provider.provider_name == "file"
 
 
 def test_file_provider_with_config():
     """Test FileProvider initialization with config."""
     config = {"home_timezone": "US/Pacific", "test_mode": True}
-    provider = FileProvider("/tmp/*.gpx", config=config)
+    provider = FileProvider("/tmp", config=config)
     assert provider.config == config
-    assert provider.file_glob == "/tmp/*.gpx"
+    assert provider.data_folder == "/tmp"
 
 
 def test_file_provider_without_config():
     """Test FileProvider initialization without config."""
-    provider = FileProvider("/tmp/*.gpx")
+    provider = FileProvider("/tmp")
     assert provider.config == {}
-    assert provider.file_glob == "/tmp/*.gpx"
+    assert provider.data_folder == "/tmp"
 
 
 def test_file_provider_with_none_config():
     """Test FileProvider initialization with None config."""
-    provider = FileProvider("/tmp/*.gpx", config=None)
+    provider = FileProvider("/tmp", config=None)
     assert provider.config == {}
-    assert provider.file_glob == "/tmp/*.gpx"
+    assert provider.data_folder == "/tmp"
 
 
 def test_file_provider_readonly_methods():
     """Test that file provider properly raises NotImplementedError for write operations."""
-    provider = FileProvider("/tmp/*.gpx", config={"home_timezone": "US/Eastern", "test_mode": True})
+    provider = FileProvider("/tmp", config={"home_timezone": "US/Eastern", "test_mode": True})
 
     # These should raise NotImplementedError
     with pytest.raises(NotImplementedError, match="does not support updating"):
@@ -234,7 +234,7 @@ def test_file_provider_get_activity_by_id(mock_get):
     mock_activity = MagicMock()
     mock_get.return_value = mock_activity
 
-    provider = FileProvider("/tmp/*.gpx", config={"home_timezone": "US/Eastern", "test_mode": True})
+    provider = FileProvider("/tmp", config={"home_timezone": "US/Eastern", "test_mode": True})
     result = provider.get_activity_by_id("123")
 
     assert result == mock_activity
@@ -255,7 +255,7 @@ def test_file_provider_get_all_gear(mock_select):
 
     mock_select.return_value = [mock_activity1, mock_activity2, mock_activity3]
 
-    provider = FileProvider("/tmp/*.gpx", config={"home_timezone": "US/Eastern", "test_mode": True})
+    provider = FileProvider("/tmp", config={"home_timezone": "US/Eastern", "test_mode": True})
     gear = provider.get_all_gear()
 
     # Should return unique gear as key-value pairs
