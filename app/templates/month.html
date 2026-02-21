@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}{{ month_name }} {{ year }} — Sync Review — tracekit{% endblock %}
+
+{% block body %}
+<div class="container-wide">
+
+  <div class="month-page-header">
+    <div class="month-page-title">
+      <a href="/" class="back-link">← Dashboard</a>
+      <h1>{{ month_name }} {{ year }} <span class="month-page-subtitle">Sync Review</span></h1>
+    </div>
+    <button class="btn-refresh" id="refresh-btn" onclick="loadChanges()">
+      ↻ Refresh
+    </button>
+  </div>
+
+  <!-- Loading / error banner -->
+  <div id="page-status" class="page-status" hidden></div>
+
+  <!-- Activity comparison table -->
+  <section class="section-card" id="section-table" hidden>
+    <h2 class="section-title">Activity Comparison</h2>
+    <p class="section-hint">
+      <span class="badge badge-auth">Green</span> = source of truth &nbsp;
+      <span class="badge badge-new">Yellow</span> = missing / to be added &nbsp;
+      <span class="badge badge-wrong">Red</span> = differs from source of truth
+    </p>
+    <div class="table-scroll">
+      <table class="sync-table" id="activity-table">
+        <thead id="activity-thead"></thead>
+        <tbody id="activity-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Pending changes panel -->
+  <section class="section-card" id="section-changes" hidden>
+    <h2 class="section-title">Pending Changes</h2>
+    <p class="section-hint">
+      Accept queues the change as a background job.  Reject dismisses it for this session.
+    </p>
+    <div id="changes-list"></div>
+    <p id="no-changes-msg" class="no-changes" hidden>✓ All activities are synchronized — no changes needed.</p>
+  </section>
+
+</div>
+
+<script>
+const YEAR_MONTH  = {{ year_month | tojson }};
+const PROVIDER_CONFIG = {{ (config.providers or {}) | tojson }};
+
+/* ── helpers ─────────────────────────────────────────────────────────────── */
+
+function statusClass(s) {
+  switch (s) {
+    case 'auth':    return 'cell-auth';
+    case 'missing': return 'cell-new';
+    case 'wrong':   return 'cell-wrong';
+    default:        return '';
+  }
+}
+
+function changeLabel(c) {
+  switch (c.change_type) {
+    case 'Update Name':
+      return `Update <strong>${c.provider}</strong> name for activity ${c.activity_id} `
+           + `from <em>${c.old_value || '(empty)'}</em> to <em>${c.new_value}</em>`;
+    case 'Update Equipment':
+      return `Update <strong>${c.provider}</strong> equipment for activity ${c.activity_id} `
+           + `from <em>${c.old_value || '(empty)'}</em> to <em>${c.new_value}</em>`;
+    case 'Update Metadata':
+      return `Update <strong>${c.provider}</strong> metadata for activity ${c.activity_id} `
+           + `(duration_hms: <em>${c.old_value || '(empty)'}</em> → <em>${c.new_value}</em>)`;
+    case 'Add Activity':
+      return `Add activity <em>${c.new_value}</em> to <strong>${c.provider}</strong> `
+           + `(from ${c.source_provider} activity ${c.activity_id})`;
+    case 'Link Activity':
+      return `Link <strong>${c.provider}</strong> activity ${c.activity_id} `
+           + `with ${c.source_provider} activity ${c.new_value}`;
+    default:
+      return JSON.stringify(c);
+  }
+}
+
+/* ── table rendering ─────────────────────────────────────────────────────── */
+
+function renderTable(providerList, rows) {
+  const thead = document.getElementById('activity-thead');
+  const tbody = document.getElementById('activity-tbody');
+
+  // Build header
+  const headerCells = ['<th>Start</th>'];
+  providerList.forEach(p => {
+    const pc = PROVIDER_CONFIG[p] || {};
+    headerCells.push(`<th>${p} ID</th>`);
+    if (pc.sync_name !== false) headerCells.push(`<th>${p} Name</th>`);
+    if (pc.sync_equipment !== false) headerCells.push(`<th>${p} Equip</th>`);
+  });
+  headerCells.push('<th>Distance</th>');
+  thead.innerHTML = `<tr>${headerCells.join('')}</tr>`;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="${headerCells.length}" class="empty-row">No correlated activities found.</td></tr>`;
+    return;
+  }
+
+  const rowHtml = rows.map(row => {
+    const cells = [`<td class="cell-start">${row.start}</td>`];
+    providerList.forEach(p => {
+      const pc = PROVIDER_CONFIG[p] || {};
+      const cell = row.providers[p];
+      if (cell && cell.present) {
+        cells.push(`<td class="cell-id cell-auth">${cell.id}</td>`);
+        if (pc.sync_name !== false) {
+          cells.push(`<td class="${statusClass(cell.name_status)}">${cell.display_name || ''}</td>`);
+        }
+        if (pc.sync_equipment !== false) {
+          cells.push(`<td class="${statusClass(cell.equip_status)}">${cell.display_equipment || ''}</td>`);
+        }
+      } else {
+        cells.push(`<td class="cell-new">TBD</td>`);
+        if (pc.sync_name !== false) cells.push(`<td class="cell-new">${cell ? cell.display_name || '' : ''}</td>`);
+        if (pc.sync_equipment !== false) cells.push(`<td class="cell-new">${cell ? cell.display_equipment || '' : ''}</td>`);
+      }
+    });
+    cells.push(`<td class="cell-dist">${row.distance}</td>`);
+    return `<tr>${cells.join('')}</tr>`;
+  }).join('');
+  tbody.innerHTML = rowHtml;
+}
+
+/* ── changes rendering ───────────────────────────────────────────────────── */
+
+function renderChanges(changes) {
+  const list  = document.getElementById('changes-list');
+  const empty = document.getElementById('no-changes-msg');
+
+  if (!changes.length) {
+    list.innerHTML = '';
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+
+  list.innerHTML = changes.map((c, i) => `
+    <div class="change-row" id="change-${i}" data-idx="${i}">
+      <div class="change-desc">${changeLabel(c)}</div>
+      <div class="change-actions">
+        <button class="btn-accept" onclick="acceptChange(${i})">✓ Accept</button>
+        <button class="btn-reject" onclick="rejectChange(${i})">✕ Reject</button>
+      </div>
+      <div class="change-status" id="change-status-${i}"></div>
+    </div>
+  `).join('');
+}
+
+/* ── load data ───────────────────────────────────────────────────────────── */
+
+let _changes = [];
+
+async function loadChanges() {
+  const status = document.getElementById('page-status');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const sectionTable   = document.getElementById('section-table');
+  const sectionChanges = document.getElementById('section-changes');
+
+  refreshBtn.disabled = true;
+  status.textContent = 'Computing changes…';
+  status.className = 'page-status page-status-info';
+  status.hidden = false;
+  sectionTable.hidden   = true;
+  sectionChanges.hidden = true;
+
+  try {
+    const resp = await fetch(`/api/month-changes/${YEAR_MONTH}`);
+    const data = await resp.json();
+
+    if (data.error) {
+      status.textContent = `Error: ${data.error}`;
+      status.className = 'page-status page-status-error';
+      return;
+    }
+
+    _changes = data.changes || [];
+
+    renderTable(data.provider_list || [], data.rows || []);
+    renderChanges(_changes);
+
+    status.hidden = true;
+    sectionTable.hidden   = false;
+    sectionChanges.hidden = false;
+  } catch (err) {
+    status.textContent = `Network error: ${err}`;
+    status.className = 'page-status page-status-error';
+  } finally {
+    refreshBtn.disabled = false;
+  }
+}
+
+/* ── accept / reject ─────────────────────────────────────────────────────── */
+
+async function acceptChange(idx) {
+  const row       = document.getElementById(`change-${idx}`);
+  const statusEl  = document.getElementById(`change-status-${idx}`);
+  const acceptBtn = row.querySelector('.btn-accept');
+  const rejectBtn = row.querySelector('.btn-reject');
+
+  acceptBtn.disabled = true;
+  rejectBtn.disabled = true;
+  statusEl.textContent = 'Queuing…';
+  statusEl.className = 'change-status change-status-pending';
+
+  try {
+    const resp = await fetch('/api/month-sync/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ change: _changes[idx], year_month: YEAR_MONTH }),
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      statusEl.textContent = `✗ ${data.error}`;
+      statusEl.className = 'change-status change-status-error';
+      acceptBtn.disabled = false;
+      rejectBtn.disabled = false;
+    } else {
+      statusEl.textContent = `✓ Queued (task ${data.task_id.slice(0, 8)}…)`;
+      statusEl.className = 'change-status change-status-queued';
+      row.classList.add('change-row-done');
+      // Poll task status
+      pollTask(data.task_id, statusEl);
+    }
+  } catch (err) {
+    statusEl.textContent = `✗ ${err}`;
+    statusEl.className = 'change-status change-status-error';
+    acceptBtn.disabled = false;
+    rejectBtn.disabled = false;
+  }
+}
+
+function rejectChange(idx) {
+  const row      = document.getElementById(`change-${idx}`);
+  const statusEl = document.getElementById(`change-status-${idx}`);
+  row.classList.add('change-row-rejected');
+  statusEl.textContent = 'Rejected';
+  statusEl.className = 'change-status change-status-rejected';
+  row.querySelector('.btn-accept').disabled = true;
+  row.querySelector('.btn-reject').disabled = true;
+}
+
+/* ── task polling ────────────────────────────────────────────────────────── */
+
+async function pollTask(taskId, statusEl, attempts = 0) {
+  if (attempts > 40) {
+    statusEl.textContent = '⏱ Timed out waiting for task';
+    statusEl.className = 'change-status change-status-error';
+    return;
+  }
+  try {
+    const resp = await fetch(`/api/sync/status/${taskId}`);
+    const data = await resp.json();
+    const state = data.state || 'UNKNOWN';
+
+    if (state === 'SUCCESS') {
+      statusEl.textContent = '✓ Applied';
+      statusEl.className = 'change-status change-status-done';
+      return;
+    } else if (state === 'FAILURE') {
+      statusEl.textContent = `✗ Failed: ${data.info || 'unknown error'}`;
+      statusEl.className = 'change-status change-status-error';
+      return;
+    } else {
+      statusEl.textContent = `⏳ ${state}`;
+      setTimeout(() => pollTask(taskId, statusEl, attempts + 1), 2000);
+    }
+  } catch (_) {
+    setTimeout(() => pollTask(taskId, statusEl, attempts + 1), 3000);
+  }
+}
+
+/* ── init ────────────────────────────────────────────────────────────────── */
+loadChanges();
+</script>
+{% endblock %}

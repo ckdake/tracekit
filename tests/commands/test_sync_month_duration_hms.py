@@ -3,14 +3,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tracekit.commands.sync_month import (
+from tracekit.core import tracekit
+from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+from tracekit.providers.strava.strava_activity import StravaActivity
+from tracekit.sync import (
     ActivityChange,
     ChangeType,
     process_activity_for_display,
 )
-from tracekit.core import tracekit
-from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
-from tracekit.providers.strava.strava_activity import StravaActivity
 
 
 def test_sync_month_detects_duration_hms_changes():

@@ -141,6 +141,64 @@ def reset_all(self):
         raise
 
 
+@celery_app.task(bind=True, name="tracekit.worker.apply_sync_change")
+def apply_sync_change(self, change_dict: dict, year_month: str):
+    """Apply a single ActivityChange for *year_month*.
+
+    *change_dict* is the dict produced by ``ActivityChange.to_dict()``.
+    For ADD_ACTIVITY changes the grouped activity data is re-computed by
+    re-pulling the month from all providers (no network calls if the data
+    is already cached in the local DB).
+    """
+    try:
+        from tracekit.notification import create_notification
+
+        create_notification(
+            f"Applying sync change ({change_dict.get('change_type')}) for {year_month}",
+            category="info",
+        )
+    except Exception:
+        pass
+
+    try:
+        from tracekit.core import tracekit as tracekit_class
+        from tracekit.sync import ActivityChange, apply_change, compute_month_changes
+
+        change = ActivityChange.from_dict(change_dict)
+
+        with tracekit_class() as tk:
+            # For ADD_ACTIVITY we need the grouped activity data.
+            # We always compute it; for other change types the grouped arg is ignored.
+            grouped, _ = compute_month_changes(tk, year_month)
+            success, msg = apply_change(change, tk, grouped=grouped)
+
+        if success:
+            try:
+                from tracekit.notification import create_notification
+
+                create_notification(f"Sync change applied: {msg}", category="info")
+            except Exception:
+                pass
+            return {"success": True, "message": msg}
+        else:
+            try:
+                from tracekit.notification import create_notification
+
+                create_notification(f"Sync change failed: {msg}", category="error")
+            except Exception:
+                pass
+            raise RuntimeError(msg)
+
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Sync change error for {year_month}: {exc}", category="error")
+        except Exception:
+            pass
+        raise
+
+
 @celery_app.task(name="tracekit.worker.daily")
 def daily():
     """Daily heartbeat — pull current month and notify."""
