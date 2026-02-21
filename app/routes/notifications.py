@@ -63,7 +63,7 @@ def api_notifications_read_all():
         from tracekit.notification import Notification
 
         get_db().connect(reuse_if_open=True)
-        Notification.update(read=True).where(Notification.read == False).execute()  # noqa: E712
+        Notification.update(read=True).where(Notification.read == False).execute()
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

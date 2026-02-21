@@ -59,3 +59,4 @@ line-ending = "auto"
 [lint.per-file-ignores]
 "tests/*" = ["S101"]  # Allow assert statements in tests
 "conftest.py" = ["F401"]  # Allow unused imports in conftest.py
+"app/routes/notifications.py" = ["E712"]  # Peewee ORM uses == False for SQL WHERE clauses
