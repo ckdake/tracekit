@@ -46,8 +46,10 @@ function renderGrid(yearMonth, data) {
         return;
     }
 
-    if (data.total_activities > 0) {
-        totalEl.textContent = data.total_activities + ' total activities';
+    const counts = Object.values(data.activity_counts || {});
+    const maxCount = counts.length ? Math.max(...counts) : 0;
+    if (maxCount > 0) {
+        totalEl.textContent = maxCount + ' activities';
     }
 
     const enabledProviders = data.providers.filter(p => {
@@ -160,6 +162,7 @@ async function pullMonth(btn) {
                 status.textContent = 'Done ✓';
                 status.className = 'pull-status ok';
                 loadCard(month);
+                setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
             } else if (data.state === 'FAILURE') {
                 clearInterval(_polling[month]);
                 btn.disabled = false;

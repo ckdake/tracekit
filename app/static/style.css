@@ -8,6 +8,9 @@ body {
     padding: 0;
     background: #f5f5f5;
     color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 h1 { color: #2c3e50; margin-top: 0; }
@@ -93,6 +96,8 @@ h2 { color: #34495e; margin-top: 30px; }
 }
 .header-nav-link:hover { background: rgba(0,0,0,.05); color: #1a1a2e; }
 .header-nav-link.active { color: #1a1a2e; background: rgba(0,0,0,.07); }
+/* Active state for the settings gear (shares .notif-bell class) */
+.notif-bell.active { color: #1a1a2e; background: rgba(0,0,0,.07); }
 
 /* ── Site nav (shared by index + calendar) ───────────────────────────────────── */
 .site-nav {
@@ -503,7 +508,7 @@ select#timezone:focus {
 }
 
 /* Provider logo */
-.provider-logo-row { margin-top: 1px; }
+.provider-logo-row { margin-top: auto; padding-top: 4px; }
 .provider-logo-img {
     display: block;
     max-height: 24px;
@@ -728,7 +733,7 @@ select#timezone:focus {
 
 /* ── Footer ──────────────────────────────────────────────────────────────────── */
 .app-footer {
-    margin-top: 48px;
+    margin-top: auto;
     padding: 20px;
     border-top: 1px solid #e0e0e0;
     background: #ffffff;
@@ -766,10 +771,16 @@ select#timezone:focus {
     opacity: 1;
 }
 .footer-logo {
-    height: 32px;
+    height: auto;
+    max-height: 22px;
+    max-width: 140px;
     width: auto;
     display: block;
     vertical-align: middle;
+}
+/* The official Strava lockup is very wide; cap it so it doesn't dwarf the others */
+.footer-logo-link[title="Powered by Strava"] .footer-logo {
+    max-width: 110px;
 }
 /* Strava brand orange: #FC4C02 */
 .attr-strava {
