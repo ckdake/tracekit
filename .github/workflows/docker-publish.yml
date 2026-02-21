@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/**'
       - 'tracekit/**'
+      - 'Dockerfile'
   release:
     types: [ published ]
 
