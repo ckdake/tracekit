@@ -155,6 +155,21 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
 
         total_activities = sum(activity_counts.values())
 
+        # Per-provider list of day-of-month numbers that have ≥1 activity (UTC)
+        activity_days: dict[str, list[int]] = {}
+        for provider, model in provider_models.items():
+            if provider not in activity_counts:
+                continue
+            try:
+                rows_ts = model.select(model.start_time).where(
+                    model.start_time.is_null(False) & (model.start_time >= start_ts) & (model.start_time <= end_ts)
+                )
+                days = sorted({datetime.utcfromtimestamp(r.start_time).day for r in rows_ts})
+                if days:
+                    activity_days[provider] = days
+            except Exception as e:
+                print(f"Error getting activity days for {provider}/{year_month}: {e}")
+
         # Collect Garmin device names used in this month (non-null, distinct)
         garmin_devices: list[str] = []
         try:
@@ -187,6 +202,7 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
             "activity_counts": activity_counts,
             "total_activities": total_activities,
             "provider_metadata": provider_metadata,
+            "activity_days": activity_days,
         }
     except Exception as e:
         return {"error": f"Database error: {e}"}

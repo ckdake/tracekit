@@ -4,6 +4,33 @@
 
 let oldestLoaded = INITIAL_OLDEST || null;
 
+// ── Build a mini SMTWRFS calendar grid HTML for one provider ─────────────────
+function buildMiniCal(yearMonth, activeDays) {
+    const [year, month] = yearMonth.split('-').map(Number);
+    const firstDow  = new Date(year, month - 1, 1).getDay(); // 0=Sun
+    const totalDays = new Date(year, month, 0).getDate();
+    const activeSet = new Set(activeDays || []);
+
+    // Header row
+    let html = '<div class="mini-cal">'
+             + '<div class="mini-cal-head">'
+             + ['S','M','T','W','R','F','S'].map(d => '<span>' + d + '</span>').join('')
+             + '</div><div class="mini-cal-body">';
+
+    // Blank cells before the 1st
+    for (let i = 0; i < firstDow; i++) {
+        html += '<span class="mc-empty"></span>';
+    }
+    // Day cells
+    for (let d = 1; d <= totalDays; d++) {
+        html += activeSet.has(d)
+            ? '<span class="mc-dot mc-active"></span>'
+            : '<span class="mc-dot mc-empty"></span>';
+    }
+    html += '</div></div>';
+    return html;
+}
+
 // ── Render a card's provider grid from API data ───────────────────────────────
 function renderGrid(yearMonth, data) {
     const grid    = document.getElementById('grid-'  + yearMonth);
@@ -55,6 +82,10 @@ function renderGrid(yearMonth, data) {
         // Big integer count (no label)
         const countHtml = count > 0 ? '<div class="activity-count-big">' + count + '</div>' : '';
 
+        // Mini calendar grid
+        const activeDays = (data.activity_days && data.activity_days[p]) ? data.activity_days[p] : [];
+        const miniCalHtml = synced ? buildMiniCal(yearMonth, activeDays) : '';
+
         // Device chip (Garmin-only)
         const devices = (synced && meta[p] && meta[p].devices) ? meta[p].devices : [];
         const deviceHtml = devices.length
@@ -66,7 +97,7 @@ function renderGrid(yearMonth, data) {
             ? '<div class="provider-logo-row"><a href="' + info.logoHref + '" target="_blank" rel="noopener"><img src="' + info.logo + '" alt="' + info.logoAlt + '" class="provider-logo-img"></a></div>'
             : '<div class="provider-name-label">' + (info.label || p) + '</div>';
 
-        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + countHtml + deviceHtml + logoHtml + '</div>';
+        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div>';
     }).join('');
 }
 
