@@ -28,6 +28,11 @@ celery_app.conf.update(
     enable_utc=True,
     # Keep task results for 24 hours so the UI can poll status
     result_expires=86400,
+    # Emit task events so Flower can display task history and details
+    worker_send_task_events=True,
+    task_send_sent_event=True,
+    # Store STARTED state in the result backend (visible in Flower)
+    task_track_started=True,
     beat_schedule={
         "daily": {
             "task": "tracekit.worker.daily",
