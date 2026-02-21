@@ -6,8 +6,6 @@ Tracked here for visibility. PRs and issues welcome.
 
 - [ ] users. database should have 'em and we should have to log in when in production
 - [ ] know which months are pulling, show that
-- [ ] auto-pull daily on current month to get new things
-- [ ] expose sync in the web UI
 
 ## Providers & Sync
 

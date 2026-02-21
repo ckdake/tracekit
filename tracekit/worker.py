@@ -43,9 +43,14 @@ celery_app.conf.update(
 )
 
 
-@celery_app.task(bind=True, max_retries=1, name="tracekit.worker.pull_month")
+@celery_app.task(bind=True, name="tracekit.worker.pull_month")
 def pull_month(self, year_month: str):
-    """Pull activities for a given YYYY-MM from all enabled providers."""
+    """Fan out per-provider pull jobs for *year_month*.
+
+    Deletes existing data for the month so each provider starts with a clean
+    slate, then enqueues one :func:`pull_provider_month` task per enabled
+    provider so they can run (and fail) independently in parallel.
+    """
     try:
         from tracekit.notification import create_notification, expiry_timestamp
 
@@ -58,20 +63,42 @@ def pull_month(self, year_month: str):
         pass
 
     try:
-        from tracekit.commands.pull import run
         from tracekit.core import tracekit as tracekit_class
 
-        # Delete existing data for the month so we get a clean re-pull
         with tracekit_class() as tk:
             tk.delete_month_activities(year_month)
+            providers = tk.enabled_providers
 
-        run(["--date", year_month])
+        for provider_name in providers:
+            pull_provider_month.delay(year_month, provider_name)
+    except Exception as exc:
+        try:
+            from tracekit.notification import create_notification
+
+            create_notification(f"Pull failed to start for {year_month}: {exc}", category="error")
+        except Exception:
+            pass
+        raise
+
+
+@celery_app.task(bind=True, max_retries=1, name="tracekit.worker.pull_provider_month")
+def pull_provider_month(self, year_month: str, provider_name: str):
+    """Pull activities for *year_month* from a single named provider.
+
+    Handles rate-limit errors from the provider: short-term limits trigger a
+    retry after the cooldown; long-term (daily) limits fail immediately.
+    """
+    try:
+        from tracekit.core import tracekit as tracekit_class
+
+        with tracekit_class() as tk:
+            tk.pull_provider_activities(year_month, provider_name)
 
         try:
             from tracekit.notification import create_notification, expiry_timestamp
 
             create_notification(
-                f"Pull finished for {year_month}",
+                f"{provider_name} pull finished for {year_month}",
                 category="info",
                 expires=expiry_timestamp(24),
             )
@@ -87,7 +114,7 @@ def pull_month(self, year_month: str):
                     from tracekit.notification import create_notification
 
                     create_notification(
-                        f"Strava short-term rate limit hit — retrying pull for {year_month} in {exc.retry_after}s.",
+                        f"Strava short-term rate limit hit — retrying {provider_name} pull for {year_month} in {exc.retry_after}s.",
                         category="info",
                     )
                 except Exception:
@@ -99,7 +126,7 @@ def pull_month(self, year_month: str):
                     from tracekit.notification import create_notification
 
                     create_notification(
-                        f"Strava daily rate limit exceeded — pull for {year_month} will not be retried. "
+                        f"Strava daily rate limit exceeded — {provider_name} pull for {year_month} will not be retried. "
                         f"Limit resets at midnight UTC. See https://developers.strava.com/docs/rate-limits/",
                         category="error",
                     )
@@ -110,7 +137,7 @@ def pull_month(self, year_month: str):
         try:
             from tracekit.notification import create_notification
 
-            create_notification(f"Pull failed for {year_month}: {exc}", category="error")
+            create_notification(f"{provider_name} pull failed for {year_month}: {exc}", category="error")
         except Exception:
             pass
         raise
@@ -274,7 +301,7 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
 
 @celery_app.task(name="tracekit.worker.daily")
 def daily():
-    """Daily heartbeat — pull current month and notify."""
+    """Daily heartbeat — fan out a pull for the current month."""
     from datetime import UTC, datetime
 
     year_month = datetime.now(UTC).strftime("%Y-%m")
@@ -289,26 +316,4 @@ def daily():
     except Exception:
         pass
 
-    try:
-        from tracekit.commands.pull import run
-
-        run(["--date", year_month])
-
-        try:
-            from tracekit.notification import create_notification, expiry_timestamp
-
-            create_notification(
-                f"Daily sync finished for {year_month}",
-                category="info",
-                expires=expiry_timestamp(24),
-            )
-        except Exception:
-            pass
-    except Exception as exc:
-        try:
-            from tracekit.notification import create_notification
-
-            create_notification(f"Daily sync failed for {year_month}: {exc}", category="error")
-        except Exception:
-            pass
-        raise
+    pull_month.delay(year_month)

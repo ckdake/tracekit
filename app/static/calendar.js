@@ -99,7 +99,9 @@ function renderGrid(yearMonth, data) {
             ? '<div class="provider-logo-row"><a href="' + info.logoHref + '" target="_blank" rel="noopener"><img src="' + info.logo + '" alt="' + info.logoAlt + '" class="provider-logo-img"></a></div>'
             : '<div class="provider-name-label">' + (info.label || p) + '</div>';
 
-        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div>';
+        const provPullBtn = '<button class="provider-pull-btn" data-month="' + yearMonth + '" data-provider="' + p + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">⬇</button>';
+
+        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + provPullBtn + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div>';
     }).join('');
 }
 
@@ -200,6 +202,64 @@ async function pullMonth(btn) {
             btn.disabled = false;
             btn.textContent = '⬇';
             status.textContent = 'Timed out – try again';
+            status.className = 'pull-status err';
+        },
+    });
+}
+
+// ── Pull a single provider for a month and refresh the card ──────────────────
+async function pullProviderMonth(btn) {
+    const month    = btn.dataset.month;
+    const provider = btn.dataset.provider;
+    const status   = document.getElementById('status-' + month);
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner spinner-sm"></span>';
+    status.textContent = '';
+    status.className = 'pull-status';
+
+    let taskId;
+    try {
+        const res  = await fetch('/api/sync/' + month + '/' + provider, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            status.textContent = data.error || 'Error';
+            status.className = 'pull-status err';
+            btn.disabled = false;
+            btn.textContent = '⬇';
+            return;
+        }
+        taskId = data.task_id;
+    } catch (e) {
+        status.textContent = 'Network error';
+        status.className = 'pull-status err';
+        btn.disabled = false;
+        btn.textContent = '⬇';
+        return;
+    }
+
+    status.textContent = provider + ' in progress…';
+    status.className = 'pull-status running';
+
+    pollTaskStatus(taskId, {
+        onSuccess: () => {
+            btn.disabled = false;
+            btn.textContent = '⬇';
+            status.textContent = provider + ' done ✓';
+            status.className = 'pull-status ok';
+            loadCard(month);
+            setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
+        },
+        onFailure: (data) => {
+            btn.disabled = false;
+            btn.textContent = '⬇';
+            status.textContent = provider + ': ' + (data.info || 'Failed');
+            status.className = 'pull-status err';
+        },
+        onTimeout: () => {
+            btn.disabled = false;
+            btn.textContent = '⬇';
+            status.textContent = provider + ': timed out – try again';
             status.className = 'pull-status err';
         },
     });

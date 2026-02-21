@@ -38,6 +38,29 @@ def sync_month(year_month: str):
         return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
 
 
+@calendar_bp.route("/api/sync/<year_month>/<provider_name>", methods=["POST"])
+def sync_provider_month(year_month: str, provider_name: str):
+    """Enqueue a pull job for a single provider and YYYY-MM month."""
+    if not re.fullmatch(r"\d{4}-\d{2}", year_month):
+        return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
+    valid_providers = {"strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"}
+    if provider_name not in valid_providers:
+        return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
+    try:
+        from tracekit.notification import create_notification, expiry_timestamp
+        from tracekit.worker import pull_provider_month
+
+        create_notification(
+            f"Pull scheduled for {provider_name} {year_month}",
+            category="info",
+            expires=expiry_timestamp(24),
+        )
+        task = pull_provider_month.delay(year_month, provider_name)
+        return jsonify({"task_id": task.id, "year_month": year_month, "provider": provider_name, "status": "queued"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
+
+
 @calendar_bp.route("/api/reset/<year_month>", methods=["POST"])
 def reset_month(year_month: str):
     """Enqueue a reset job for the given YYYY-MM month."""

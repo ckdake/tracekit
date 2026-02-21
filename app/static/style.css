@@ -529,6 +529,7 @@ select#timezone:focus {
     min-height: 36px;
 }
 .provider-status {
+    position: relative;
     padding: 6px 8px;
     border-radius: 4px;
     text-align: center;
@@ -540,6 +541,26 @@ select#timezone:focus {
     align-items: center;
     gap: 3px;
 }
+
+/* Per-provider pull button — overlaid top-right, revealed on hover */
+.provider-pull-btn {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background: rgba(0,0,0,0.20);
+    border: none;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    font-size: 9px;
+    padding: 1px 3px;
+    border-radius: 3px;
+    line-height: 1.3;
+    opacity: 0;
+    transition: opacity .15s, background .15s;
+}
+.provider-status:hover .provider-pull-btn { opacity: 1; }
+.provider-pull-btn:hover:not(:disabled) { background: rgba(0,0,0,0.38); color: white; }
+.provider-pull-btn:disabled { cursor: default; opacity: 0.45; }
 
 /* Big bare integer */
 .activity-count-big {
