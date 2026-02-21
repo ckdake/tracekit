@@ -1,6 +1,8 @@
 // Calendar page logic.
-// Expects `PROVIDER_CONFIG` to be defined inline before this script loads.
-/* global PROVIDER_CONFIG */
+// Expects `PROVIDER_CONFIG` and `INITIAL_OLDEST` to be defined inline before this script loads.
+/* global PROVIDER_CONFIG, INITIAL_OLDEST */
+
+let oldestLoaded = INITIAL_OLDEST || null;
 
 // ── Render a card's provider grid from API data ───────────────────────────────
 function renderGrid(yearMonth, data) {
@@ -109,3 +111,35 @@ document.addEventListener('DOMContentLoaded', () => {
         loadCard(card.id.replace('card-', ''));
     });
 });
+// ── Append a month card to the grid ────────────────────────────────────────────────
+function appendMonthCard(ym, year, month) {
+    const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'long' });
+    const div = document.createElement('div');
+    div.className = 'month-card';
+    div.id = 'card-' + ym;
+    div.innerHTML = `
+        <div class="month-header">
+            ${monthName} ${year}
+            <div class="total-label" id="total-${ym}"></div>
+        </div>
+        <div class="provider-grid" id="grid-${ym}">
+            <div class="card-loading">Loading…</div>
+        </div>
+        <button class="pull-btn" data-month="${ym}" onclick="pullMonth(this)">Pull</button>
+        <div class="pull-status" id="status-${ym}"></div>`;
+    document.getElementById('calendar-grid').appendChild(div);
+}
+
+// ── Load 12 more months going back in time ────────────────────────────────────────
+function loadMoreMonths() {
+    if (!oldestLoaded) return;
+    let [y, m] = oldestLoaded.split('-').map(Number);
+    for (let i = 0; i < 12; i++) {
+        m--;
+        if (m === 0) { m = 12; y--; }
+        const ym = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`;
+        appendMonthCard(ym, y, m);
+        loadCard(ym);
+        oldestLoaded = ym;
+    }
+}

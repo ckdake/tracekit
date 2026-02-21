@@ -269,12 +269,13 @@ class TestWebRoutes:
     """Test Flask web routes."""
 
     def test_index_route_success(self, client, temp_database):
-        """Index renders with config values from the DB."""
+        """Index renders the calendar/status page."""
         response = client.get("/")
 
         assert response.status_code == 200
-        assert b"tracekit Dashboard" in response.data
-        assert b"US/Pacific" in response.data
+        assert b"calendar-grid" in response.data
+        assert b"Status" in response.data
+        assert b"load-more-btn" in response.data
 
     def test_index_route_no_db_still_serves(self, client):
         """Index always responds 200 even with no external config — uses defaults."""
@@ -286,13 +287,11 @@ class TestWebRoutes:
         assert response.status_code == 200
 
     def test_calendar_route_success(self, client, temp_database):
-        """Calendar page renders with sync data from DB."""
+        """/calendar redirects to /."""
         response = client.get("/calendar")
 
-        assert response.status_code == 200
-        assert b"tracekit Sync Calendar" in response.data
-        assert b"strava" in response.data
-        assert b"garmin" in response.data
+        assert response.status_code == 301
+        assert response.headers["Location"] == "/"
 
     def test_api_config_route(self, client, temp_database):
         """GET /api/config returns the config stored in the DB."""
@@ -329,6 +328,22 @@ class TestWebRoutes:
         data = response.get_json()
         assert "tables" in data
         assert "providersync" in data["tables"]
+
+    def test_api_recent_activity_route(self, client, temp_database):
+        """GET /api/recent-activity returns a JSON object with timestamp and formatted keys."""
+        response = client.get("/api/recent-activity")
+
+        assert response.status_code == 200
+        assert response.is_json
+        data = response.get_json()
+        assert "timestamp" in data
+        assert "formatted" in data
+        # With the seeded test DB there may or may not be activities;
+        # either None/None or a real ts + formatted string are both valid.
+        if data["timestamp"] is not None:
+            assert isinstance(data["timestamp"], int)
+            assert isinstance(data["formatted"], str)
+            assert len(data["formatted"]) > 5
 
     def test_health_route(self, client):
         response = client.get("/health")
@@ -401,9 +416,9 @@ class TestSettingsRoute:
         response = client.get("/settings")
         assert b'id="provider-list"' in response.data
 
-    def test_settings_has_save_button(self, client, temp_database):
+    def test_settings_has_status_toast(self, client, temp_database):
         response = client.get("/settings")
-        assert b'id="save-btn"' in response.data
+        assert b'id="status-msg"' in response.data
 
     def test_settings_has_back_link_to_dashboard(self, client, temp_database):
         response = client.get("/settings")
@@ -529,10 +544,10 @@ class TestIntegration:
     """Integration tests for the web application."""
 
     def test_full_application_flow(self, client, temp_database):
-        """Full request flow: dashboard, config API, database API, health."""
+        """Full request flow: status page, config API, database API, health."""
         response = client.get("/")
         assert response.status_code == 200
-        assert b"tracekit Dashboard" in response.data
+        assert b"calendar-grid" in response.data
 
         response = client.get("/api/config")
         assert response.status_code == 200

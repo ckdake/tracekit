@@ -93,6 +93,60 @@ def get_database_info(config: dict[str, Any] | None = None) -> dict[str, Any]:
         return {"error": f"Database error: {e}"}
 
 
+def get_most_recent_activity(config: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return the timestamp and timezone-formatted datetime of the most recent activity."""
+    if not _init_db():
+        return {"error": "Database not available"}
+
+    try:
+        from tracekit.providers.file.file_activity import FileActivity
+        from tracekit.providers.garmin.garmin_activity import GarminActivity
+        from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
+        from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+        from tracekit.providers.strava.strava_activity import StravaActivity
+        from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+
+        models = [
+            StravaActivity,
+            GarminActivity,
+            RideWithGPSActivity,
+            SpreadsheetActivity,
+            FileActivity,
+            StravaJsonActivity,
+        ]
+
+        max_ts: int | None = None
+        for model in models:
+            try:
+                row = (
+                    model.select(model.start_time)
+                    .where(model.start_time.is_null(False))
+                    .order_by(model.start_time.desc())
+                    .first()
+                )
+                if row and row.start_time:
+                    ts = int(row.start_time)
+                    if max_ts is None or ts > max_ts:
+                        max_ts = ts
+            except Exception:
+                pass
+
+        if max_ts is None:
+            return {"timestamp": None, "formatted": None}
+
+        tz_str = (config or {}).get("home_timezone", "UTC")
+        try:
+            tz = pytz.timezone(tz_str)
+        except Exception:
+            tz = pytz.UTC
+
+        dt = datetime.fromtimestamp(max_ts, tz=UTC).astimezone(tz)
+        formatted = dt.strftime("%-d %b %Y, %H:%M %Z")
+        return {"timestamp": max_ts, "formatted": formatted}
+    except Exception as e:
+        return {"error": f"Database error: {e}"}
+
+
 def get_sync_calendar_data(config: dict[str, Any]) -> dict[str, Any]:
     """Compatibility shim — returns full calendar data (used by tests).
 
@@ -255,6 +309,21 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
         return {"error": f"Database error: {e}"}
 
 
+def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    """Sort providers by priority (lowest first) with disabled providers at the end."""
+    enabled: list[tuple[int, str, dict[str, Any]]] = []
+    disabled: list[tuple[str, dict[str, Any]]] = []
+    for name, cfg in providers.items():
+        if cfg.get("enabled", False):
+            enabled.append((cfg.get("priority", 999), name, cfg))
+        else:
+            disabled.append((name, cfg))
+    enabled.sort(key=lambda x: x[0])
+    result = [(name, cfg) for _, name, cfg in enabled]
+    result.extend(disabled)
+    return result
+
+
 @app.route("/settings")
 def settings():
     """Settings page — edit providers, timezone and debug flag."""
@@ -262,60 +331,50 @@ def settings():
     import pytz
 
     timezones = pytz.common_timezones
-    return render_template("settings.html", config=config, timezones=timezones)
+    return render_template("settings.html", config=config, timezones=timezones, page_name="Settings")
 
 
 @app.route("/calendar")
 def calendar():
-    """Sync calendar page — renders card shells; each card loads via /api/calendar/<ym>."""
-    config = load_tracekit_config()
+    """Redirect legacy /calendar URL to /."""
+    from flask import redirect
 
-    shell_data: dict[str, Any] = {}
-    if not config.get("error"):
-        shell_data = get_calendar_shell(config)
-
-    current_date = get_current_date_in_timezone(config)
-    current_month = f"{current_date.year:04d}-{current_date.month:02d}"
-
-    return render_template("calendar.html", config=config, shell_data=shell_data, current_month=current_month)
-
-
-def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
-    """Sort providers by priority (lowest to highest) with disabled providers at the end."""
-    enabled_providers = []
-    disabled_providers = []
-
-    for name, config in providers.items():
-        if config.get("enabled", False):
-            # Get priority, default to 999 if not specified
-            priority = config.get("priority", 999)
-            enabled_providers.append((priority, name, config))
-        else:
-            disabled_providers.append((name, config))
-
-    # Sort enabled providers by priority (lowest first)
-    enabled_providers.sort(key=lambda x: x[0])
-
-    # Convert to list of (name, config) tuples
-    result = [(name, config) for _, name, config in enabled_providers]
-    result.extend(disabled_providers)
-
-    return result
+    return redirect("/", code=301)
 
 
 @app.route("/")
 def index():
-    """Main dashboard page."""
+    """Main status/calendar page — last 12 months, most recent first."""
     config = load_tracekit_config()
 
-    # Sort providers if they exist
-    sorted_providers = []
-    if "providers" in config and not config.get("error"):
-        sorted_providers = sort_providers(config["providers"])
+    current_date = get_current_date_in_timezone(config)
+    current_month = f"{current_date.year:04d}-{current_date.month:02d}"
 
-    db_info = get_database_info(config)
+    # Build last 12 months, most recent first
+    months = []
+    year, month = current_date.year, current_date.month
+    for _ in range(12):
+        ym = f"{year:04d}-{month:02d}"
+        months.append(
+            {
+                "year_month": ym,
+                "year": year,
+                "month": month,
+                "month_name": datetime(year, month, 1).strftime("%B"),
+            }
+        )
+        month -= 1
+        if month == 0:
+            month = 12
+            year -= 1
 
-    return render_template("index.html", config=config, sorted_providers=sorted_providers, db_info=db_info)
+    return render_template(
+        "index.html",
+        config=config,
+        initial_months=months,
+        current_month=current_month,
+        page_name="Status",
+    )
 
 
 @app.route("/api/config", methods=["GET"])
@@ -341,6 +400,13 @@ def api_config_save():
 def api_database():
     """API endpoint for database information."""
     return jsonify(get_database_info())
+
+
+@app.route("/api/recent-activity")
+def api_recent_activity():
+    """Return the most recent activity timestamp and formatted datetime."""
+    config = load_tracekit_config()
+    return jsonify(get_most_recent_activity(config))
 
 
 @app.route("/api/calendar/<year_month>")

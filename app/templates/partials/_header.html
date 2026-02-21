@@ -1,0 +1,18 @@
+{# Shared app header — included by base.html. Expects optional `page_name` context var. #}
+<header class="app-header">
+    <a href="/" class="header-brand">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="tracekit" class="header-logo">
+        <span class="header-name">tracekit</span>
+    </a>
+    {% if page_name %}
+    <div class="header-breadcrumb">
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-active">{{ page_name }}</span>
+    </div>
+    {% endif %}    <div class="header-recent">
+        <span class="recent-label">last activity</span>
+        <span class="recent-value" id="recent-activity-time">—</span>
+    </div>    <nav class="header-nav">
+        <a href="/settings" class="header-nav-link{% if page_name == 'Settings' %} active{% endif %}">⚙ Settings</a>
+    </nav>
+</header>

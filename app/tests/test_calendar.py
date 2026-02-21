@@ -272,13 +272,10 @@ class TestCalendarIntegration:
 
     def test_calendar_page_renders(self, client, temp_database):
         """Test that the calendar page renders successfully."""
-        response = client.get("/calendar")
+        response = client.get("/")
         assert response.status_code == 200
-        assert b"Sync Calendar" in response.data
-
-        content = response.data.decode()
-        assert "2024-01" in content or "2024-02" in content or "2024-03" in content
-        assert "activities" in content or "total" in content
+        assert b"calendar-grid" in response.data
+        assert b"load-more-btn" in response.data
 
     def test_calendar_page_with_timezone(self, client, temp_database):
         """Test calendar page with a specific timezone seeded in the DB."""
@@ -286,9 +283,9 @@ class TestCalendarIntegration:
 
         save_config({"home_timezone": "US/Eastern", "debug": False, "providers": {}})
 
-        response = client.get("/calendar")
+        response = client.get("/")
         assert response.status_code == 200
 
         content = response.data.decode()
-        assert "Sync Calendar" in content
+        assert "calendar-grid" in content
         assert len(content) > 1000

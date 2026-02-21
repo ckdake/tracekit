@@ -1,59 +1,40 @@
 {% extends "base.html" %}
-{% block title %}tracekit Dashboard{% endblock %}
+{% block title %}tracekit{% endblock %}
 
 {% block body %}
-<div class="container">
-    <h1>🏃‍♂️ tracekit</h1>
-
-    {% include 'partials/_nav.html' %}
-
-    <div class="section">
-        <h2>🗓 Current Config</h2>
-        <div class="config-item">
-            <span class="config-key">Timezone</span>
-            <span class="config-value">{{ config.home_timezone or '—' }}</span>
-        </div>
-        <div class="config-item">
-            <span class="config-key">Debug</span>
-            <span class="config-value">{{ 'on' if config.debug else 'off' }}</span>
-        </div>
-        <div class="config-item">
-            <span class="config-key">Providers enabled</span>
-            <span class="config-value">
-                {%- set enabled = namespace(names=[]) -%}
-                {%- for name, p in (config.providers or {}).items() -%}
-                    {%- if p.enabled -%}{%- set enabled.names = enabled.names + [name] -%}{%- endif -%}
-                {%- endfor -%}
-                {{ enabled.names | join(', ') or '(none)' }}
-            </span>
-        </div>
-        <div style="margin-top:14px">
-            <a href="/settings" class="nav-link sm">Edit in Settings →</a>
-        </div>
+<div class="container-wide">
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color synced"></div><span>Synced</span></div>
+        <div class="legend-item"><div class="legend-color not-synced"></div><span>Not Synced</span></div>
+        <div class="legend-item"><div class="legend-color disabled"></div><span>Disabled</span></div>
     </div>
 
-    {% if db_info %}
-    <div class="section{% if db_info.error %} error{% endif %}">
-        <h2>💾 Database</h2>
-        {% if db_info.error %}
-            <p><strong>Error:</strong> {{ db_info.error }}</p>
-        {% else %}
-            <div class="config-item">
-                <span class="config-key">Total tables</span>
-                <span class="config-value">{{ db_info.total_tables }}</span>
+    <div class="calendar-grid" id="calendar-grid">
+        {% for month in initial_months %}
+        <div class="month-card {% if month.year_month == current_month %}current{% endif %}"
+             id="card-{{ month.year_month }}">
+            <div class="month-header">
+                {{ month.month_name }} {{ month.year }}
+                <div class="total-label" id="total-{{ month.year_month }}"></div>
             </div>
-            {% if db_info.tables %}
-            <div class="table-grid">
-                {% for table_name, row_count in db_info.tables.items() %}
-                <div class="table-item">
-                    <div class="table-name">{{ table_name }}</div>
-                    <div class="table-count">{{ row_count }} rows</div>
-                </div>
-                {% endfor %}
+            <div class="provider-grid" id="grid-{{ month.year_month }}">
+                <div class="card-loading">Loadingâ¦</div>
             </div>
-            {% endif %}
-        {% endif %}
+            <button class="pull-btn" data-month="{{ month.year_month }}"
+                    onclick="pullMonth(this)">Pull</button>
+            <div class="pull-status" id="status-{{ month.year_month }}"></div>
+        </div>
+        {% endfor %}
     </div>
-    {% endif %}
+
+    <div class="load-more-bar">
+        <button class="btn-load-more" id="load-more-btn" onclick="loadMoreMonths()">Load 12 more months</button>
+    </div>
 </div>
+
+<script>
+const PROVIDER_CONFIG = {{ (config.providers or {})|tojson }};
+const INITIAL_OLDEST  = {{ (initial_months[-1].year_month if initial_months else '')|tojson }};
+</script>
+<script src="{{ url_for('static', filename='calendar.js') }}"></script>
 {% endblock %}

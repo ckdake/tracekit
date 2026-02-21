@@ -8,6 +8,18 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+{% include 'partials/_header.html' %}
 {% block body %}{% endblock %}
+<script>
+fetch('/api/recent-activity')
+    .then(r => r.json())
+    .then(d => {
+        if (d.formatted) {
+            const el = document.getElementById('recent-activity-time');
+            if (el) el.textContent = d.formatted;
+        }
+    })
+    .catch(() => {});
+</script>
 </body>
 </html>

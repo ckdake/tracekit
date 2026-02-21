@@ -2,6 +2,16 @@
 // Expects `INITIAL_CONFIG` to be defined inline before this script loads.
 /* global INITIAL_CONFIG */
 
+// ── Status toast ─────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showStatus(text, type = 'ok') {
+    const msg = document.getElementById('status-msg');
+    msg.textContent = text;
+    msg.className = type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { msg.textContent = ''; msg.className = ''; }, 3000);
+}
+
 const PROVIDER_META = {
     strava:      { label: 'Strava',       sync_equipment: true,  sync_name: true,  text_fields: [] },
     ridewithgps: { label: 'RideWithGPS',  sync_equipment: true,  sync_name: true,  text_fields: [] },
@@ -40,6 +50,7 @@ function addDragListeners(card) {
         const dstIdx = [...list.children].indexOf(card);
         if (srcIdx < dstIdx) list.insertBefore(dragSrc, card.nextSibling);
         else                 list.insertBefore(dragSrc, card);
+        autoSave();
     });
 }
 
@@ -91,6 +102,7 @@ function makeProviderCard(name, data) {
     const enabledToggle = makeToggle(`en-${name}`, data.enabled, 'Enabled');
     enabledToggle.querySelector('input').addEventListener('change', e => {
         card.classList.toggle('disabled-card', !e.target.checked);
+        autoSave();
     });
     header.appendChild(enabledToggle);
     card.appendChild(header);
@@ -99,16 +111,22 @@ function makeProviderCard(name, data) {
     controls.className = 'provider-controls';
 
     if (meta.sync_equipment) {
-        controls.appendChild(makeToggle(`se-${name}`, data.sync_equipment ?? false, 'Sync equipment'));
+        const t = makeToggle(`se-${name}`, data.sync_equipment ?? false, 'Sync equipment');
+        t.querySelector('input').addEventListener('change', autoSave);
+        controls.appendChild(t);
     }
     if (meta.sync_name) {
-        controls.appendChild(makeToggle(`sn-${name}`, data.sync_name ?? false, 'Sync name'));
+        const t = makeToggle(`sn-${name}`, data.sync_name ?? false, 'Sync name');
+        t.querySelector('input').addEventListener('change', autoSave);
+        controls.appendChild(t);
     }
 
     if (controls.children.length > 0) card.appendChild(controls);
 
     for (const f of meta.text_fields) {
-        card.appendChild(makeEditableField(f, data[f.key] ?? ''));
+        const field = makeEditableField(f, data[f.key] ?? '');
+        field.querySelector('input').addEventListener('change', autoSave);
+        card.appendChild(field);
     }
 
     addDragListeners(card);
@@ -132,13 +150,7 @@ function renderProviders(config) {
 }
 
 // ── Collect settings from DOM and save ───────────────────────────────────────
-async function saveSettings() {
-    const btn = document.getElementById('save-btn');
-    const msg = document.getElementById('status-msg');
-    btn.disabled = true;
-    msg.textContent = '';
-    msg.className = '';
-
+async function autoSave() {
     const tz    = document.getElementById('timezone').value;
     const debug = document.getElementById('debug-toggle').checked;
 
@@ -179,22 +191,17 @@ async function saveSettings() {
 
         if (resp.ok) {
             Object.assign(INITIAL_CONFIG, newConfig);
-            msg.textContent = 'Settings saved.';
-            msg.className = 'ok';
+            showStatus('Saved.');
         } else {
             const err = await resp.json().catch(() => ({}));
-            msg.textContent = 'Error: ' + (err.error || resp.statusText);
-            msg.className = 'err';
+            showStatus('Error: ' + (err.error || resp.statusText), 'err');
         }
     } catch (e) {
-        msg.textContent = 'Network error: ' + e.message;
-        msg.className = 'err';
+        showStatus('Network error: ' + e.message, 'err');
     }
-
-    btn.disabled = false;
-    setTimeout(() => { msg.textContent = ''; msg.className = ''; }, 4000);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderProviders(INITIAL_CONFIG);
-document.getElementById('save-btn').addEventListener('click', saveSettings);
+document.getElementById('timezone').addEventListener('change', autoSave);
+document.getElementById('debug-toggle').addEventListener('change', autoSave);

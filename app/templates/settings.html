@@ -3,11 +3,6 @@
 
 {% block body %}
 <div class="container-narrow">
-    <header class="page-header">
-        <a href="/" class="back-link">← Dashboard</a>
-        <h1>⚙️ Settings</h1>
-    </header>
-
     <div class="card">
         <h2>Timezone</h2>
         <div class="field-row">
@@ -41,11 +36,8 @@
         <div id="provider-list"></div>
     </div>
 
-    <div class="save-bar">
-        <button class="btn-save" id="save-btn">Save Settings</button>
-        <span id="status-msg"></span>
-    </div>
 </div>
+<div id="status-msg"></div>
 
 <script>const INITIAL_CONFIG = {{ config | tojson }};</script>
 <script src="{{ url_for('static', filename='settings.js') }}"></script>
