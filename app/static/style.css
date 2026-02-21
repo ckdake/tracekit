@@ -506,10 +506,9 @@ select#timezone:focus {
 .provider-logo-row { margin-top: 1px; }
 .provider-logo-img {
     display: block;
-    max-height: 13px;
-    max-width: 72px;
-    filter: brightness(0) invert(1);
-    opacity: 0.9;
+    max-height: 16px;
+    max-width: 80px;
+    border-radius: 3px;
 }
 
 /* Not-synced = neutral gray */
@@ -750,9 +749,10 @@ select#timezone:focus {
 .footer-attribution {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     flex-wrap: wrap;
     justify-content: center;
+    margin-top: 10px;
 }
 .footer-logo-link {
     display: inline-flex;

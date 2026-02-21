@@ -155,7 +155,18 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
 
         total_activities = sum(activity_counts.values())
 
-        # Per-provider list of day-of-month numbers that have ≥1 activity (UTC)
+        # Per-provider list of day-of-month numbers that have ≥1 activity,
+        # converted to the configured home timezone so dots match the user's calendar.
+        tz_str = (config or {}).get("home_timezone", "UTC")
+        try:
+            import pytz
+
+            local_tz = pytz.timezone(tz_str)
+        except Exception:
+            import pytz
+
+            local_tz = pytz.utc
+
         activity_days: dict[str, list[int]] = {}
         for provider, model in provider_models.items():
             if provider not in activity_counts:
@@ -164,7 +175,7 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
                 rows_ts = model.select(model.start_time).where(
                     model.start_time.is_null(False) & (model.start_time >= start_ts) & (model.start_time <= end_ts)
                 )
-                days = sorted({datetime.utcfromtimestamp(r.start_time).day for r in rows_ts})
+                days = sorted({datetime.fromtimestamp(r.start_time, tz=UTC).astimezone(local_tz).day for r in rows_ts})
                 if days:
                     activity_days[provider] = days
             except Exception as e:
