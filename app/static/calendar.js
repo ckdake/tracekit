@@ -34,12 +34,12 @@ function renderGrid(yearMonth, data) {
     }
 
     const PROVIDER_DISPLAY = {
-        strava:      { label: 'Strava',      attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
-        garmin:      { label: 'Garmin',      attr: '<a href="https://www.garmin.com" target="_blank" rel="noopener" class="provider-attr attr-garmin" title="Powered by Garmin">Powered by Garmin</a>' },
-        stravajson:  { label: 'Strava (JSON)', attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
-        ridewithgps: { label: 'RideWithGPS', attr: '' },
-        spreadsheet: { label: 'Spreadsheet', attr: '' },
-        file:        { label: 'File',         attr: '' },
+        strava:      { label: 'Strava',        cls: 'provider-strava',      attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
+        garmin:      { label: 'Garmin',        cls: 'provider-garmin',      attr: '<a href="https://www.garmin.com" target="_blank" rel="noopener" class="provider-attr attr-garmin" title="Powered by Garmin">Powered by Garmin</a>' },
+        stravajson:  { label: 'Strava (JSON)', cls: 'provider-strava',      attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
+        ridewithgps: { label: 'RideWithGPS',  cls: 'provider-ridewithgps', attr: '<a href="https://ridewithgps.com" target="_blank" rel="noopener" class="provider-attr attr-ridewithgps" title="Powered by RideWithGPS">Powered by RideWithGPS</a>' },
+        spreadsheet: { label: 'Spreadsheet',  cls: 'provider-spreadsheet', attr: '' },
+        file:        { label: 'File',          cls: 'provider-file',        attr: '' },
     };
 
     const meta = data.provider_metadata || {};
@@ -52,6 +52,7 @@ function renderGrid(yearMonth, data) {
         const countHtml = count > 0 ? '<div class="activity-count">' + count + ' activities</div>' : '';
         const info    = PROVIDER_DISPLAY[p] || {};
         const label   = info.label || p;
+        const providerCls = info.cls || '';
         const attrHtml = (synced && info.attr) ? '<div class="provider-attr-row">' + info.attr + '</div>' : '';
 
         // Device names (currently Garmin-only)
@@ -60,7 +61,7 @@ function renderGrid(yearMonth, data) {
             ? '<div class="provider-devices">' + devices.map(d => '<span class="device-chip">' + d + '</span>').join('') + '</div>'
             : '';
 
-        return '<div class="provider-status ' + cls + '" title="' + tooltip + '"><div>' + label + '</div>' + countHtml + deviceHtml + attrHtml + '</div>';
+        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '"><div>' + label + '</div>' + countHtml + deviceHtml + attrHtml + '</div>';
     }).join('');
 }
 

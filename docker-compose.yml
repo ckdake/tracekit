@@ -43,6 +43,7 @@ services:
       - DATABASE_URL=postgresql://tracekit:${POSTGRES_PASSWORD}@postgres:5432/tracekit
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SILENCE_TOKEN_WARNINGS=true
     volumes:
       - /opt/tracekit/data:/opt/tracekit/data
 
@@ -61,6 +62,7 @@ services:
       - DATABASE_URL=postgresql://tracekit:${POSTGRES_PASSWORD}@postgres:5432/tracekit
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SILENCE_TOKEN_WARNINGS=true
     volumes:
       - /opt/tracekit/data:/opt/tracekit/data
 
@@ -78,6 +80,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SILENCE_TOKEN_WARNINGS=true
 
   flower:
     image: mher/flower:latest

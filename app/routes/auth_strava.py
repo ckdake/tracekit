@@ -11,10 +11,29 @@ def _strava_callback_page(success: bool, message: str) -> str:
     status = "ok" if success else "error"
     icon = "\u2713" if success else "\u2717"
     safe_msg = message.replace("'", "\\'").replace("<", "&lt;").replace(">", "&gt;")
+    redirect_block = (
+        """
+  <p id="redirect-msg" style="font-size:0.95rem;color:#666;">
+    Redirecting to <a href="/settings">Settings</a> in <span id="countdown">30</span>s…
+  </p>
+  <script>
+    var sec = 30;
+    var t = setInterval(function() {
+      sec--;
+      var el = document.getElementById('countdown');
+      if (el) el.textContent = sec;
+      if (sec <= 0) { clearInterval(t); window.location.href = '/settings'; }
+    }, 1000);
+  </script>"""
+        if success
+        else ""
+    )
     return f"""<!DOCTYPE html>
 <html><head><title>Strava Auth</title></head>
 <body style="font-family:sans-serif;text-align:center;padding:48px;color:#2c3e50;">
   <p style="font-size:1.2rem;">{icon} {safe_msg}</p>
+  {redirect_block}
+  <p><a href="/settings" style="font-size:1rem;">Go to Settings</a></p>
   <script>
     if (window.opener) {{
       window.opener.postMessage({{stravaAuth:true,status:'{status}',message:'{safe_msg}'}}, '*');

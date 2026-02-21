@@ -31,10 +31,7 @@ const PROVIDER_META = {
         ],
     },
     garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,
-        text_fields: [
-        { key: 'email',        label: 'Email' },
-        { key: 'garth_tokens', label: 'Garth Tokens', field_type: 'password' },
-    ] },
+        text_fields: [] },
     spreadsheet: {
         label: 'Spreadsheet', sync_equipment: true, sync_name: true,
         instructions: `Point <strong>path</strong> at an <code>.xlsx</code> file. Row 1 is a header row (skipped). Each subsequent row is one activity.<br>
@@ -253,7 +250,6 @@ function showFieldCheck(inputEl) {
 
 async function autoSave(triggerEl) {
     const tz    = document.getElementById('timezone').value;
-    const debug = document.getElementById('debug-toggle').checked;
 
     const cards = document.querySelectorAll('.provider-card');
     const newProviders = {};
@@ -281,7 +277,7 @@ async function autoSave(triggerEl) {
         priority++;
     });
 
-    const newConfig = { ...INITIAL_CONFIG, home_timezone: tz, debug, providers: newProviders };
+    const newConfig = { ...INITIAL_CONFIG, home_timezone: tz, providers: newProviders };
 
     try {
         const resp = await fetch('/api/config', {
@@ -327,10 +323,14 @@ const _modal = buildModal();
 let _modalCard = null;
 let _modalProviderName = null;
 let _mfaSessionId = null;
+let _modalBusy = false;
+let _modalEmail = '';
 
 function closeGarminModal() {
+    if (_modalBusy) return;
     _modal.classList.add('hidden');
     _mfaSessionId = null;
+    _modalEmail = '';
 }
 
 function setModalError(msg) {
@@ -338,7 +338,13 @@ function setModalError(msg) {
 }
 
 function setModalBusy(busy) {
-    _modal.querySelectorAll('button.btn-primary').forEach(b => { b.disabled = busy; b.textContent = busy ? 'Please wait…' : b.dataset.label; });
+    _modalBusy = busy;
+    _modal.querySelectorAll('button').forEach(b => {
+        b.disabled = busy;
+        if (b.classList.contains('btn-primary')) {
+            b.textContent = busy ? 'Please wait…' : b.dataset.label;
+        }
+    });
 }
 
 function showCredentialsStep(prefillEmail) {
@@ -392,7 +398,7 @@ function showMfaStep() {
     const back = document.createElement('button');
     back.type = 'button'; back.className = 'btn btn-secondary';
     back.textContent = 'Back';
-    back.addEventListener('click', () => { _mfaSessionId = null; showCredentialsStep(document.getElementById('gm-email')?.value || ''); setModalError(''); });
+    back.addEventListener('click', () => { _mfaSessionId = null; showCredentialsStep(_modalEmail); setModalError(''); });
 
     const submit = document.createElement('button');
     submit.type = 'button'; submit.className = 'btn btn-primary';
@@ -409,6 +415,7 @@ async function submitCredentials() {
     const email = document.getElementById('gm-email')?.value.trim();
     const password = document.getElementById('gm-password')?.value;
     if (!email || !password) { setModalError('Please enter both email and password.'); return; }
+    _modalEmail = email;
     setModalError('');
     setModalBusy(true);
 
@@ -516,12 +523,13 @@ function openGarminModal(card, data, providerName) {
     _modalCard = card;
     _modalProviderName = providerName;
     _mfaSessionId = null;
+    _modalBusy = false;
+    _modalEmail = data.email || '';
     setModalError('');
-    showCredentialsStep(data.email || '');
+    showCredentialsStep(_modalEmail);
     _modal.classList.remove('hidden');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderProviders(INITIAL_CONFIG);
 document.getElementById('timezone').addEventListener('change', autoSave);
-document.getElementById('debug-toggle').addEventListener('change', autoSave);

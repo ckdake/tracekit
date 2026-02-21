@@ -485,8 +485,19 @@ select#timezone:focus {
     gap: 2px;
 }
 .activity-count { font-size: 10px; opacity: 0.9; font-weight: normal; }
+
+/* Fallback synced/not-synced colours for unknown providers */
 .provider-status.synced     { background: #28a745; }
-.provider-status.not-synced { background: #dc3545; }
+.provider-status.not-synced { opacity: 0.38; filter: saturate(0.4); }
+
+/* Provider brand colours — come after synced/not-synced so they win on background */
+.provider-status.provider-strava      { background: #FC4C02; }
+.provider-status.provider-garmin      { background: #007CC3; }
+.provider-status.provider-ridewithgps { background: #52AF4A; }
+.provider-status.provider-stravajson  { background: #FC4C02; }
+.provider-status.provider-spreadsheet { background: #34a853; }
+.provider-status.provider-file        { background: #6c757d; }
+
 .card-loading { color: #999; font-size: 12px; text-align: center; padding: 6px 0; }
 
 .cal-stats {
@@ -714,6 +725,15 @@ select#timezone:focus {
     color: #005f99 !important;
     text-decoration: underline;
 }
+/* RideWithGPS brand green: #52AF4A */
+.attr-ridewithgps {
+    color: #52AF4A !important;
+    font-weight: 600;
+}
+.attr-ridewithgps:hover {
+    color: #3d8836 !important;
+    text-decoration: underline;
+}
 
 /* ── Provider attribution within calendar cards ─────────────────────────────── */
 .provider-attr-row {
@@ -738,6 +758,20 @@ select#timezone:focus {
     border: 1px solid rgba(0,124,195,.35);
 }
 .provider-attr.attr-garmin:hover { background: rgba(0,124,195,.08); }
+.provider-attr.attr-ridewithgps {
+    color: #52AF4A;
+    border: 1px solid rgba(82,175,74,.35);
+}
+.provider-attr.attr-ridewithgps:hover { background: rgba(82,175,74,.08); }
+
+/* Attribution links inside branded (coloured) provider cards — use white */
+.provider-status[class*="provider-"] .provider-attr {
+    color: rgba(255,255,255,.9) !important;
+    border-color: rgba(255,255,255,.4);
+}
+.provider-status[class*="provider-"] .provider-attr:hover {
+    background: rgba(255,255,255,.15) !important;
+}
 
 /* ── Device name chip inside provider card ───────────────────────────────────── */
 .provider-devices {
