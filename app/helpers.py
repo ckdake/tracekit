@@ -102,6 +102,37 @@ def get_most_recent_activity(config: dict[str, Any] | None = None) -> dict[str, 
         return {"error": f"Database error: {e}"}
 
 
+def get_provider_activity_counts() -> dict[str, int]:
+    """Return {provider_name: activity_count} for all known providers."""
+    if not _init_db():
+        return {}
+
+    try:
+        from tracekit.providers.file.file_activity import FileActivity
+        from tracekit.providers.garmin.garmin_activity import GarminActivity
+        from tracekit.providers.ridewithgps.ridewithgps_activity import (
+            RideWithGPSActivity,
+        )
+        from tracekit.providers.spreadsheet.spreadsheet_activity import (
+            SpreadsheetActivity,
+        )
+        from tracekit.providers.strava.strava_activity import StravaActivity
+        from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+
+        models: dict[str, Any] = {
+            "strava": StravaActivity,
+            "garmin": GarminActivity,
+            "ridewithgps": RideWithGPSActivity,
+            "spreadsheet": SpreadsheetActivity,
+            "file": FileActivity,
+            "stravajson": StravaJsonActivity,
+        }
+
+        return {name: model.select().count() for name, model in models.items()}
+    except Exception as e:
+        return {"error": f"Database error: {e}"}  # type: ignore[return-value]
+
+
 def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """Sort providers by priority (lowest first) with disabled providers at the end."""
     enabled: list[tuple[int, str, dict[str, Any]]] = []

@@ -230,20 +230,32 @@ class Tracekit:
         if not provider:
             raise ValueError(f"Provider '{provider_name}' is not available or not enabled")
 
+        # Detect cache hits: if a ProviderSync row already exists the provider
+        # will return local DB data without contacting the API.  We must NOT
+        # overwrite the status in that case — it would silently mask a previous
+        # rate-limit failure with a spurious success entry.
+        try:
+            from tracekit.provider_sync import ProviderSync as _ProviderSync
+
+            _was_cached = _ProviderSync.get_or_none(year_month, provider_name) is not None
+        except Exception:
+            _was_cached = False
+
         try:
             activities = provider.pull_activities(year_month)
             print(f"Pulled {len(activities)} activities from {provider_name}")
-            try:
-                from tracekit.provider_status import record_operation
+            if not _was_cached:
+                try:
+                    from tracekit.provider_status import record_operation
 
-                record_operation(
-                    provider_name,
-                    "pull",
-                    True,
-                    f"Pulled {len(activities)} activities for {year_month}",
-                )
-            except Exception:
-                pass
+                    record_operation(
+                        provider_name,
+                        "pull",
+                        True,
+                        f"Pulled {len(activities)} activities for {year_month}",
+                    )
+                except Exception:
+                    pass
             return activities
         except Exception as e:
             from tracekit.provider_status import ProviderRateLimitError

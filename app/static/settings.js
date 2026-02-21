@@ -152,7 +152,7 @@ function makeProviderCard(name, data) {
 
     const header = document.createElement('div');
     header.className = 'provider-header';
-    header.innerHTML = `<span class="drag-handle">⠿</span><span class="provider-name">${escHtml(meta.label)}</span><span class="provider-inline-status"></span>`;
+    header.innerHTML = `<span class="drag-handle">⠿</span><span class="provider-name">${escHtml(meta.label)}</span><span class="provider-activity-count"></span><span class="provider-inline-status"></span>`;
 
     const enabledToggle = makeToggle(`en-${name}`, data.enabled, 'Enabled');
     enabledToggle.querySelector('input').addEventListener('change', e => {
@@ -634,6 +634,18 @@ function renderProviderStatuses(statuses) {
 
         // Remove old rate-limit banners if re-rendering
         card.querySelectorAll('.provider-rate-limit').forEach(el => el.remove());
+
+        // Update activity count in the header
+        const countEl = card.querySelector('.provider-activity-count');
+        if (countEl) {
+            const count = status?.activity_count;
+            if (typeof count === 'number' && count > 0) {
+                countEl.textContent = count.toLocaleString();
+                countEl.title = `${count.toLocaleString()} activities`;
+            } else {
+                countEl.textContent = '';
+            }
+        }
 
         // Update inline status in the header
         const inlineStatus = card.querySelector('.provider-inline-status');

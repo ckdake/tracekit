@@ -2,7 +2,7 @@
 
 from db_init import _init_db, load_tracekit_config
 from flask import Blueprint, jsonify, request
-from helpers import get_database_info, get_most_recent_activity
+from helpers import get_database_info, get_most_recent_activity, get_provider_activity_counts
 
 api_bp = Blueprint("api", __name__)
 
@@ -45,7 +45,18 @@ def api_provider_status():
     try:
         from tracekit.provider_status import get_all_statuses
 
-        return jsonify(get_all_statuses())
+        statuses = get_all_statuses()
+        counts = get_provider_activity_counts()
+
+        # Merge activity counts into each provider's status dict
+        all_providers = set(statuses.keys()) | set(counts.keys())
+        merged: dict = {}
+        for provider in all_providers:
+            entry = dict(statuses.get(provider) or {})
+            entry["activity_count"] = counts.get(provider, 0)
+            merged[provider] = entry
+
+        return jsonify(merged)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
