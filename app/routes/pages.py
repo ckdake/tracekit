@@ -10,6 +10,12 @@ from helpers import get_current_date_in_timezone
 pages_bp = Blueprint("pages", __name__)
 
 
+@pages_bp.route("/privacy")
+def privacy():
+    """Privacy policy and terms of service page."""
+    return render_template("privacy.html", page_name="Privacy Policy")
+
+
 @pages_bp.route("/settings")
 def settings():
     """Settings page — edit providers, timezone and debug flag."""

@@ -155,6 +155,27 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
 
         total_activities = sum(activity_counts.values())
 
+        # Collect Garmin device names used in this month (non-null, distinct)
+        garmin_devices: list[str] = []
+        try:
+            rows = (
+                GarminActivity.select(GarminActivity.device_name)
+                .where(
+                    GarminActivity.start_time.is_null(False)
+                    & (GarminActivity.start_time >= start_ts)
+                    & (GarminActivity.start_time <= end_ts)
+                    & GarminActivity.device_name.is_null(False)
+                )
+                .distinct()
+            )
+            garmin_devices = sorted({r.device_name for r in rows if r.device_name})
+        except Exception:
+            pass
+
+        provider_metadata: dict[str, dict] = {}
+        if garmin_devices:
+            provider_metadata["garmin"] = {"devices": garmin_devices}
+
         return {
             "year_month": year_month,
             "year": year_int,
@@ -165,6 +186,7 @@ def get_single_month_data(config: dict[str, Any] | None, year_month: str) -> dic
             "provider_status": provider_status,
             "activity_counts": activity_counts,
             "total_activities": total_activities,
+            "provider_metadata": provider_metadata,
         }
     except Exception as e:
         return {"error": f"Database error: {e}"}

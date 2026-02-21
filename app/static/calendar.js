@@ -33,13 +33,34 @@ function renderGrid(yearMonth, data) {
         return;
     }
 
+    const PROVIDER_DISPLAY = {
+        strava:      { label: 'Strava',      attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
+        garmin:      { label: 'Garmin',      attr: '<a href="https://www.garmin.com" target="_blank" rel="noopener" class="provider-attr attr-garmin" title="Powered by Garmin">Powered by Garmin</a>' },
+        stravajson:  { label: 'Strava (JSON)', attr: '<a href="https://www.strava.com" target="_blank" rel="noopener" class="provider-attr attr-strava" title="Powered by Strava">Powered by Strava</a>' },
+        ridewithgps: { label: 'RideWithGPS', attr: '' },
+        spreadsheet: { label: 'Spreadsheet', attr: '' },
+        file:        { label: 'File',         attr: '' },
+    };
+
+    const meta = data.provider_metadata || {};
+
     grid.innerHTML = enabledProviders.map(p => {
         const synced  = data.provider_status[p];
         const cls     = synced ? 'synced' : 'not-synced';
         const tooltip = synced ? 'Synced' : 'Not synced';
         const count   = data.activity_counts[p] || 0;
         const countHtml = count > 0 ? '<div class="activity-count">' + count + ' activities</div>' : '';
-        return '<div class="provider-status ' + cls + '" title="' + tooltip + '"><div>' + p.substring(0, 8) + '</div>' + countHtml + '</div>';
+        const info    = PROVIDER_DISPLAY[p] || {};
+        const label   = info.label || p;
+        const attrHtml = (synced && info.attr) ? '<div class="provider-attr-row">' + info.attr + '</div>' : '';
+
+        // Device names (currently Garmin-only)
+        const devices = (synced && meta[p] && meta[p].devices) ? meta[p].devices : [];
+        const deviceHtml = devices.length
+            ? '<div class="provider-devices">' + devices.map(d => '<span class="device-chip">' + d + '</span>').join('') + '</div>'
+            : '';
+
+        return '<div class="provider-status ' + cls + '" title="' + tooltip + '"><div>' + label + '</div>' + countHtml + deviceHtml + attrHtml + '</div>';
     }).join('');
 }
 

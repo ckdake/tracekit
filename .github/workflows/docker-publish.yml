@@ -3,6 +3,9 @@ name: Build and publish Docker image
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'tracekit/**'
   release:
     types: [ published ]
 

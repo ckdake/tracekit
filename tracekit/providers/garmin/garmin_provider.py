@@ -53,6 +53,27 @@ class GarminProvider(FitnessProvider):
                 )
         return self.client
 
+    def _get_device_map(self) -> dict[int, str]:
+        """Return a mapping of Garmin deviceId → human-readable product name.
+
+        Calls get_devices() once per sync.  Returns an empty dict on failure
+        so that the sync continues even if device info is unavailable.
+        """
+        try:
+            client = self._get_client()
+            devices = client.get_devices()
+            device_map: dict[int, str] = {}
+            for dev in devices or []:
+                device_id = dev.get("deviceId")
+                # Prefer productDisplayName, fall back to displayName
+                name = dev.get("productDisplayName") or dev.get("displayName") or ""
+                if device_id and name:
+                    device_map[int(device_id)] = name
+            return device_map
+        except Exception as e:
+            print(f"Could not fetch Garmin device list: {e}")
+            return {}
+
     def pull_activities(self, date_filter: str | None = None) -> list[GarminActivity]:
         """
         Sync activities for a given month filter in YYYY-MM format.
@@ -70,6 +91,9 @@ class GarminProvider(FitnessProvider):
             print(f"Month {date_filter} already synced for {self.provider_name}")
             # Always return activities for the requested month from database
             return self._get_garmin_activities_for_month(date_filter)
+
+        # Build device ID → name map once for this sync
+        device_map = self._get_device_map()
 
         # Get the raw activity data for the month
         raw_activities = self.fetch_activities_for_month(date_filter)
@@ -130,6 +154,11 @@ class GarminProvider(FitnessProvider):
 
                 if raw_activity.get("calories"):
                     garmin_activity.calories = int(raw_activity.get("calories", 0))
+
+                # Device name
+                raw_device_id = raw_activity.get("deviceId")
+                if raw_device_id is not None:
+                    garmin_activity.device_name = device_map.get(int(raw_device_id), "") or None
 
                 # Store raw data as JSON
                 garmin_activity.raw_data = json.dumps(raw_activity)

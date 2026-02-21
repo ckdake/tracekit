@@ -693,6 +693,106 @@ select#timezone:focus {
     margin: 0 8px;
     color: rgba(0,0,0,.2);
 }
+.footer-attribution {
+    display: inline;
+}
+/* Strava brand orange: #FC4C02 */
+.attr-strava {
+    color: #FC4C02 !important;
+    font-weight: 600;
+}
+.attr-strava:hover {
+    color: #d93f00 !important;
+    text-decoration: underline;
+}
+/* Garmin brand blue: #007CC3 */
+.attr-garmin {
+    color: #007CC3 !important;
+    font-weight: 600;
+}
+.attr-garmin:hover {
+    color: #005f99 !important;
+    text-decoration: underline;
+}
+
+/* ── Provider attribution within calendar cards ─────────────────────────────── */
+.provider-attr-row {
+    margin-top: 4px;
+    font-size: 0.65rem;
+    line-height: 1.2;
+}
+.provider-attr {
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 3px;
+    padding: 1px 4px;
+    display: inline-block;
+}
+.provider-attr.attr-strava {
+    color: #FC4C02;
+    border: 1px solid rgba(252,76,2,.35);
+}
+.provider-attr.attr-strava:hover { background: rgba(252,76,2,.08); }
+.provider-attr.attr-garmin {
+    color: #007CC3;
+    border: 1px solid rgba(0,124,195,.35);
+}
+.provider-attr.attr-garmin:hover { background: rgba(0,124,195,.08); }
+
+/* ── Device name chip inside provider card ───────────────────────────────────── */
+.provider-devices {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+.device-chip {
+    display: inline-block;
+    font-size: 0.62rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(0,124,195,.1);
+    color: #005f99;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* ── Privacy / prose page ────────────────────────────────────────────────────── */
+.prose {
+    background: #fff;
+    border-radius: 8px;
+    padding: 32px 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.07);
+    margin-bottom: 40px;
+    line-height: 1.75;
+}
+.prose h1 { font-size: 1.7rem; margin-bottom: 4px; }
+.prose h2 { font-size: 1.2rem; margin-top: 32px; padding-bottom: 4px; border-bottom: 1px solid #eee; }
+.prose h3 { font-size: 1rem; margin-top: 24px; color: #444; }
+.prose-lead { color: rgba(0,0,0,.4); font-size: 0.88rem; margin-top: 0; margin-bottom: 24px; }
+.prose hr { border: none; border-top: 1px solid #eee; margin: 28px 0; }
+.prose code {
+    background: #f4f4f4;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.88em;
+}
+.prose ul { padding-left: 1.5em; }
+.prose li { margin-bottom: 4px; }
+.attribution-block { margin: 8px 0 16px; }
+.attribution-logo { height: 28px; vertical-align: middle; }
+.attribution-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.garmin-pill {
+    background: #007CC3;
+    color: #fff;
+    text-decoration: none;
+}
 
 /* ── Notifications ───────────────────────────────────────────────────────────── */
 .notif-wrap {

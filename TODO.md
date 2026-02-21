@@ -18,6 +18,18 @@ Tracked here for visibility. PRs and issues welcome.
 - [ ] What about choochoo?
 - [ ] Load files from S3 or another remote source: [boto3](https://pypi.org/project/boto3/)
 
+## Strava API Compliance
+
+- [ ] **Delete synced Strava activities that have been deleted on Strava** — during daily sync,
+      re-fetch the list of activity IDs for each synced month and remove any local records
+      whose Strava ID no longer exists (Strava API §2.14.vi requires deletion within 48 hours).
+- [ ] **Implement Strava webhook subscriptions** for real-time deletion events
+      (`DELETE` event type on `/push_subscriptions`) so deletions propagate immediately rather
+      than waiting for the next daily sync. See
+      [Strava Webhook Events API](https://developers.strava.com/docs/webhooks/).
+- [ ] **Handle token revocation gracefully** — detect 401 responses from Strava, mark the
+      provider as disconnected, and prompt the user to re-authorize rather than failing silently.
+
 ## File Formats
 
 - [ ] Get everything out of GPX files: [gpxpy](https://pypi.org/project/gpxpy/) *(basics in — fill out metadata, add fields to db)*

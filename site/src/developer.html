@@ -31,9 +31,9 @@
                     <h1>tracekit</h1>
                     <p>
                         tracekit is a Python toolkit for aggregating, syncing,
-                        and analyzing your fitness activity data from multiple
-                        sources (Strava, RideWithGPS, spreadsheets, and local
-                        files). It is designed to be self-contained,
+                        and analyzing fitness activity data from multiple
+                        sources (Strava, RideWithGPS, Garmin, spreadsheets, and
+                        local files). It is designed to be self-contained,
                         non-destructive, and extensible.
                     </p>
                     <p>
@@ -46,9 +46,15 @@
                         📚 <strong>Source</strong>:
                         <a href="https://github.com/ckdake/tracekit"
                             >github.com/ckdake/tracekit</a
-                        >[CAUTION: This is under active development. Do not use
-                        it without reading every line of code!]
+                        >
                     </p>
+                    <blockquote>
+                        <p>
+                            ⚠️ <strong>Caution:</strong> This is under active
+                            development. Do not use it without reading every
+                            line of code.
+                        </p>
+                    </blockquote>
                     <p>
                         <a
                             href="https://github.com/ckdake/tracekit/actions/workflows/ruff.yml"
@@ -76,551 +82,120 @@
                         /></a>
                     </p>
                     <hr />
-                    <h2>Features</h2>
-                    <ul>
-                        <li>
-                            Parse and import activity files (<code>.fit</code>,
-                            <code>.tcx</code>, <code>.gpx</code>, and compressed
-                            variants)
-                        </li>
-                        <li>Integrate with Strava and RideWithGPS APIs</li>
-                        <li>
-                            Store and manage activity metadata in a local SQLite
-                            database
-                        </li>
-                        <li>
-                            Command-line interface for authentication and data
-                            management
-                        </li>
-                        <li>
-                            <strong>Web dashboard</strong> for viewing
-                            configuration and database status
-                            (<code>./dev.sh</code>)
-                        </li>
-                        <li>
-                            Modular provider and file format architecture for
-                            easy extension
-                        </li>
-                        <li>
-                            Static website with documentation at
-                            <a href="https://tracekit.app">tracekit.app</a>
-                        </li>
-                    </ul>
-                    <hr />
-                    <h2>Quick Start</h2>
+                    <h2>Running Locally</h2>
+                    <blockquote>
+                        <p>
+                            ⚠️ <strong>Work in Progress.</strong> Local setup
+                            works but is not yet polished. Expect rough edges.
+                        </p>
+                    </blockquote>
                     <h3>Option 1: Development Container (Recommended)</h3>
-                    <p>
-                        The easiest way to get started is using the provided
-                        development container:
-                    </p>
                     <ol>
                         <li>
-                            <strong>Prerequisites</strong>: Install
+                            Install
                             <a href="https://code.visualstudio.com/">VS Code</a>
                             and <a href="https://www.docker.com/">Docker</a>
                         </li>
+                        <li>Clone the repo and open it in VS Code</li>
                         <li>
-                            <strong>Open Repository</strong>: Clone and open in
-                            VS Code
+                            When prompted, click &quot;Reopen in Container&quot;
+                            (or <code>Ctrl+Shift+P</code> → &quot;Dev
+                            Containers: Reopen in Container&quot;)
                         </li>
                         <li>
-                            <strong>Reopen in Container</strong>: When prompted,
-                            click &quot;Reopen in Container&quot; or use
-                            <code>Ctrl+Shift+P</code> → &quot;Dev Containers:
-                            Reopen in Container&quot;
-                        </li>
-                        <li>
-                            <strong>Wait for Setup</strong>: The container will
-                            automatically install all dependencies and run
-                            verification tests
-                        </li>
-                        <li>
-                            <strong>Start Developing</strong>: Everything is
-                            ready to go!
+                            The container installs all dependencies and runs
+                            verification tests automatically
                         </li>
                     </ol>
-                    <p>
-                        📋 See
-                        <a href=".devcontainer/README.md"
-                            ><code>.devcontainer/README.md</code></a
-                        >
-                        for detailed container documentation.
-                    </p>
-                    <p><strong>Verify Setup:</strong></p>
-                    <pre><code class="language-bash">.devcontainer/verify.sh  # Quick environment check
-python -m tracekit --help  # Test CLI access
+                    <pre><code class="language-bash">.devcontainer/verify.sh   # Verify the environment
+python -m tracekit --help
 </code></pre>
                     <h3>Option 2: Local Installation</h3>
-                    <ol>
-                        <li>
-                            <p><strong>Clone the repository:</strong></p>
-                            <pre><code class="language-sh">git clone https://github.com/ckdake/tracekit.git
+                    <pre><code class="language-bash">git clone https://github.com/ckdake/tracekit.git
 cd tracekit
+pip install -e .[dev]
+pre-commit install
 </code></pre>
-                        </li>
-                        <li>
-                            <p><strong>Install dependencies:</strong></p>
-                            <pre><code class="language-sh">pip install -e .[dev]  # Development installation
-# OR
-pip install .          # Regular installation
-</code></pre>
-                        </li>
-                        <li>
-                            <p><strong>Set up development tools:</strong></p>
-                            <pre><code class="language-sh">pre-commit install     # Install git hooks
-</code></pre>
-                        </li>
-                        <li>
-                            <p>
-                                <strong>Set up environment variables:</strong>
-                                Create a <code>.env</code> file in the project
-                                root with the following variables:
-                            </p>
-                            <pre><code class="language-sh"># Strava API credentials (required for Strava integration, generate with the auth-strava command)
+                    <h3>Environment Variables</h3>
+                    <p>Create a <code>.env</code> file in the project root:</p>
+                    <pre><code class="language-sh"># Strava (https://www.strava.com/settings/api)
 STRAVA_CLIENT_ID=your_client_id
 STRAVA_CLIENT_SECRET=your_client_secret
 STRAVA_ACCESS_TOKEN=your_access_token
 STRAVA_REFRESH_TOKEN=your_refresh_token
 STRAVA_TOKEN_EXPIRES=token_expiration_timestamp
 
-# RideWithGPS credentials (required for RWGPS integration)
+# RideWithGPS (https://ridewithgps.com/api)
 RIDEWITHGPS_EMAIL=your_email
 RIDEWITHGPS_PASSWORD=your_password
 RIDEWITHGPS_KEY=your_api_key
 
-# Garmin Connect credentials (required for Garmin integration)
+# Garmin Connect
 GARMIN_EMAIL=your_email
 GARMINTOKENS=~/.garminconnect
 </code></pre>
-                            <p>
-                                Note: You can get Strava API credentials by
-                                creating an application at
-                                <a href="https://www.strava.com/settings/api"
-                                    >https://www.strava.com/settings/api</a
-                                >, RideWithGPS credentials at
-                                <a href="https://ridewithgps.com/api"
-                                    >https://ridewithgps.com/api</a
-                                >, and Garmin Connect credentials by using your
-                                existing Garmin Connect account.
-                            </p>
-                        </li>
-                        <li>
-                            <p><strong>Prepare your data:</strong></p>
-                            <ul>
-                                <li>
-                                    Place your exported Strava activity files in
-                                    a folder such as
-                                    <code>export_12345/</code> in the repo root.
-                                </li>
-                                <li>
-                                    If you&#39;re not using Strava export, place
-                                    your files in
-                                    <code>export_12345/activities/</code> in the
-                                    repo root.
-                                </li>
-                                <li>
-                                    (Optional) Place your exercise spreadsheet
-                                    at
-                                    <code>~/Documents/exerciselog.xlsx</code>.
-                                </li>
-                            </ul>
-                        </li>
-                    </ol>
-                    <hr />
-                    <h2>Authenticating with Strava</h2>
-                    <p>
-                        To use Strava API features, you need to authenticate and
-                        get an access token.
-                    </p>
-                    <ol>
-                        <li>
-                            <p>
-                                <strong
-                                    >Set your Strava API credentials as
-                                    environment variables:</strong
-                                >
-                            </p>
-                            <pre><code class="language-sh">export STRAVA_CLIENT_ID=your_client_id
+                    <h3>Authenticating with Strava</h3>
+                    <pre><code class="language-bash">export STRAVA_CLIENT_ID=your_client_id
 export STRAVA_CLIENT_SECRET=your_client_secret
-</code></pre>
-                        </li>
-                        <li>
-                            <p>
-                                <strong
-                                    >Run the Strava authentication
-                                    command:</strong
-                                >
-                            </p>
-                            <pre><code class="language-sh">python -m tracekit auth-strava
-</code></pre>
-                            <p>
-                                This will guide you through the OAuth process
-                                and print an access token. Set it in your
-                                environment:
-                            </p>
-                            <pre><code class="language-sh">export STRAVA_ACCESS_TOKEN=your_access_token
-</code></pre>
-                        </li>
-                    </ol>
-                    <hr />
-                    <h2>Authenticating with Garmin Connect</h2>
-                    <p>
-                        To use Garmin Connect API features, you need to
-                        authenticate and store OAuth tokens.
-                    </p>
-                    <ol>
-                        <li>
-                            <p>
-                                <strong
-                                    >Set your Garmin Connect credentials as
-                                    environment variables (optional):</strong
-                                >
-                            </p>
-                            <pre><code class="language-sh">export GARMIN_EMAIL=your_email
-export GARMINTOKENS=~/.garminconnect
-</code></pre>
-                        </li>
-                        <li>
-                            <p>
-                                <strong
-                                    >Run the Garmin authentication
-                                    command:</strong
-                                >
-                            </p>
-                            <pre><code class="language-sh">python -m tracekit auth-garmin
-</code></pre>
-                            <p>
-                                This will prompt for your email and password,
-                                handle any required MFA, and automatically
-                                generate and store OAuth tokens that are valid
-                                for about a year. The tokens will be reused
-                                automatically for future API calls.
-                            </p>
-                        </li>
-                    </ol>
-                    <hr />
-                    <h2>Running tracekit</h2>
-                    <p>You can use the CLI for various commands:</p>
-                    <pre><code class="language-sh">python -m tracekit --help
-python -m tracekit configure
 python -m tracekit auth-strava
-python -m tracekit auth-garmin
+# Follow the OAuth prompts, then set STRAVA_ACCESS_TOKEN in your .env
+</code></pre>
+                    <h3>Authenticating with Garmin Connect</h3>
+                    <pre><code class="language-bash">python -m tracekit auth-garmin
+# Prompts for email/password, handles MFA, and stores OAuth tokens (~/.garminconnect)
+# Tokens are valid for ~1 year and reused automatically
+</code></pre>
+                    <h3>Running</h3>
+                    <pre><code class="language-bash">python -m tracekit --help
+python -m tracekit configure   # interactive wizard — writes tracekit_config.json (seeds DB on first boot)
 python -m tracekit pull --date 2025-08
 python -m tracekit sync-month 2025-08
 python -m tracekit reset --date 2025-08
 </code></pre>
-                    <ul>
-                        <li>
-                            <code>configure</code> – Set up paths and API
-                            credentials.
-                        </li>
-                        <li>
-                            <code>auth-strava</code> – Authenticate with Strava
-                            and get an access token.
-                        </li>
-                        <li>
-                            <code>sync</code> – Sync and match activities from
-                            all sources.
-                        </li>
-                        <li>
-                            <code>help</code> – Show usage and documentation.
-                        </li>
-                    </ul>
-                    <p>
-                        You can also use the Python API in your own scripts to
-                        process files, sync with providers, or analyze your
-                        data.
-                    </p>
+                    <blockquote>
+                        <p>
+                            <strong>Web dashboard:</strong> For Docker
+                            deployments, configuration is stored in PostgreSQL
+                            and managed through the Settings UI at
+                            <code>/settings</code>.
+                            <code>tracekit_config.json</code> is only used as a
+                            one-time seed if present when the DB is empty.
+                        </p>
+                    </blockquote>
                     <hr />
-                    <h2>Running Tests</h2>
-                    <p>
-                        tracekit uses
-                        <a href="https://pytest.org/">pytest</a> for testing. To
-                        run all tests:
-                    </p>
-                    <pre><code class="language-sh">python -m pytest --cov=tracekit --cov-report=term-missing -v
-</code></pre>
-                    <p>
-                        Test files are in the <code>tests/</code> directory and
-                        mirror the package structure.
-                    </p>
-                    <hr />
-                    <h2>Packaging &amp; Publishing to PyPI</h2>
-                    <p>To prepare and publish the package:</p>
-                    <ol>
-                        <li>
-                            <strong
-                                >Update version and metadata in
-                                <code>setup.py</code> and
-                                <code>setup.cfg</code>.</strong
-                            >
-                        </li>
-                        <li>
-                            <strong>Build the package:</strong>
-                            <pre><code class="language-sh">python -m build
-</code></pre>
-                        </li>
-                        <li>
-                            <strong
-                                >Upload to PyPI (requires
-                                <code>twine</code>):</strong
-                            >
-                            <pre><code class="language-sh">twine upload dist/*
-</code></pre>
-                        </li>
-                    </ol>
-                    <hr />
-                    <h2>Contributing</h2>
-                    <p>
-                        PRs and issues are welcome! See the TODO section in this
-                        README for ideas and next steps.
-                    </p>
-                    <hr />
-                    <h2>Development</h2>
-                    <p>
-                        This is a monorepo containing both the Python package
-                        and the static website.
-                    </p>
-                    <h3>Repository Structure</h3>
-                    <pre><code>tracekit/
-├── .devcontainer/       # Development container configuration
-├── .github/workflows/   # CI/CD pipelines
-├── app/                 # Web dashboard (Flask)
-├── tracekit/              # Python package source
-├── tests/               # Python tests
-├── site/                # Static website source
-│   ├── src/             # Website source files
-│   ├── scripts/         # Build scripts
-│   └── dist/            # Built website (generated)
-├── pyproject.toml       # Python package config
-├── ruff.toml           # Python linting configuration
-├── dev.sh              # Start web dashboard
-└── README.md           # This file (also used for website)
-</code></pre>
-                    <h3>Web Dashboard</h3>
-                    <p>
-                        For local development, tracekit includes a simple web
-                        dashboard to view configuration and database status:
-                    </p>
-                    <pre><code class="language-bash"># Start the web dashboard (development script moved to `scripts/run-dev.sh`)
-./scripts/run-dev.sh
-</code></pre>
-                    <p>
-                        Visit
-                        <a href="http://localhost:5000"
-                            >http://localhost:5000</a
-                        >
-                        to see:
-                    </p>
+                    <h2>More</h2>
                     <ul>
                         <li>
-                            📊 <strong>Configuration status</strong> from
-                            <code>tracekit_config.json</code>
+                            <a href="DEVELOPMENT.md">DEVELOPMENT.md</a> – Repo
+                            structure, dev tools, lint/test/package/release, VS
+                            Code integration
                         </li>
                         <li>
-                            🔌
-                            <strong>Provider settings</strong>
-                            (enabled/disabled, priorities)
+                            <a href="PRODUCTION.md">PRODUCTION.md</a> –
+                            Self-hosting with Docker and SSL termination
                         </li>
                         <li>
-                            💾 <strong>Database information</strong> (size,
-                            tables, row counts)
+                            <a href="WEBSITE.md">WEBSITE.md</a> – Website
+                            development and deployment
                         </li>
                         <li>
-                            🔗 <strong>API endpoints</strong> for programmatic
-                            access
+                            <a href="TODO.md">TODO.md</a> – Planned work and
+                            known gaps
+                        </li>
+                        <li>
+                            <a href="SECURITY.md">SECURITY.md</a> – Reporting
+                            security issues
                         </li>
                     </ul>
-                    <p>
-                        The dashboard provides a quick way to verify your
-                        tracekit setup without running CLI commands.
-                    </p>
-                    <h3>Running via Docker</h3>
-                    <p>
-                        A pre-built image is available on GitHub Container
-                        Registry: <code>ghcr.io/ckdake/tracekit:latest</code>.
-                    </p>
-                    <p>Pull and run the published image:</p>
-                    <pre><code class="language-bash"># Pull the latest published image
-docker pull ghcr.io/ckdake/tracekit:latest
-
-# Run with your local config mounted
-docker run --rm -p 5000:5000 -v $(pwd)/tracekit_config.json:/app/tracekit_config.json ghcr.io/ckdake/tracekit:latest
-
-# Or pass a host config path via CONFIG_PATH env var
-docker run --rm -p 5000:5000 -e CONFIG_PATH=/host/config/tracekit_config.json -v /host/config:/host/config ghcr.io/ckdake/tracekit:latest
-
-# Verify health
-curl http://localhost:5000/health
-</code></pre>
-                    <h3>Development Tools</h3>
-                    <p><strong>Python Development:</strong></p>
-                    <ul>
-                        <li>
-                            <strong>Ruff</strong>: Fast linting, formatting, and
-                            import sorting (replaces Black, Flake8, isort,
-                            Pylint)
-                        </li>
-                        <li><strong>MyPy</strong>: Static type checking</li>
-                        <li>
-                            <strong>Pytest</strong>: Test runner with coverage
-                        </li>
-                        <li>
-                            <strong>Pre-commit</strong>: Git hooks for automated
-                            code quality
-                        </li>
-                    </ul>
-                    <p><strong>Web Development:</strong></p>
-                    <ul>
-                        <li>
-                            <strong>Node.js 18</strong>: Runtime environment
-                        </li>
-                        <li>
-                            <strong>Vite</strong>: Build system and dev server
-                        </li>
-                        <li><strong>ESLint</strong>: JavaScript linting</li>
-                        <li><strong>Stylelint</strong>: CSS linting</li>
-                        <li><strong>Prettier</strong>: Code formatting</li>
-                    </ul>
-                    <h3>Development Commands</h3>
-                    <p><strong>Python:</strong></p>
-                    <pre><code class="language-bash"># Run tests
-python -m pytest -v
-
-# Lint and format code
-ruff check tracekit/ tests/           # Check for issues
-ruff check --fix tracekit/ tests/     # Auto-fix issues
-ruff format tracekit/ tests/          # Format code
-
-# Type checking
-mypy tracekit/
-
-# Run CLI
-python -m tracekit --help
-</code></pre>
-                    <p><strong>Website:</strong></p>
-                    <pre><code class="language-bash">cd site/
-
-# Install dependencies
-npm install
-
-# Development server (localhost:3000)
-npm run dev
-
-# Build for production
-npm run build
-
-# Lint and format
-npm run lint
-npm run format
-</code></pre>
-                    <p><strong>Quality Assurance:</strong></p>
-                    <pre><code class="language-bash"># Run all pre-commit hooks
-pre-commit run --all-files
-
-# Verify development environment
-.devcontainer/verify.sh
-</code></pre>
-                    <h3>VS Code Integration</h3>
-                    <p>
-                        The development container automatically configures VS
-                        Code with:
-                    </p>
-                    <ul>
-                        <li>Format on save for all file types</li>
-                        <li>Automatic import organization</li>
-                        <li>Error highlighting for Python, JavaScript, CSS</li>
-                        <li>Integrated terminal with proper environment</li>
-                        <li>All necessary extensions pre-installed</li>
-                    </ul>
-                    <p>
-                        <strong>Available VS Code Tasks</strong> (<code
-                            >Ctrl+Shift+P</code
-                        >
-                        → &quot;Tasks: Run Task&quot;):
-                    </p>
-                    <ul>
-                        <li>
-                            <strong>Python: Run Tests</strong> - Run all Python
-                            tests
-                        </li>
-                        <li>
-                            <strong>Python: Lint All</strong> - Run Python
-                            linting
-                        </li>
-                        <li>
-                            <strong>DevContainer: Verify Setup</strong> - Verify
-                            environment health
-                        </li>
-                    </ul>
-                    <h3>Website Development</h3>
-                    <p>
-                        The website at
-                        <a href="https://tracekit.app">tracekit.app</a>
-                        automatically includes content from this README.md file:
-                    </p>
-                    <ol>
-                        <li>
-                            Start development server:
-                            <code>cd site &amp;&amp; npm run dev</code>
-                        </li>
-                        <li>
-                            Edit files in <code>site/src/</code> or update
-                            README.md
-                        </li>
-                        <li>Site rebuilds automatically with changes</li>
-                        <li>
-                            Build for production: <code>npm run build</code>
-                        </li>
-                    </ol>
-                    <p>
-                        The website is automatically deployed when changes are
-                        pushed to the main branch.
-                    </p>
                     <hr />
                     <h2>License</h2>
                     <p>
-                        This project is licensed under the Creative Commons
-                        Attribution-NonCommercial 4.0 International (CC BY-NC
-                        4.0). See the LICENSE file for details.
+                        This project is licensed under the
+                        <a href="LICENSE.txt"
+                            >Creative Commons Attribution-NonCommercial 4.0
+                            International (CC BY-NC 4.0)</a
+                        >.
                     </p>
-                    <hr />
-                    <h2>Getting things back out into spreadsheet</h2>
-                    <pre><code>sqlite3 metadata.sqlite3
-.headers on
-.mode csv
-.output metadata.csv
-SELECT date,activity_type,location_name,city,state,temperature,equipment,duration_hms,max_speed,avg_heart_rate,max_heart_rate,calories,max_elevation,total_elevation_gain,with_names,avg_cadence,strava_id,garmin_id,ridewithgps_id,notes from ActivityMetadata where source=&quot;Main&quot;;
-.quit
-</code></pre>
-                    <h2>TODO</h2>
-                    <pre><code>* Next month to fix:  `python -m tracekit sync-month 2024-03`
-* File provider manually fixed, go through other providers and manually fix them to work the ~same way. make sure we&#39;re not making API calls if the month is synced.
-* Fix strava gear matching to work for running shoes.
-* Fix &quot;create&quot; in providers to create_from_activity, and get all that out of sync_month
-* Write some tests...
-* Get everything out of gpx files: https://pypi.org/project/gpxpy/  (basics are in, need to fill out metadata, add more fields to db!)
-* Get everything out of tcx files: https://pypi.org/project/python-tcxparser/ (basics are in, need to fill out metadata, add more fields to db!)
-* Get everything out of fit files: https://github.com/dtcooper/python-fitparse/ (basics are in, need to fill out metadata, add more fields to db!)
-* Get everything out of KML files: https://pypi.org/project/pykml/
-* Get everything out of a spreadsheet with headers: https://pypi.org/project/openpyxl/ (basics are in, work better with headers)
-
-* Output as all fit (lib already included)
-* Output as all tcx (lib already included)
-* Output as all gpx (lib already included)
-* Output as all kml (lib already included)
-* Output as all geojson: https://pypi.org/project/geojson/
-
-* Load files from S3 bucket or somewhere else instead of local: https://pypi.org/project/boto3/
-
-* What is in TrainingPeaks?
-* What is in Wandrer.earth?
-* What about the weather?
-* What about choochoo?
-* What else?
-
-* switch to fitdecode
-</code></pre>
                 </div>
             </div>
         </main>

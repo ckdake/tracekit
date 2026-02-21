@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy &amp; Terms — tracekit{% endblock %}
+
+{% block body %}
+<div class="container-narrow">
+    <article class="prose">
+        <h1>Privacy Policy &amp; Terms of Service</h1>
+        <p class="prose-lead">Effective Date: February 21, 2026</p>
+
+        <p>tracekit is a personal, self-hosted fitness data aggregation tool. This document describes
+        how tracekit handles your data when you run it yourself or use a hosted instance operated
+        by someone you trust.</p>
+
+        <hr>
+
+        <h2>1. What tracekit Is</h2>
+        <p>tracekit is open-source software you install and operate yourself. It connects to third-party
+        fitness platforms (Strava, Garmin, RideWithGPS, etc.) using OAuth tokens that <strong>you</strong> provide
+        and stores a local cache of your activity metadata to power features like:</p>
+        <ul>
+            <li>Viewing your own activity history across providers in one calendar view</li>
+            <li>Matching the same activity across providers (e.g. Garmin upload → Strava record)</li>
+            <li>Updating activity titles and gear assignments on Strava</li>
+        </ul>
+
+        <h2>2. Data We Collect and Why</h2>
+
+        <h3>What is stored</h3>
+        <p>tracekit stores <strong>activity metadata only</strong> — no GPS tracks, no route geometry, no
+        heart-rate time series. The metadata stored includes:</p>
+        <ul>
+            <li>Activity name, type, date/time, and duration</li>
+            <li>Distance and elevation</li>
+            <li>Equipment / gear name</li>
+            <li>Heart-rate averages and max values</li>
+            <li>Temperature</li>
+            <li>Provider-assigned activity ID</li>
+        </ul>
+
+        <h3>What is NOT stored</h3>
+        <ul>
+            <li>GPS coordinates, routes, or map data</li>
+            <li>Granular time-series sensor data (per-second HR, power, cadence streams)</li>
+            <li>Any data from other users — only the authenticated user's own data is ever fetched or stored</li>
+        </ul>
+
+        <h3>Why it is stored</h3>
+        <p>Data is cached locally (in a SQLite database you control) to avoid unnecessary API calls and
+        to allow offline browsing of your own history. The cache is only ever read by you — the
+        person running the software.</p>
+
+        <h2>3. How Data Is Used</h2>
+        <ul>
+            <li><strong>Matching:</strong> Activity records from different providers are compared by timestamp and
+            distance to identify duplicates and link IDs across providers.</li>
+            <li><strong>Display:</strong> Your own cached activities are shown on the calendar and sync status pages.</li>
+            <li><strong>Writeback:</strong> You may use tracekit to update activity titles and gear assignments on Strava
+            via the Strava API. No other write operations are performed on third-party platforms.</li>
+        </ul>
+        <p>tracekit <strong>never</strong>:</p>
+        <ul>
+            <li>Shares your data with any third party</li>
+            <li>Aggregates or analyzes data across multiple users</li>
+            <li>Uses your data for advertising or machine learning</li>
+            <li>Sells, licenses, or discloses your data to anyone</li>
+        </ul>
+
+        <h2>4. Third-Party Platforms</h2>
+        <p>tracekit integrates with the following platforms. Your use of those platforms is governed by
+        their own terms and privacy policies.</p>
+
+        <h3>Strava</h3>
+        <p>tracekit uses the <a href="https://www.strava.com/legal/api" target="_blank" rel="noopener">Strava API</a>.
+        Activity data obtained via the Strava API is used solely to display your own activities to you
+        and to perform gear/title updates on your behalf. tracekit is not affiliated with or endorsed
+        by Strava.</p>
+        <p class="attribution-block">
+            <a href="https://www.strava.com" target="_blank" rel="noopener" class="attribution-link strava-attr">
+                <img src="{{ url_for('static', filename='powered_by_strava.svg') }}"
+                     alt="Powered by Strava" class="attribution-logo" onerror="this.replaceWith(document.createTextNode('Powered by Strava'))">
+            </a>
+        </p>
+
+        <h3>Garmin</h3>
+        <p>tracekit can ingest activity data that originated on Garmin devices, either via Garmin Connect
+        or via Strava (where Garmin-sourced activities may appear). tracekit is not affiliated with or
+        endorsed by Garmin.</p>
+        <p class="attribution-block">
+            <a href="https://www.garmin.com" target="_blank" rel="noopener" class="attribution-link garmin-attr">
+                <span class="attribution-pill garmin-pill">Powered by Garmin</span>
+            </a>
+        </p>
+
+        <h3>RideWithGPS</h3>
+        <p>tracekit can sync activities from RideWithGPS. tracekit is not affiliated with or endorsed by
+        RideWithGPS.</p>
+
+        <h2>5. Data Retention</h2>
+        <ul>
+            <li>Cached activity data is retained locally in your SQLite database until you delete it.</li>
+            <li>You can delete all data for a provider at any time using the <code>reset</code> command or the
+            settings page in the web app.</li>
+            <li>If you request deletion of your data from a hosted instance, the operator must delete all
+            stored data related to your account within a reasonable time (we target 24 hours).</li>
+            <li><strong>Daily sync:</strong> tracekit performs a daily background sync. If an activity has been deleted
+            on a connected platform, tracekit will eventually remove it from the local cache.</li>
+        </ul>
+
+        <h2>6. Security</h2>
+        <ul>
+            <li>OAuth tokens used to access third-party APIs are stored in your local configuration file.
+            You are responsible for securing that file.</li>
+            <li>All communication with third-party APIs uses HTTPS.</li>
+            <li>tracekit does not expose your data to the internet unless you choose to run the web app on
+            a public interface.</li>
+        </ul>
+
+        <h2>7. Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+            <li><strong>Access</strong> all data tracekit has stored about you (it is in your SQLite database file).</li>
+            <li><strong>Delete</strong> all stored data — use <code>python -m tracekit reset</code> or the Settings page.</li>
+            <li><strong>Revoke</strong> tracekit's access to any connected platform at any time by disconnecting the app
+            in that platform's settings (e.g. Strava's
+            <a href="https://www.strava.com/settings/apps" target="_blank" rel="noopener">Connected Apps</a>
+            page). Upon revocation, no further data will be fetched.</li>
+        </ul>
+
+        <h2>8. Contact</h2>
+        <p>tracekit is open-source software maintained on GitHub:
+        <a href="https://github.com/ckdake/tracekit" target="_blank" rel="noopener">github.com/ckdake/tracekit</a>.
+        For questions or data deletion requests, open an issue or contact the repository maintainer.</p>
+    </article>
+</div>
+{% endblock %}
