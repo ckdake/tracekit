@@ -28,13 +28,25 @@ from helpers import (
 
 
 class _UserIdFilter(logging.Filter):
-    """Adds ``user_id`` from the ContextVar to every log record."""
+    """Adds ``user_id`` to every log record.
+
+    Prefers ``g.uid`` (set per-request by ``_set_user_context``) when inside a
+    Flask request context so concurrent requests on different threads each get
+    their own value.  Falls back to the ContextVar for log lines emitted outside
+    of a request (e.g. Celery workers, startup).
+    """
 
     def filter(self, record: logging.LogRecord) -> bool:
         try:
-            from tracekit.user_context import get_user_id
+            from flask import g as flask_g
+            from flask import has_request_context
 
-            record.user_id = get_user_id()
+            if has_request_context():
+                record.user_id = flask_g.get("uid", 0)
+            else:
+                from tracekit.user_context import get_user_id
+
+                record.user_id = get_user_id()
         except Exception:
             record.user_id = "?"
         return True
@@ -78,6 +90,10 @@ def _set_user_context():
 
     from tracekit.user_context import set_user_id
 
+    # Initialise g.uid so the log filter always has a value for this request,
+    # even if we return early or abort below.
+    g.uid = 0
+
     if is_single_user_mode():
         set_user_id(0)
         return
@@ -111,6 +127,7 @@ def _set_user_context():
 
         user = User.get_by_id(uid)
         set_user_id(user.id)
+        g.uid = user.id
         # Cache on g so the context processor never needs to re-query the DB.
         # Tracekit.cleanup() closes the connection before templates render, so a
         # second DB round-trip in inject_current_user() would intermittently fail.
