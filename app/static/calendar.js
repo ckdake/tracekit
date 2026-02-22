@@ -83,12 +83,12 @@ function renderGrid(yearMonth, data) {
         const pullStatus  = data.pull_statuses && data.pull_statuses[p];
         const isActive    = pullStatus && (pullStatus.status === 'queued' || pullStatus.status === 'started');
 
-        // Big integer count (no label)
-        const countHtml = count > 0 ? '<div class="activity-count-big">' + count + '</div>' : '';
+        // Big integer count (no label) — always shown, even for 0
+        const countHtml = '<div class="activity-count-big">' + count + '</div>';
 
-        // Mini calendar grid
+        // Mini calendar grid — always shown; dots are off when activeDays is empty
         const activeDays = (data.activity_days && data.activity_days[p]) ? data.activity_days[p] : [];
-        const miniCalHtml = synced ? buildMiniCal(yearMonth, activeDays) : '';
+        const miniCalHtml = buildMiniCal(yearMonth, activeDays);
 
         // Device chip (Garmin-only)
         const devices = (synced && meta[p] && meta[p].devices) ? meta[p].devices : [];
