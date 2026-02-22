@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — tracekit{% endblock %}
+{% block body %}
+<div class="auth-page">
+    <div class="auth-card">
+        <h1 class="auth-title">Sign Up</h1>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/signup" class="auth-form">
+            <label class="auth-label" for="email">Email</label>
+            <input class="auth-input" type="email" id="email" name="email"
+                   value="{{ email or '' }}" autocomplete="email" autofocus required>
+
+            <label class="auth-label" for="password">Password</label>
+            <input class="auth-input" type="password" id="password" name="password"
+                   autocomplete="new-password" required>
+
+            <label class="auth-label" for="confirm">Confirm Password</label>
+            <input class="auth-input" type="password" id="confirm" name="confirm"
+                   autocomplete="new-password" required>
+
+            <button type="submit" class="btn btn-primary auth-submit">Create Account</button>
+        </form>
+        <p class="auth-alt">Already have an account? <a href="/login">Log in</a></p>
+    </div>
+</div>
+{% endblock %}

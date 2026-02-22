@@ -22,6 +22,11 @@ def _init_db() -> bool:
 
             configure_db(get_db_path_from_env())
             migrate_tables(get_all_models())
+
+            from models.user import User
+
+            migrate_tables([User])
+
             _db_initialized = True
         except Exception as e:
             print(f"DB init failed: {e}")

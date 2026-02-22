@@ -1,5 +1,7 @@
 """tracekit web application — entry point and blueprint registration."""
 
+import os
+import secrets
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -10,7 +12,7 @@ from db_init import (
     _init_db,  # noqa: F401
     load_tracekit_config,
 )
-from flask import Flask
+from flask import Flask, session
 from helpers import (
     get_current_date_in_timezone,  # noqa: F401
     get_database_info,  # noqa: F401
@@ -28,11 +30,32 @@ app = Flask(
     static_folder=str(app_dir / "static"),
 )
 
+app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+
+# ---------------------------------------------------------------------------
+# Template context — inject current_user into every template
+# ---------------------------------------------------------------------------
+
+
+@app.context_processor
+def inject_current_user():
+    user_id = session.get("user_id")
+    if user_id:
+        try:
+            from models.user import User
+
+            return {"current_user": User.get_by_id(user_id)}
+        except Exception:
+            session.pop("user_id", None)
+    return {"current_user": None}
+
+
 # ---------------------------------------------------------------------------
 # Blueprint registration
 # ---------------------------------------------------------------------------
 
 from routes.api import api_bp
+from routes.auth import auth_bp
 from routes.auth_garmin import garmin_bp
 from routes.auth_strava import strava_bp
 from routes.calendar import calendar_bp
@@ -41,6 +64,7 @@ from routes.notifications import notifications_bp
 from routes.pages import pages_bp
 
 app.register_blueprint(pages_bp)
+app.register_blueprint(auth_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(calendar_bp)
 app.register_blueprint(month_bp)

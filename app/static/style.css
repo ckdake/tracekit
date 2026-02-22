@@ -191,6 +191,81 @@ h2 { color: #34495e; margin-top: 30px; }
     margin: 20px 0;
 }
 
+/* ── Auth (login / signup) ───────────────────────────────────────────────────── */
+.auth-page {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+}
+.auth-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.1);
+    padding: 36px 40px;
+    width: 100%;
+    max-width: 400px;
+}
+.auth-title {
+    margin: 0 0 24px;
+    font-size: 1.4rem;
+    color: #1a1a2e;
+}
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.auth-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    margin-top: 10px;
+}
+.auth-label:first-of-type { margin-top: 0; }
+.auth-input {
+    padding: 9px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+}
+.auth-input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52,152,219,.15);
+}
+.auth-submit {
+    margin-top: 18px;
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+}
+.auth-alt {
+    margin: 18px 0 0;
+    font-size: 0.9rem;
+    color: #666;
+    text-align: center;
+}
+.auth-alt a { color: #3498db; text-decoration: none; }
+.auth-alt a:hover { text-decoration: underline; }
+
+/* ── Header auth ─────────────────────────────────────────────────────────────── */
+.header-user-email {
+    font-size: 0.8rem;
+    color: rgba(0,0,0,.5);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.header-logout-form {
+    display: inline-flex;
+    margin: 0;
+    padding: 0;
+}
+
 /* ── Card (settings) ─────────────────────────────────────────────────────────── */
 .card {
     background: white;
