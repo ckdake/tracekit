@@ -24,14 +24,8 @@ def sync_month(year_month: str):
     if not re.fullmatch(r"\d{4}-\d{2}", year_month):
         return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
     try:
-        from tracekit.notification import create_notification, expiry_timestamp
         from tracekit.worker import pull_month
 
-        create_notification(
-            f"Pull scheduled for {year_month}",
-            category="info",
-            expires=expiry_timestamp(24),
-        )
         task = pull_month.delay(year_month)
         return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
     except Exception as e:
@@ -47,18 +41,12 @@ def sync_provider_month(year_month: str, provider_name: str):
     if provider_name not in valid_providers:
         return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
     try:
-        from tracekit.notification import create_notification, expiry_timestamp
         from tracekit.provider_status import PULL_STATUS_QUEUED, is_pull_active, set_pull_status
         from tracekit.worker import pull_provider_month
 
         if is_pull_active(year_month, provider_name):
             return jsonify({"error": f"A pull is already active for {provider_name}/{year_month}"}), 409
 
-        create_notification(
-            f"Pull scheduled for {provider_name} {year_month}",
-            category="info",
-            expires=expiry_timestamp(24),
-        )
         task = pull_provider_month.delay(year_month, provider_name)
         set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
         return jsonify({"task_id": task.id, "year_month": year_month, "provider": provider_name, "status": "queued"})
@@ -70,14 +58,8 @@ def sync_provider_month(year_month: str, provider_name: str):
 def sync_file():
     """Enqueue a full scan of the activities data folder."""
     try:
-        from tracekit.notification import create_notification, expiry_timestamp
         from tracekit.worker import pull_file
 
-        create_notification(
-            "File pull scheduled",
-            category="info",
-            expires=expiry_timestamp(24),
-        )
         task = pull_file.delay()
         return jsonify({"task_id": task.id, "status": "queued"})
     except Exception as e:
@@ -91,10 +73,8 @@ def reset_provider_data(provider_name: str):
     if provider_name not in valid_providers:
         return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
     try:
-        from tracekit.notification import create_notification
         from tracekit.worker import reset_provider as reset_provider_task
 
-        create_notification(f"Reset scheduled for {provider_name}", category="info")
         task = reset_provider_task.delay(provider_name)
         return jsonify({"task_id": task.id, "provider": provider_name, "status": "queued"})
     except Exception as e:
@@ -107,10 +87,8 @@ def reset_month(year_month: str):
     if not re.fullmatch(r"\d{4}-\d{2}", year_month):
         return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
     try:
-        from tracekit.notification import create_notification
         from tracekit.worker import reset_month as reset_month_task
 
-        create_notification(f"Reset scheduled for {year_month}", category="info")
         task = reset_month_task.delay(year_month)
         return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
     except Exception as e:
@@ -121,10 +99,8 @@ def reset_month(year_month: str):
 def reset_all():
     """Enqueue a reset-all job that deletes all activities and sync records."""
     try:
-        from tracekit.notification import create_notification
         from tracekit.worker import reset_all as reset_all_task
 
-        create_notification("Reset all scheduled", category="info")
         task = reset_all_task.delay()
         return jsonify({"task_id": task.id, "status": "queued"})
     except Exception as e:

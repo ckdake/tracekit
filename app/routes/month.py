@@ -41,12 +41,6 @@ try:
 except Exception:  # pragma: no cover
     apply_sync_change = None  # type: ignore[assignment]
 
-try:
-    from tracekit.notification import create_notification, expiry_timestamp
-except Exception:  # pragma: no cover
-    create_notification = None  # type: ignore[assignment]
-    expiry_timestamp = None  # type: ignore[assignment]
-
 
 @month_bp.route("/month/<year_month>")
 def month_show(year_month: str):
@@ -116,12 +110,6 @@ def api_apply_change():
             raise RuntimeError("Celery worker not available — is the worker running?")
 
         change_dict = data["change"]
-        if create_notification and expiry_timestamp:
-            create_notification(
-                f"Sync change queued for {year_month}: {change_dict.get('change_type')}",
-                category="info",
-                expires=expiry_timestamp(24),
-            )
         task = apply_sync_change.delay(change_dict, year_month)
         return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
     except Exception as exc:

@@ -247,11 +247,7 @@ class TestMonthApplyApi:
         mock_task.id = "test-task-uuid-1234"
         mock_celery = MagicMock()
         mock_celery.delay.return_value = mock_task
-        with (
-            patch("routes.month.apply_sync_change", mock_celery),
-            patch("routes.month.create_notification", MagicMock()),
-            patch("routes.month.expiry_timestamp", return_value=99999),
-        ):
+        with patch("routes.month.apply_sync_change", mock_celery):
             resp = client.post(
                 "/api/month-sync/apply",
                 content_type="application/json",

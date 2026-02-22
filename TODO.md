@@ -6,7 +6,6 @@ Tracked here for visibility. PRs and issues welcome.
 
 in web app:
 - [ ] Each month has a "sync review" page that shows changes that need to be applied for a given month so that everything "matches up".  It's run on-demand when this page is viewed, lets store this "sync status" for the month, similar to how we store "provider status".  a month can be "synchronized" (all good) when "no changes needed" is the calcualted state. It's "requires action" when changes are needed, and "unknown" when we have not yet run. any changes (pull or activity modification in any provider in the month) should reset the status to "unknown" until the sync review page is visited again. (later, we'll automate this up). Most of this change will be in the python package, with just some UI in the app.
-- [ ] We have too many notifications. Now that we have provider sync status, we don't need any notifications about "normal" things like daily job running or successes. We only need notifications when a sync fails and will not be retried (e.g. strava rate limit) Most of this change will be in the python package, with just some UI in the app.
 
 later:
 - [ ] users. database should have 'em and we should have to log in when in production

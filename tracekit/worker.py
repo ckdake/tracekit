@@ -53,17 +53,6 @@ def pull_month(self, year_month: str):
     provider so they can run (and fail) independently in parallel.
     """
     try:
-        from tracekit.notification import create_notification, expiry_timestamp
-
-        create_notification(
-            f"Pull started for {year_month}",
-            category="info",
-            expires=expiry_timestamp(24),
-        )
-    except Exception:
-        pass
-
-    try:
         from tracekit.core import tracekit as tracekit_class
         from tracekit.provider_status import PULL_STATUS_QUEUED, is_pull_active, set_pull_status
 
@@ -113,17 +102,6 @@ def pull_provider_month(self, year_month: str, provider_name: str):
             set_pull_status(year_month, provider_name, PULL_STATUS_SUCCESS)
         except Exception:
             pass
-
-        try:
-            from tracekit.notification import create_notification, expiry_timestamp
-
-            create_notification(
-                f"{provider_name} pull finished for {year_month}",
-                category="info",
-                expires=expiry_timestamp(24),
-            )
-        except Exception:
-            pass
     except Exception as exc:
         from tracekit.provider_status import RATE_LIMIT_SHORT_TERM, ProviderRateLimitError
 
@@ -134,15 +112,6 @@ def pull_provider_month(self, year_month: str, provider_name: str):
                     from tracekit.provider_status import PULL_STATUS_QUEUED, set_pull_status
 
                     set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=self.request.id)
-                except Exception:
-                    pass
-                try:
-                    from tracekit.notification import create_notification
-
-                    create_notification(
-                        f"Strava short-term rate limit hit — retrying {provider_name} pull for {year_month} in {exc.retry_after}s.",
-                        category="info",
-                    )
                 except Exception:
                     pass
                 raise self.retry(countdown=exc.retry_after, exc=exc)
@@ -192,23 +161,9 @@ def pull_provider_month(self, year_month: str, provider_name: str):
 def reset_month(self, year_month: str):
     """Reset (delete) all activities and sync records for a given YYYY-MM."""
     try:
-        from tracekit.notification import create_notification
-
-        create_notification(f"Reset started for {year_month}", category="info")
-    except Exception:
-        pass
-
-    try:
         from tracekit.commands.reset import run
 
         run(["--date", year_month])
-
-        try:
-            from tracekit.notification import create_notification
-
-            create_notification(f"Reset finished for {year_month}", category="info")
-        except Exception:
-            pass
     except Exception as exc:
         try:
             from tracekit.notification import create_notification
@@ -223,23 +178,9 @@ def reset_month(self, year_month: str):
 def reset_all(self):
     """Reset (delete) ALL activities and sync records."""
     try:
-        from tracekit.notification import create_notification
-
-        create_notification("Reset all started", category="info")
-    except Exception:
-        pass
-
-    try:
         from tracekit.commands.reset import run
 
         run(["--force"])
-
-        try:
-            from tracekit.notification import create_notification
-
-            create_notification("Reset all finished", category="info")
-        except Exception:
-            pass
     except Exception as exc:
         try:
             from tracekit.notification import create_notification
@@ -260,16 +201,6 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
     is already cached in the local DB).
     """
     try:
-        from tracekit.notification import create_notification
-
-        create_notification(
-            f"Applying sync change ({change_dict.get('change_type')}) for {year_month}",
-            category="info",
-        )
-    except Exception:
-        pass
-
-    try:
         from tracekit.core import tracekit as tracekit_class
         from tracekit.sync import ActivityChange, apply_change, compute_month_changes
 
@@ -284,11 +215,9 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
         provider = change_dict.get("provider", "unknown")
         if success:
             try:
-                from tracekit.notification import create_notification
                 from tracekit.provider_status import record_operation
 
                 record_operation(provider, change_dict.get("change_type", "apply_change"), True, msg)
-                create_notification(f"Sync change applied: {msg}", category="info")
             except Exception:
                 pass
             return {"success": True, "message": msg}
@@ -308,15 +237,6 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
 
         if isinstance(exc, ProviderRateLimitError):
             if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
-                try:
-                    from tracekit.notification import create_notification
-
-                    create_notification(
-                        f"Strava short-term rate limit hit — retrying in {exc.retry_after}s.",
-                        category="info",
-                    )
-                except Exception:
-                    pass
                 raise self.retry(countdown=exc.retry_after, exc=exc)
             else:
                 try:
@@ -361,17 +281,6 @@ def pull_file(self):
             unprocessed = tk.file.list_unprocessed_files()
 
         count = len(unprocessed)
-        try:
-            from tracekit.notification import create_notification, expiry_timestamp
-
-            create_notification(
-                f"File scan complete — queuing {count} new file{'s' if count != 1 else ''}",
-                category="info",
-                expires=expiry_timestamp(24),
-            )
-        except Exception:
-            pass
-
         for file_path in unprocessed:
             process_file.delay(file_path)
 
@@ -403,18 +312,6 @@ def process_file(self, file_path: str):
                 return {"status": "skipped", "reason": "file provider not enabled"}
             result = tk.file.process_single_file(file_path)
 
-        if result.get("status") == "ok":
-            try:
-                from tracekit.notification import create_notification, expiry_timestamp
-
-                create_notification(
-                    f"Processed file: {result['file']}",
-                    category="info",
-                    expires=expiry_timestamp(24),
-                )
-            except Exception:
-                pass
-
         return result
     except Exception as exc:
         try:
@@ -437,13 +334,6 @@ def reset_provider(self, provider_name: str):
     copy of the provider\'s activities and the associated sync records.
     """
     try:
-        from tracekit.notification import create_notification
-
-        create_notification(f"Reset started for {provider_name}", category="info")
-    except Exception:
-        pass
-
-    try:
         from tracekit.core import tracekit as tracekit_class
         from tracekit.provider_sync import ProviderSync
 
@@ -454,17 +344,6 @@ def reset_provider(self, provider_name: str):
             deleted = provider.reset_activities(date_filter=None)
 
         sync_deleted = ProviderSync.delete().where(ProviderSync.provider == provider_name).execute()
-
-        try:
-            from tracekit.notification import create_notification
-
-            create_notification(
-                f"Reset {provider_name}: {deleted} activities and {sync_deleted} sync records deleted",
-                category="info",
-            )
-        except Exception:
-            pass
-
         return {"provider": provider_name, "activities_deleted": deleted, "sync_records_deleted": sync_deleted}
     except Exception as exc:
         try:
@@ -494,16 +373,5 @@ def daily():
         year_month = prev.strftime("%Y-%m")
     else:
         year_month = now.strftime("%Y-%m")
-    try:
-        from tracekit.notification import create_notification, expiry_timestamp
-
-        create_notification(
-            f"Daily sync running for {year_month}",
-            category="info",
-            expires=expiry_timestamp(24),
-        )
-    except Exception:
-        pass
-
     pull_month.delay(year_month)
     pull_file.delay()
