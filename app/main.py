@@ -1,5 +1,6 @@
 """tracekit web application — entry point and blueprint registration."""
 
+import logging
 import os
 import secrets
 from pathlib import Path
@@ -12,12 +13,46 @@ from db_init import (
     _init_db,  # noqa: F401
     load_tracekit_config,
 )
-from flask import Flask, abort, g, session
+from flask import Flask, abort, g, request, session
+
+_access_log = logging.getLogger("tracekit.access")
 from helpers import (
     get_current_date_in_timezone,  # noqa: F401
     get_database_info,  # noqa: F401
     sort_providers,  # noqa: F401
 )
+
+# ---------------------------------------------------------------------------
+# Logging — inject user_id into every record produced by the web process
+# ---------------------------------------------------------------------------
+
+
+class _UserIdFilter(logging.Filter):
+    """Adds ``user_id`` from the ContextVar to every log record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            from tracekit.user_context import get_user_id
+
+            record.user_id = get_user_id()
+        except Exception:
+            record.user_id = "?"
+        return True
+
+
+def _configure_logging() -> None:
+    """Attach the user_id filter + formatter to the root logger."""
+    handler = logging.StreamHandler()
+    handler.addFilter(_UserIdFilter())
+    handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s uid=%(user_id)s %(name)s: %(message)s"))
+    root = logging.getLogger()
+    # Avoid duplicate handlers when the module is reloaded in tests.
+    if not any(isinstance(h, logging.StreamHandler) and hasattr(h, "stream") for h in root.handlers):
+        root.addHandler(handler)
+    root.setLevel(logging.INFO)
+
+
+_configure_logging()
 
 # ---------------------------------------------------------------------------
 # Flask app
@@ -102,6 +137,12 @@ def inject_current_user():
     # Use the user cached by before_request — no additional DB query needed.
     current_user = g.get("current_user")
     return {"current_user": current_user, "single_user_mode": False}
+
+
+@app.after_request
+def _log_request(response):
+    _access_log.info("%s %s %s", request.method, request.path, response.status_code)
+    return response
 
 
 # ---------------------------------------------------------------------------
