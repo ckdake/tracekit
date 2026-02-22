@@ -11,6 +11,7 @@ tracekit.egg-info
 .mypy_cache
 tracekit_config.json
 .env
+.ruff_cache
 
 # Site build artifacts
 site/dist/
