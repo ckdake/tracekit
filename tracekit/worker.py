@@ -10,6 +10,7 @@ Observe via Flower (runs as its own container in production):
     celery -A tracekit.worker flower
 """
 
+import contextlib
 import os
 
 from celery import Celery
@@ -64,13 +65,18 @@ def pull_month(self, year_month: str):
 
     try:
         from tracekit.core import tracekit as tracekit_class
+        from tracekit.provider_status import PULL_STATUS_QUEUED, is_pull_active, set_pull_status
 
         with tracekit_class() as tk:
             tk.delete_month_activities(year_month)
             providers = tk.enabled_providers
 
         for provider_name in providers:
-            pull_provider_month.delay(year_month, provider_name)
+            if is_pull_active(year_month, provider_name):
+                continue  # already queued or running — skip to avoid duplicates
+            task = pull_provider_month.delay(year_month, provider_name)
+            with contextlib.suppress(Exception):
+                set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
     except Exception as exc:
         try:
             from tracekit.notification import create_notification
@@ -89,10 +95,24 @@ def pull_provider_month(self, year_month: str, provider_name: str):
     retry after the cooldown; long-term (daily) limits fail immediately.
     """
     try:
+        from tracekit.provider_status import PULL_STATUS_STARTED, set_pull_status
+
+        set_pull_status(year_month, provider_name, PULL_STATUS_STARTED, job_id=self.request.id)
+    except Exception:
+        pass
+
+    try:
         from tracekit.core import tracekit as tracekit_class
 
         with tracekit_class() as tk:
             tk.pull_provider_activities(year_month, provider_name)
+
+        try:
+            from tracekit.provider_status import PULL_STATUS_SUCCESS, set_pull_status
+
+            set_pull_status(year_month, provider_name, PULL_STATUS_SUCCESS)
+        except Exception:
+            pass
 
         try:
             from tracekit.notification import create_notification, expiry_timestamp
@@ -109,7 +129,13 @@ def pull_provider_month(self, year_month: str, provider_name: str):
 
         if isinstance(exc, ProviderRateLimitError):
             if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
-                # Short-term: notify and retry after the cooldown
+                # Short-term: re-queue status (same task ID on retry), notify, then retry
+                try:
+                    from tracekit.provider_status import PULL_STATUS_QUEUED, set_pull_status
+
+                    set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=self.request.id)
+                except Exception:
+                    pass
                 try:
                     from tracekit.notification import create_notification
 
@@ -123,8 +149,9 @@ def pull_provider_month(self, year_month: str, provider_name: str):
             else:
                 # Long-term: fail immediately without retry
                 try:
-                    from tracekit.provider_status import record_rate_limit
+                    from tracekit.provider_status import PULL_STATUS_ERROR, record_rate_limit, set_pull_status
 
+                    set_pull_status(year_month, provider_name, PULL_STATUS_ERROR, message=str(exc))
                     record_rate_limit(
                         provider=exc.provider,
                         limit_type=exc.limit_type,
@@ -146,6 +173,12 @@ def pull_provider_month(self, year_month: str, provider_name: str):
                     pass
                 raise
 
+        try:
+            from tracekit.provider_status import PULL_STATUS_ERROR, set_pull_status
+
+            set_pull_status(year_month, provider_name, PULL_STATUS_ERROR, message=str(exc))
+        except Exception:
+            pass
         try:
             from tracekit.notification import create_notification
 
@@ -445,10 +478,22 @@ def reset_provider(self, provider_name: str):
 
 @celery_app.task(name="tracekit.worker.daily")
 def daily():
-    """Daily heartbeat — pull the current month and scan all activity files."""
-    from datetime import UTC, datetime
+    """Daily heartbeat — pull the relevant month and scan all activity files.
 
-    year_month = datetime.now(UTC).strftime("%Y-%m")
+    On the 1st of the month the previous month is pulled (activities from the
+    last day of the prior month haven't been pulled yet).  All other days pull
+    the current month.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(UTC)
+    if now.day == 1:
+        # The last daily run covered up to yesterday (end of prior month), so
+        # pull that month to catch any remaining activities.
+        prev = now.replace(day=1) - timedelta(days=1)
+        year_month = prev.strftime("%Y-%m")
+    else:
+        year_month = now.strftime("%Y-%m")
     try:
         from tracekit.notification import create_notification, expiry_timestamp
 

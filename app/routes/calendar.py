@@ -48,7 +48,11 @@ def sync_provider_month(year_month: str, provider_name: str):
         return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
     try:
         from tracekit.notification import create_notification, expiry_timestamp
+        from tracekit.provider_status import PULL_STATUS_QUEUED, is_pull_active, set_pull_status
         from tracekit.worker import pull_provider_month
+
+        if is_pull_active(year_month, provider_name):
+            return jsonify({"error": f"A pull is already active for {provider_name}/{year_month}"}), 409
 
         create_notification(
             f"Pull scheduled for {provider_name} {year_month}",
@@ -56,6 +60,7 @@ def sync_provider_month(year_month: str, provider_name: str):
             expires=expiry_timestamp(24),
         )
         task = pull_provider_month.delay(year_month, provider_name)
+        set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
         return jsonify({"task_id": task.id, "year_month": year_month, "provider": provider_name, "status": "queued"})
     except Exception as e:
         return jsonify({"error": f"Failed to enqueue task: {e}"}), 503

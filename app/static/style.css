@@ -579,6 +579,9 @@ select#timezone:focus {
 }
 .provider-status {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: 6px 8px;
     border-radius: 4px;
     text-align: center;
@@ -592,27 +595,69 @@ select#timezone:focus {
     flex-direction: column;
     align-items: center;
     gap: 3px;
+    flex: 1;
 }
 
-/* Per-provider pull button — overlaid top-right, revealed on hover */
+/* Footer strip at the bottom of each chiclet */
+.provider-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    margin: 4px -8px -6px;
+    padding: 3px 4px 3px 6px;
+    background: rgba(0,0,0,0.18);
+    border-radius: 0 0 4px 4px;
+    min-height: 22px;
+}
+
+/* Per-provider pull button — lives in footer, always visible */
 .provider-pull-btn {
-    position: absolute;
-    top: 3px;
-    right: 3px;
     background: rgba(0,0,0,0.20);
     border: none;
     color: rgba(255,255,255,0.85);
     cursor: pointer;
-    font-size: 9px;
-    padding: 1px 3px;
+    font-size: 10px;
+    padding: 2px 6px;
     border-radius: 3px;
     line-height: 1.3;
-    opacity: 0;
-    transition: opacity .15s, background .15s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    transition: background .15s;
 }
-.provider-status:hover .provider-pull-btn { opacity: 1; }
 .provider-pull-btn:hover:not(:disabled) { background: rgba(0,0,0,0.38); color: white; }
-.provider-pull-btn:disabled { cursor: default; opacity: 0.45; }
+.provider-pull-btn:disabled { cursor: default; opacity: 0.55; }
+/* Spinner inside provider pull button should use white tones */
+.provider-pull-btn .spinner-sm {
+    border-color: rgba(255,255,255,.25);
+    border-top-color: rgba(255,255,255,.9);
+}
+
+/* Pull status indicator inside the footer */
+.pcs {
+    font-size: 10px;
+    color: rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.pcs-active  { color: rgba(255,255,255,0.95); }
+.pcs-error   { color: rgba(255,200,200,0.95); cursor: default; }
+.pcs-spinner {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border: 1.5px solid rgba(255,255,255,.3);
+    border-top-color: rgba(255,255,255,.9);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+}
 
 /* Big bare integer */
 .activity-count-big {
@@ -643,7 +688,7 @@ select#timezone:focus {
 }
 
 /* Not-synced = neutral gray */
-.provider-status.not-synced { background: #aab0b8; opacity: 0.55; }
+.provider-status.not-synced { background: #aab0b8; opacity: 0.70; }
 
 /* Per-provider synced colors */
 .provider-status.provider-strava.synced      { background: #FC4C02; }

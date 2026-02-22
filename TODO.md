@@ -5,12 +5,13 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 - [ ] users. database should have 'em and we should have to log in when in production
-- [ ] know which months are pulling, show that
 - [ ] add new source data files to file data when found in other places
 - [ ] know which months are "fully synced" and only reset that when we get new data/etc
 - [ ] know sync status, which months+providers are queued, their last sync state, etc.
 - [ ] fix / view so that we get all "action" buttons on each month tile, for both on-load and pulled in
-
+- [ ] after updating an activity in a provider, pull that activity again to our local so we have it updated
+- [ ] dang way too many notifications, we need less
+- [ ] i think we need a websocket or something for realtime updates
 
 ## Providers & Sync
 
@@ -57,25 +58,3 @@ Tracked here for visibility. PRs and issues welcome.
 
 - [ ] What about the weather?
 - [ ] What else?
-
-## Tests
-
-- [ ] Write more tests across providers, commands, and file formats
-
-## Getting Data Back Out
-
-Quick reference for exporting to CSV:
-
-```sql
-sqlite3 metadata.sqlite3
-.headers on
-.mode csv
-.output metadata.csv
-SELECT date,activity_type,location_name,city,state,temperature,equipment,
-       duration_hms,max_speed,avg_heart_rate,max_heart_rate,calories,
-       max_elevation,total_elevation_gain,with_names,avg_cadence,
-       strava_id,garmin_id,ridewithgps_id,notes
-  FROM ActivityMetadata
- WHERE source="Main";
-.quit
-```

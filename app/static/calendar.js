@@ -80,6 +80,8 @@ function renderGrid(yearMonth, data) {
         const count       = data.activity_counts[p] || 0;
         const info        = PROVIDER_DISPLAY[p] || {};
         const providerCls = info.cls || '';
+        const pullStatus  = data.pull_statuses && data.pull_statuses[p];
+        const isActive    = pullStatus && (pullStatus.status === 'queued' || pullStatus.status === 'started');
 
         // Big integer count (no label)
         const countHtml = count > 0 ? '<div class="activity-count-big">' + count + '</div>' : '';
@@ -99,12 +101,38 @@ function renderGrid(yearMonth, data) {
             ? '<div class="provider-logo-row"><a href="' + info.logoHref + '" target="_blank" rel="noopener"><img src="' + info.logo + '" alt="' + info.logoAlt + '" class="provider-logo-img"></a></div>'
             : '<div class="provider-name-label">' + (info.label || p) + '</div>';
 
-        // File provider does not support per-month pulls — the pull button lives on the Settings page.
-        const provPullBtn = p !== 'file'
-            ? '<button class="provider-pull-btn" data-month="' + yearMonth + '" data-provider="' + p + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">⬇</button>'
-            : '';
+        // Status label shown in the chiclet footer
+        let statusHtml = '';
+        if (pullStatus) {
+            if (pullStatus.status === 'queued') {
+                statusHtml = '<span class="pcs pcs-active"><span class="pcs-spinner"></span>queued</span>';
+            } else if (pullStatus.status === 'started') {
+                statusHtml = '<span class="pcs pcs-active"><span class="pcs-spinner"></span>syncing</span>';
+            } else if (pullStatus.status === 'error') {
+                const msg = (pullStatus.message || 'error').replace(/"/g, '&quot;').substring(0, 120);
+                statusHtml = '<span class="pcs pcs-error" title="' + msg + '">⚠ error</span>';
+            }
+        }
 
-        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">' + provPullBtn + '<div class="provider-content">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div></div>';
+        // Footer strip: status on left, pull button on right.
+        // File provider has no per-month pull — only show footer if there is a status to display.
+        let footerHtml = '';
+        if (p !== 'file') {
+            const btnContent = isActive ? '<span class="spinner spinner-sm"></span>' : '⬇';
+            const btnDisabled = isActive ? ' disabled' : '';
+            const pullBtn = '<button class="provider-pull-btn"' + btnDisabled
+                + ' data-month="' + yearMonth + '" data-provider="' + p
+                + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">'
+                + btnContent + '</button>';
+            footerHtml = '<div class="provider-footer">' + statusHtml + pullBtn + '</div>';
+        } else if (statusHtml) {
+            footerHtml = '<div class="provider-footer">' + statusHtml + '</div>';
+        }
+
+        return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">'
+            + '<div class="provider-content">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div>'
+            + footerHtml
+            + '</div>';
     }).join('');
 }
 

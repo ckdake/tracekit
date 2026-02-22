@@ -108,6 +108,7 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
     """
     import pytz
 
+    from tracekit.provider_status import get_month_pull_statuses
     from tracekit.provider_sync import ProviderSync
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
@@ -115,6 +116,8 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
     from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+
+    pull_statuses = get_month_pull_statuses(year_month)
 
     synced_rows = ProviderSync.select(ProviderSync.provider).where(ProviderSync.year_month == year_month)
     synced_providers = [r.provider for r in synced_rows]
@@ -200,6 +203,7 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
         "providers": providers,
         "synced_providers": synced_providers,
         "provider_status": provider_status,
+        "pull_statuses": pull_statuses,
         "activity_counts": activity_counts,
         "total_activities": total_activities,
         "provider_metadata": provider_metadata,

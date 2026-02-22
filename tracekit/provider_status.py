@@ -2,6 +2,9 @@
 
 Stores the last operation attempted for each provider, whether it succeeded,
 and any rate-limit information (short-term vs long-term, reset timestamp).
+
+Also tracks per-(year_month, provider) pull job status so the UI can show
+queued / started / success / error state for each calendar cell.
 """
 
 from __future__ import annotations
@@ -16,6 +19,13 @@ from tracekit.db import db
 
 RATE_LIMIT_SHORT_TERM = "short_term"  # 15-minute Strava window
 RATE_LIMIT_LONG_TERM = "long_term"  # daily Strava window (resets midnight UTC)
+
+PULL_STATUS_QUEUED = "queued"
+PULL_STATUS_STARTED = "started"
+PULL_STATUS_SUCCESS = "success"
+PULL_STATUS_ERROR = "error"
+
+_PULL_ACTIVE_STATUSES = {PULL_STATUS_QUEUED, PULL_STATUS_STARTED}
 
 
 # ---- typed exception ---------------------------------------------------------
@@ -153,3 +163,92 @@ def next_midnight_utc() -> int:
     now = datetime.now(UTC)
     midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     return int(midnight.timestamp())
+
+
+# ---- per-(year_month, provider) pull job status ------------------------------
+
+
+class ProviderPullStatus(Model):
+    """Tracks the current pull job status for each (year_month, provider) pair.
+
+    Only one row per pair — represents current state, not history.
+    """
+
+    year_month = CharField()  # e.g. "2025-02"
+    provider = CharField()  # e.g. "strava"
+    status = CharField()  # queued | started | success | error
+    job_id = CharField(null=True)  # Celery task ID; cleared on finish
+    message = CharField(null=True, max_length=1024)  # error detail on failure
+    updated_at = IntegerField(null=True)  # Unix timestamp of last update
+
+    class Meta:
+        database = db
+        table_name = "provider_pull_status"
+        indexes = ((("year_month", "provider"), True),)  # unique together
+
+
+def set_pull_status(
+    year_month: str,
+    provider: str,
+    status: str,
+    job_id: str | None = None,
+    message: str | None = None,
+) -> None:
+    """Upsert the pull status for (year_month, provider).
+
+    Clears job_id automatically when status is success or error.
+    Safe to call from anywhere; never raises.
+    """
+    try:
+        _ensure_connected()
+        now = int(datetime.now(UTC).timestamp())
+        row, _ = ProviderPullStatus.get_or_create(
+            year_month=year_month,
+            provider=provider,
+            defaults={"status": status, "updated_at": now},
+        )
+        row.status = status
+        row.updated_at = now
+        if status in (PULL_STATUS_SUCCESS, PULL_STATUS_ERROR):
+            row.job_id = None  # done — no need to track the job any more
+        elif job_id is not None:
+            row.job_id = job_id
+        row.message = message[:1024] if message else None
+        row.save()
+    except Exception as exc:
+        print(f"[provider_status] failed to set pull status: {exc}")
+
+
+def get_month_pull_statuses(year_month: str) -> dict[str, dict]:
+    """Return {provider: status_dict} for all pull status rows in *year_month*."""
+    try:
+        _ensure_connected()
+        rows = ProviderPullStatus.select().where(ProviderPullStatus.year_month == year_month)
+        return {
+            row.provider: {
+                "status": row.status,
+                "job_id": row.job_id,
+                "message": row.message,
+                "updated_at": row.updated_at,
+            }
+            for row in rows
+        }
+    except Exception as exc:
+        print(f"[provider_status] failed to get month pull statuses: {exc}")
+        return {}
+
+
+def is_pull_active(year_month: str, provider: str) -> bool:
+    """Return True if a pull is currently queued or in-progress for (year_month, provider).
+
+    Returns False on any exception so a DB error never permanently blocks enqueuing.
+    """
+    try:
+        _ensure_connected()
+        row = ProviderPullStatus.get_or_none(
+            (ProviderPullStatus.year_month == year_month) & (ProviderPullStatus.provider == provider)
+        )
+        return row is not None and row.status in _PULL_ACTIVE_STATUSES
+    except Exception as exc:
+        print(f"[provider_status] failed to check pull active: {exc}")
+        return False
