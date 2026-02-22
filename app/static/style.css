@@ -606,8 +606,7 @@ select#timezone:focus {
     gap: 4px;
     margin: 4px -8px -6px;
     padding: 3px 4px 3px 6px;
-    background: rgba(0,0,0,0.18);
-    border-radius: 0 0 4px 4px;
+    border-top: 1px solid rgba(255,255,255,0.25);
     min-height: 22px;
 }
 

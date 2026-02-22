@@ -12,6 +12,7 @@ Tracked here for visibility. PRs and issues welcome.
 - [ ] after updating an activity in a provider, pull that activity again to our local so we have it updated
 - [ ] dang way too many notifications, we need less
 - [ ] i think we need a websocket or something for realtime updates
+- [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)
 
 ## Providers & Sync
 

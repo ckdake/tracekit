@@ -118,7 +118,10 @@ function renderGrid(yearMonth, data) {
         // File provider has no per-month pull — only show footer if there is a status to display.
         let footerHtml = '';
         if (p !== 'file') {
-            const btnContent = isActive ? '<span class="spinner spinner-sm"></span>' : '⬇';
+            const btnContent = isActive                             ? '<span class="spinner spinner-sm"></span>'
+                             : pullStatus && pullStatus.status === 'success' ? '✓'
+                             : pullStatus && pullStatus.status === 'error'   ? '✗'
+                             : '⬇';
             const btnDisabled = isActive ? ' disabled' : '';
             const pullBtn = '<button class="provider-pull-btn"' + btnDisabled
                 + ' data-month="' + yearMonth + '" data-provider="' + p
@@ -242,56 +245,39 @@ async function pullMonth(btn) {
 async function pullProviderMonth(btn) {
     const month    = btn.dataset.month;
     const provider = btn.dataset.provider;
-    const status   = document.getElementById('status-' + month);
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner spinner-sm"></span>';
-    status.textContent = '';
-    status.className = 'pull-status';
 
     let taskId;
     try {
         const res  = await fetch('/api/sync/' + month + '/' + provider, { method: 'POST' });
         const data = await res.json();
         if (!res.ok) {
-            status.textContent = data.error || 'Error';
-            status.className = 'pull-status err';
             btn.disabled = false;
-            btn.textContent = '⬇';
+            btn.textContent = '✗';
             return;
         }
         taskId = data.task_id;
     } catch (e) {
-        status.textContent = 'Network error';
-        status.className = 'pull-status err';
         btn.disabled = false;
-        btn.textContent = '⬇';
+        btn.textContent = '✗';
         return;
     }
-
-    status.textContent = provider + ' in progress…';
-    status.className = 'pull-status running';
 
     pollTaskStatus(taskId, {
         onSuccess: () => {
             btn.disabled = false;
-            btn.textContent = '⬇';
-            status.textContent = provider + ' done ✓';
-            status.className = 'pull-status ok';
+            btn.textContent = '✓';
             loadCard(month);
-            setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
         },
-        onFailure: (data) => {
+        onFailure: () => {
             btn.disabled = false;
-            btn.textContent = '⬇';
-            status.textContent = provider + ': ' + (data.info || 'Failed');
-            status.className = 'pull-status err';
+            btn.textContent = '✗';
         },
         onTimeout: () => {
             btn.disabled = false;
-            btn.textContent = '⬇';
-            status.textContent = provider + ': timed out – try again';
-            status.className = 'pull-status err';
+            btn.textContent = '✗';
         },
     });
 }
