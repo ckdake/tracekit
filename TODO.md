@@ -4,17 +4,23 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
+in fitler python package:
+- [ ] after updating an activity in a provider, pull that activity again to our local so "our version" is "in sync" with the upstream.
+
+in web app:
+- [ ] Order providers by provider priority in the UI, not ABC
+- [ ] The chicklet "check" status showing success should turn into a "pull" icon on hover to indicate what it will do when clicked. Make the
+- [ ] The pull button for month no longer needs to jam in status text, it just makes the jobs. each chiclet should spin (as it does) until synced, and should reload one by one as sync finishes
+- [ ] Remove extra padding in bottom of months, and improve UI for months. The chicklets are refined, but the "month" block is not yet.  More visual consistency with pull and sync buttons and how the providers work. Something better than "X activities". Additionally, when we pull in additional months, they have a "reset" button that is missing from initial page load, and intial page load months have a "sync review" button that is missing from additional. All should have same actions.
+- [ ] Each month has a "sync review" page that shows changes that need to be applied for a given month so that everything "matches up".  It's run on-demand when this page is viewed, lets store this "sync status" for the month, similar to how we store "provider status".  a month can be "synchronized" (all good) when "no changes needed" is the calcualted state. It's "requires action" when changes are needed, and "unknown" when we have not yet run. any changes (pull or activity modification in any provider in the month) should reset the status to "unknown" until the sync review page is visited again. (later, we'll automate this up). Most of this change will be in the python package, with just some UI in the app.
+- [ ] We have too many notifications. Now that we have provider sync status, we don't need any notifications about "normal" things like daily job running or successes. We only need notifications when a sync fails and will not be retried (e.g. strava rate limit) Most of this change will be in the python package, with just some UI in the app.
+
+later:
 - [ ] users. database should have 'em and we should have to log in when in production
 - [ ] add new source data files to file data when found in other places
-- [ ] know which months are "fully synced" and only reset that when we get new data/etc
-- [ ] know sync status, which months+providers are queued, their last sync state, etc.
-- [ ] fix / view so that we get all "action" buttons on each month tile, for both on-load and pulled in
-- [ ] after updating an activity in a provider, pull that activity again to our local so we have it updated
-- [ ] dang way too many notifications, we need less
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)
-- [ ] pull button for month no longer needs to jam in status text, it just makes the jobs. each chiclet should spin (as it does) until synced, and should reload one by one as sync finishes
-- [ ] file chiclet should be last
+- [ ] download file from providers if file is missing. see https://raw.githubusercontent.com/cyberjunky/python-garminconnect/master/demo.py in download_activities_by_date for garmin
 
 ## Providers & Sync
 
