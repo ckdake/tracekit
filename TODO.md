@@ -13,6 +13,7 @@ later:
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
 - [ ] move app api keys from per-user to admin thing
 - [ ] sentry cloud for exceptions
+- [ ] outbound email sending for email verificaiton on login, and password reset
 - [ ] add new source data files to file data when found in other places
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)

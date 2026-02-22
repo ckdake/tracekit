@@ -122,7 +122,7 @@ class Tracekit:
         """Get the Garmin provider, initializing it if needed."""
         provider_config = self.config.get("providers", {}).get("garmin", {})
 
-        if not self._garmin and provider_config.get("enabled", False) and os.environ.get("GARMINTOKENS"):
+        if not self._garmin and provider_config.get("enabled", False) and provider_config.get("garth_tokens"):
             # Add home_timezone to provider config
             enhanced_config = provider_config.copy()
             enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
