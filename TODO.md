@@ -13,6 +13,8 @@ Tracked here for visibility. PRs and issues welcome.
 - [ ] dang way too many notifications, we need less
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)
+- [ ] pull button for month no longer needs to jam in status text, it just makes the jobs. each chiclet should spin (as it does) until synced, and should reload one by one as sync finishes
+- [ ] file chiclet should be last
 
 ## Providers & Sync
 
