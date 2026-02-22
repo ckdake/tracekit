@@ -2,7 +2,6 @@
 
 import logging
 import os
-import secrets
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -13,7 +12,7 @@ from db_init import (
     _init_db,  # noqa: F401
     load_tracekit_config,
 )
-from flask import Flask, abort, g, request, session
+from flask import Flask, abort, g, redirect, request, session, url_for
 
 _access_log = logging.getLogger("tracekit.access")
 from helpers import (
@@ -77,9 +76,7 @@ app = Flask(
     static_folder=str(app_dir / "static"),
 )
 
-# default works for development mode with single thread. Multi-threaded or services
-# cycling require a SESSION_KEY
-app.secret_key = os.environ.get("SESSION_KEY", secrets.token_hex(32))
+app.secret_key = os.environ["SESSION_KEY"]
 
 # ---------------------------------------------------------------------------
 # Template context — inject current_user into every template
@@ -156,6 +153,32 @@ def inject_current_user():
     # Use the user cached by before_request — no additional DB query needed.
     current_user = g.get("current_user")
     return {"current_user": current_user, "single_user_mode": False}
+
+
+_PUBLIC_ENDPOINTS = frozenset(
+    {
+        "auth.login",
+        "auth.signup",
+        "auth.logout",
+        "api.health",
+        "pages.privacy",
+        "static",
+    }
+)
+
+
+@app.before_request
+def _require_auth():
+    """Redirect unauthenticated users to /login in multi-user mode."""
+    from auth_mode import is_single_user_mode
+
+    if is_single_user_mode():
+        return
+    if request.endpoint in _PUBLIC_ENDPOINTS:
+        return
+    if g.get("current_user"):
+        return
+    return redirect(url_for("auth.login"))
 
 
 @app.after_request

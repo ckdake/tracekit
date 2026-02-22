@@ -73,20 +73,25 @@ h2 { color: #34495e; margin-top: 30px; }
 }
 .breadcrumb-sep  { color: rgba(0,0,0,.2); }
 .breadcrumb-active { color: rgba(0,0,0,.75); font-weight: 500; }
-.header-recent {
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     margin-left: auto;
+    flex-shrink: 0;
+}
+.header-recent {
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 0.8rem;
     color: rgba(0,0,0,.4);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-right: 4px;
 }
 .recent-label { text-transform: uppercase; letter-spacing: .05em; font-size: 0.7rem; }
 .recent-value  { color: rgba(0,0,0,.65); font-variant-numeric: tabular-nums; }
-.header-nav { flex-shrink: 0; margin-left: 16px; }
+.header-logout-form { display: contents; }
 .header-nav-link {
     color: rgba(0,0,0,.55);
     text-decoration: none;
@@ -1279,7 +1284,6 @@ select#timezone:focus {
 .notif-wrap {
     position: relative;
     flex-shrink: 0;
-    margin-left: 8px;
 }
 .notif-bell {
     position: relative;
