@@ -46,12 +46,6 @@ function renderGrid(yearMonth, data) {
         return;
     }
 
-    const counts = Object.values(data.activity_counts || {});
-    const maxCount = counts.length ? Math.max(...counts) : 0;
-    if (maxCount > 0) {
-        totalEl.textContent = maxCount + ' activities';
-    }
-
     const enabledProviders = data.providers.filter(p => {
         const cfg = PROVIDER_CONFIG[p] || {};
         return cfg.enabled !== false;
@@ -61,6 +55,12 @@ function renderGrid(yearMonth, data) {
         grid.innerHTML = '<div class="card-loading">No active providers</div>';
         return;
     }
+
+    const allActiveDays = new Set();
+    enabledProviders.forEach(p => {
+        ((data.activity_days || {})[p] || []).forEach(d => allActiveDays.add(d));
+    });
+    totalEl.textContent = allActiveDays.size > 0 ? allActiveDays.size + ' active days' : '';
 
     const PROVIDER_DISPLAY = {
         strava:      { cls: 'provider-strava',      label: 'Strava',       logo: '/static/powered_by_strava.svg',      logoAlt: 'Powered by Strava',      logoHref: 'https://www.strava.com' },
@@ -365,6 +365,7 @@ function appendMonthCard(ym, year, month) {
             <div class="month-title-row">
                 <span>${monthName} ${year}</span>
                 <div class="month-btn-group">
+                    <a class="sync-review-link" href="/month/${ym}" title="Sync Review">⇄</a>
                     <button class="pull-btn" data-month="${ym}" onclick="pullMonth(this)" title="Pull">⬇</button>
                     <button class="reset-btn" data-month="${ym}" onclick="resetMonth(this)" title="Reset month data">↺</button>
                 </div>

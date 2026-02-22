@@ -14,6 +14,8 @@
                         <a class="sync-review-link" href="/month/{{ month.year_month }}" title="Sync Review">⇄</a>
                         <button class="pull-btn" data-month="{{ month.year_month }}"
                                 onclick="pullMonth(this)" title="Pull">⬇</button>
+                        <button class="reset-btn" data-month="{{ month.year_month }}"
+                                onclick="resetMonth(this)" title="Reset month data">↺</button>
                     </div>
                 </div>
                 <div class="total-label" id="total-{{ month.year_month }}"></div>

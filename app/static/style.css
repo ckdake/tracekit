@@ -766,7 +766,8 @@ select#timezone:focus {
 }
 .sync-review-link:hover { color: #27ae60; background: #eafaf1; }
 
-.pull-status { margin-top: 5px; font-size: 11px; text-align: center; min-height: 14px; }
+.pull-status { font-size: 11px; text-align: center; }
+.pull-status:not(:empty) { margin-top: 5px; min-height: 14px; }
 .pull-status.ok      { color: #28a745; }
 .pull-status.err     { color: #dc3545; }
 .pull-status.running { color: #3498db; }
