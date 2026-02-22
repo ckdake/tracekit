@@ -45,13 +45,17 @@ celery_app.conf.update(
 
 
 @celery_app.task(bind=True, name="tracekit.worker.pull_month")
-def pull_month(self, year_month: str):
+def pull_month(self, year_month: str, user_id: int = 0):
     """Fan out per-provider pull jobs for *year_month*.
 
     Deletes existing data for the month so each provider starts with a clean
     slate, then enqueues one :func:`pull_provider_month` task per enabled
     provider so they can run (and fail) independently in parallel.
     """
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
+
     try:
         from tracekit.core import tracekit as tracekit_class
         from tracekit.provider_status import PULL_STATUS_QUEUED, is_pull_active, set_pull_status
@@ -68,7 +72,7 @@ def pull_month(self, year_month: str):
         for provider_name in providers:
             if is_pull_active(year_month, provider_name):
                 continue  # already queued or running — skip to avoid duplicates
-            task = pull_provider_month.delay(year_month, provider_name)
+            task = pull_provider_month.delay(year_month, provider_name, user_id=user_id)
             with contextlib.suppress(Exception):
                 set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
     except Exception as exc:
@@ -82,12 +86,16 @@ def pull_month(self, year_month: str):
 
 
 @celery_app.task(bind=True, max_retries=1, name="tracekit.worker.pull_provider_month")
-def pull_provider_month(self, year_month: str, provider_name: str):
+def pull_provider_month(self, year_month: str, provider_name: str, user_id: int = 0):
     """Pull activities for *year_month* from a single named provider.
 
     Handles rate-limit errors from the provider: short-term limits trigger a
     retry after the cooldown; long-term (daily) limits fail immediately.
     """
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
+
     try:
         from tracekit.provider_status import PULL_STATUS_STARTED, set_pull_status
 
@@ -168,8 +176,12 @@ def pull_provider_month(self, year_month: str, provider_name: str):
 
 
 @celery_app.task(bind=True, name="tracekit.worker.reset_month")
-def reset_month(self, year_month: str):
+def reset_month(self, year_month: str, user_id: int = 0):
     """Reset (delete) all activities and sync records for a given YYYY-MM."""
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
+
     try:
         from tracekit.commands.reset import run
 
@@ -185,8 +197,12 @@ def reset_month(self, year_month: str):
 
 
 @celery_app.task(bind=True, name="tracekit.worker.reset_all")
-def reset_all(self):
+def reset_all(self, user_id: int = 0):
     """Reset (delete) ALL activities and sync records."""
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
+
     try:
         from tracekit.commands.reset import run
 
@@ -202,7 +218,7 @@ def reset_all(self):
 
 
 @celery_app.task(bind=True, max_retries=1, name="tracekit.worker.apply_sync_change")
-def apply_sync_change(self, change_dict: dict, year_month: str):
+def apply_sync_change(self, change_dict: dict, year_month: str, user_id: int = 0):
     """Apply a single ActivityChange for *year_month*.
 
     *change_dict* is the dict produced by ``ActivityChange.to_dict()``.
@@ -210,6 +226,10 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
     re-pulling the month from all providers (no network calls if the data
     is already cached in the local DB).
     """
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
+
     try:
         from tracekit.core import tracekit as tracekit_class
         from tracekit.sync import ActivityChange, apply_change, compute_month_changes
@@ -279,13 +299,17 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
 
 
 @celery_app.task(bind=True, name="tracekit.worker.pull_file")
-def pull_file(self):
+def pull_file(self, user_id: int = 0):
     """Scan the activities data folder and enqueue one process_file task per new file.
 
     Files already in the database (matched by basename + checksum) are skipped
     immediately — no parse work is queued for them.  This task is a lightweight
     fan-out; the actual parsing happens in process_file.
     """
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
+
     try:
         from tracekit.core import tracekit as tracekit_class
 
@@ -296,7 +320,7 @@ def pull_file(self):
 
         count = len(unprocessed)
         for file_path in unprocessed:
-            process_file.delay(file_path)
+            process_file.delay(file_path, user_id=user_id)
 
         return {"queued": count}
     except Exception as exc:
@@ -310,13 +334,17 @@ def pull_file(self):
 
 
 @celery_app.task(bind=True, name="tracekit.worker.process_file")
-def process_file(self, file_path: str):
+def process_file(self, file_path: str, user_id: int = 0):
     """Parse and ingest a single activity file.
 
     Idempotent: if the file has already been processed (matched by checksum)
     this task exits without writing to the database.
     """
     import os as _os
+
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
 
     try:
         from tracekit.core import tracekit as tracekit_class
@@ -341,12 +369,16 @@ def process_file(self, file_path: str):
 
 
 @celery_app.task(bind=True, name="tracekit.worker.reset_provider")
-def reset_provider(self, provider_name: str):
+def reset_provider(self, provider_name: str, user_id: int = 0):
     """Delete all activities and sync records for a single named provider.
 
     Does not touch any files on disk — only removes this tracekit\'s stored
     copy of the provider\'s activities and the associated sync records.
     """
+    from tracekit.user_context import set_user_id
+
+    set_user_id(user_id)
+
     try:
         from tracekit.core import tracekit as tracekit_class
         from tracekit.provider_sync import ProviderSync
@@ -357,7 +389,11 @@ def reset_provider(self, provider_name: str):
                 raise ValueError(f"Provider not found or not enabled: {provider_name}")
             deleted = provider.reset_activities(date_filter=None)
 
-        sync_deleted = ProviderSync.delete().where(ProviderSync.provider == provider_name).execute()
+        sync_deleted = (
+            ProviderSync.delete()
+            .where((ProviderSync.provider == provider_name) & (ProviderSync.user_id == user_id))
+            .execute()
+        )
         return {"provider": provider_name, "activities_deleted": deleted, "sync_records_deleted": sync_deleted}
     except Exception as exc:
         try:
@@ -371,21 +407,34 @@ def reset_provider(self, provider_name: str):
 
 @celery_app.task(name="tracekit.worker.daily")
 def daily():
-    """Daily heartbeat — pull the relevant month and scan all activity files.
+    """Daily heartbeat — pull the relevant month for every known user.
 
     On the 1st of the month the previous month is pulled (activities from the
     last day of the prior month haven't been pulled yet).  All other days pull
     the current month.
+
+    Fan-out: one pull_month task per distinct user_id that has ProviderSync
+    rows (covers user_id=0 / CLI and all web users).  user_id=0 is always
+    included even if no rows exist yet.
     """
     from datetime import UTC, datetime, timedelta
 
+    from tracekit.provider_sync import ProviderSync
+
     now = datetime.now(UTC)
     if now.day == 1:
-        # The last daily run covered up to yesterday (end of prior month), so
-        # pull that month to catch any remaining activities.
         prev = now.replace(day=1) - timedelta(days=1)
         year_month = prev.strftime("%Y-%m")
     else:
         year_month = now.strftime("%Y-%m")
-    pull_month.delay(year_month)
-    pull_file.delay()
+
+    try:
+        user_ids = {row.user_id for row in ProviderSync.select(ProviderSync.user_id).distinct()}
+    except Exception:
+        user_ids = set()
+    user_ids.add(0)  # always include CLI/unscoped user
+
+    for uid in user_ids:
+        pull_month.delay(year_month, user_id=uid)
+
+    pull_file.delay(user_id=0)  # file scanning is always unscoped

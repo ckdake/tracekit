@@ -69,6 +69,9 @@ class BaseProviderActivity(Model):
     created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")])
     updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")])
 
+    # User association — 0 = CLI/unscoped, web users get their own ID
+    user_id = IntegerField(default=0, index=True)
+
     class Meta:
         database = db
         abstract = True  # This is a base class, not a concrete table

@@ -37,17 +37,45 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 # ---------------------------------------------------------------------------
 
 
+@app.before_request
+def _set_user_context():
+    from auth_mode import is_single_user_mode
+
+    from tracekit.user_context import set_user_id
+
+    if is_single_user_mode():
+        set_user_id(0)
+        return
+    uid = session.get("user_id")
+    if uid:
+        try:
+            from models.user import User
+
+            user = User.get_by_id(uid)
+            set_user_id(user.id)
+        except Exception:
+            session.pop("user_id", None)
+            set_user_id(0)
+    else:
+        set_user_id(0)
+
+
 @app.context_processor
 def inject_current_user():
+    from auth_mode import is_single_user_mode
+
+    single_user_mode = is_single_user_mode()
+    if single_user_mode:
+        return {"current_user": None, "single_user_mode": True}
     user_id = session.get("user_id")
     if user_id:
         try:
             from models.user import User
 
-            return {"current_user": User.get_by_id(user_id)}
+            return {"current_user": User.get_by_id(user_id), "single_user_mode": False}
         except Exception:
             session.pop("user_id", None)
-    return {"current_user": None}
+    return {"current_user": None, "single_user_mode": False}
 
 
 # ---------------------------------------------------------------------------

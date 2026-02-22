@@ -27,11 +27,19 @@ def signup():
             error = "An account with that email already exists."
 
         if error is None:
+            is_first_user = User.select().count() == 0
             user = User.create(
                 email=email,
                 password_hash=generate_password_hash(password),
             )
             session["user_id"] = user.id
+            if is_first_user:
+                from data_claim import claim_unscoped_data
+
+                from tracekit.user_context import set_user_id
+
+                set_user_id(user.id)
+                claim_unscoped_data(user.id)
             return redirect(url_for("pages.index"))
 
         return render_template("signup.html", error=error, email=email)

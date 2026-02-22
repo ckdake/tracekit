@@ -24,6 +24,7 @@ from peewee import DoesNotExist
 from tracekit.provider_sync import ProviderSync
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.file.file_activity import FileActivity
+from tracekit.user_context import get_user_id
 
 from .formats.fit import parse_fit
 from .formats.gpx import parse_gpx
@@ -166,6 +167,7 @@ class FileProvider(FitnessProvider):
                 FileActivity.get(
                     FileActivity.file_path == os.path.basename(file_path),
                     FileActivity.file_checksum == checksum,
+                    FileActivity.user_id == get_user_id(),
                 )
                 # Already in the database — skip.
             except DoesNotExist:
@@ -190,6 +192,7 @@ class FileProvider(FitnessProvider):
             FileActivity.get_or_none(
                 FileActivity.file_path == basename,
                 FileActivity.file_checksum == checksum,
+                FileActivity.user_id == get_user_id(),
             )
             is not None
         ):
@@ -204,6 +207,7 @@ class FileProvider(FitnessProvider):
             FileActivity.get_or_none(
                 FileActivity.file_path == parsed_data.get("file_path"),
                 FileActivity.file_checksum == parsed_data.get("file_checksum"),
+                FileActivity.user_id == get_user_id(),
             )
             is not None
         ):
@@ -241,7 +245,7 @@ class FileProvider(FitnessProvider):
 
         if date_filter:
             year, month = map(int, date_filter.split("-"))
-            for activity in FileActivity.select():
+            for activity in FileActivity.select().where(FileActivity.user_id == get_user_id()):
                 if hasattr(activity, "start_time") and activity.start_time:
                     try:
                         # Convert timestamp to datetime for comparison
@@ -251,7 +255,7 @@ class FileProvider(FitnessProvider):
                     except (ValueError, TypeError):
                         continue
         else:
-            file_activities = list(FileActivity.select())
+            file_activities = list(FileActivity.select().where(FileActivity.user_id == get_user_id()))
 
         return file_activities
 
@@ -268,13 +272,14 @@ class FileProvider(FitnessProvider):
             activity_type=parsed_data.get("activity_type", ""),
             duration_hms=parsed_data.get("duration_hms", ""),
             raw_data=json.dumps(parsed_data),
+            user_id=get_user_id(),
         )
         return file_activity
 
     def _mark_all_months_as_synced(self) -> None:
         """Mark all months containing activities as synced for this provider."""
         # Get all unique months that have activities
-        activities = FileActivity.select()
+        activities = FileActivity.select().where(FileActivity.user_id == get_user_id())
         unique_months = set()
 
         for activity in activities:
@@ -291,7 +296,7 @@ class FileProvider(FitnessProvider):
         for year_month in unique_months:
             existing_sync = ProviderSync.get_or_none(year_month, self.provider_name)
             if not existing_sync:
-                ProviderSync.create(year_month=year_month, provider=self.provider_name)
+                ProviderSync.create(year_month=year_month, provider=self.provider_name, user_id=get_user_id())
                 print(f"Marked {year_month} as synced for {self.provider_name}")
 
     def pull_activities(self, date_filter: str | None = None) -> list["FileActivity"]:
@@ -317,7 +322,9 @@ class FileProvider(FitnessProvider):
     def get_activity_by_id(self, activity_id: str) -> Optional["FileActivity"]:
         """Get a specific activity by its file activity ID."""
         try:
-            return FileActivity.get_by_id(int(activity_id))
+            return FileActivity.get_or_none(
+                (FileActivity.id == int(activity_id)) & (FileActivity.user_id == get_user_id())
+            )
         except (ValueError, DoesNotExist):
             return None
 
@@ -332,7 +339,7 @@ class FileProvider(FitnessProvider):
     def get_all_gear(self) -> dict[str, str]:
         """Get all unique equipment from file activities."""
         gear_set = set()
-        for activity in FileActivity.select():
+        for activity in FileActivity.select().where(FileActivity.user_id == get_user_id()):
             if hasattr(activity, "equipment") and activity.equipment:
                 gear_set.add(str(activity.equipment))
         return {name: name for name in gear_set}
@@ -352,8 +359,12 @@ class FileProvider(FitnessProvider):
 
             return (
                 FileActivity.delete()
-                .where((FileActivity.start_time >= start_timestamp) & (FileActivity.start_time <= end_timestamp))
+                .where(
+                    (FileActivity.start_time >= start_timestamp)
+                    & (FileActivity.start_time <= end_timestamp)
+                    & (FileActivity.user_id == get_user_id())
+                )
                 .execute()
             )
         else:
-            return FileActivity.delete().execute()
+            return FileActivity.delete().where(FileActivity.user_id == get_user_id()).execute()

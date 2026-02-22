@@ -16,6 +16,7 @@ from peewee import DoesNotExist
 from tracekit.provider_sync import ProviderSync
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+from tracekit.user_context import get_user_id
 
 
 class SpreadsheetProvider(FitnessProvider):
@@ -101,7 +102,10 @@ class SpreadsheetProvider(FitnessProvider):
                 continue  # Skip header row
 
             excel_row_number = i + 1  # Convert enumerate index to Excel row number (1-based)
-            existing_activity = SpreadsheetActivity.get_or_none(SpreadsheetActivity.spreadsheet_id == excel_row_number)
+            existing_activity = SpreadsheetActivity.get_or_none(
+                (SpreadsheetActivity.spreadsheet_id == excel_row_number)
+                & (SpreadsheetActivity.user_id == get_user_id())
+            )
             if existing_activity is None:
                 activity = self._process_parsed_data(
                     {
@@ -123,7 +127,7 @@ class SpreadsheetProvider(FitnessProvider):
 
         if date_filter:
             year, month = map(int, date_filter.split("-"))
-            for activity in SpreadsheetActivity.select():
+            for activity in SpreadsheetActivity.select().where(SpreadsheetActivity.user_id == get_user_id()):
                 if hasattr(activity, "start_time") and activity.start_time:
                     try:
                         # Convert timestamp to datetime for comparison
@@ -133,14 +137,15 @@ class SpreadsheetProvider(FitnessProvider):
                     except (ValueError, TypeError):
                         continue
         else:
-            file_activities = list(SpreadsheetActivity.select())
+            file_activities = list(SpreadsheetActivity.select().where(SpreadsheetActivity.user_id == get_user_id()))
 
         return file_activities
 
     def _process_parsed_data(self, parsed_data: dict) -> SpreadsheetActivity | None:
         try:
             existing_activity = SpreadsheetActivity.get(
-                SpreadsheetActivity.spreadsheet_id == parsed_data.get("spreadsheet_id")
+                SpreadsheetActivity.spreadsheet_id == parsed_data.get("spreadsheet_id"),
+                SpreadsheetActivity.user_id == get_user_id(),
             )
             return existing_activity
         except DoesNotExist:
@@ -204,13 +209,14 @@ class SpreadsheetProvider(FitnessProvider):
         activity_kwargs["source_file_type"] = "spreadsheet"
         activity_kwargs["spreadsheet_id"] = parsed_data["spreadsheet_id"]
 
+        activity_kwargs["user_id"] = get_user_id()
         spreadsheet_activity = SpreadsheetActivity.create(**activity_kwargs)
         return spreadsheet_activity
 
     def _mark_all_months_as_synced(self) -> None:
         """Mark all months containing activities as synced for this provider."""
         # Get all unique months that have activities
-        activities = SpreadsheetActivity.select()
+        activities = SpreadsheetActivity.select().where(SpreadsheetActivity.user_id == get_user_id())
         unique_months = set()
 
         for activity in activities:
@@ -229,7 +235,7 @@ class SpreadsheetProvider(FitnessProvider):
         for year_month in unique_months:
             existing_sync = ProviderSync.get_or_none(year_month, self.provider_name)
             if not existing_sync:
-                ProviderSync.create(year_month=year_month, provider=self.provider_name)
+                ProviderSync.create(year_month=year_month, provider=self.provider_name, user_id=get_user_id())
                 print(f"Marked {year_month} as synced for {self.provider_name}")
 
     def pull_activities(self, date_filter: str | None = None) -> list[SpreadsheetActivity]:
@@ -255,7 +261,10 @@ class SpreadsheetProvider(FitnessProvider):
     def get_activity_by_id(self, activity_id: str) -> SpreadsheetActivity | None:
         """Get a specific activity by its spreadsheet_id."""
         try:
-            return SpreadsheetActivity.get(SpreadsheetActivity.spreadsheet_id == int(activity_id))
+            return SpreadsheetActivity.get(
+                SpreadsheetActivity.spreadsheet_id == int(activity_id),
+                SpreadsheetActivity.user_id == get_user_id(),
+            )
         except (ValueError, DoesNotExist):
             return None
 
@@ -265,7 +274,10 @@ class SpreadsheetProvider(FitnessProvider):
             activity_id = activity_data.get("spreadsheet_id")
             if not activity_id:
                 return None
-            activity = SpreadsheetActivity.get(SpreadsheetActivity.spreadsheet_id == activity_id)
+            activity = SpreadsheetActivity.get(
+                SpreadsheetActivity.spreadsheet_id == activity_id,
+                SpreadsheetActivity.user_id == get_user_id(),
+            )
 
             # Update the database record
             for key, value in activity_data.items():
@@ -359,6 +371,7 @@ class SpreadsheetProvider(FitnessProvider):
             )
 
         # Create the database record
+        db_data["user_id"] = get_user_id()
         SpreadsheetActivity.create(**db_data)
 
         # Return the Excel row number as the spreadsheet_id
@@ -418,8 +431,9 @@ class SpreadsheetProvider(FitnessProvider):
                 .where(
                     (SpreadsheetActivity.start_time >= start_timestamp)
                     & (SpreadsheetActivity.start_time <= end_timestamp)
+                    & (SpreadsheetActivity.user_id == get_user_id())
                 )
                 .execute()
             )
         else:
-            return SpreadsheetActivity.delete().execute()
+            return SpreadsheetActivity.delete().where(SpreadsheetActivity.user_id == get_user_id()).execute()

@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from peewee import BooleanField, CharField, IntegerField, Model
 
 from tracekit.db import db
+from tracekit.user_context import get_user_id
 
 # ---- constants ---------------------------------------------------------------
 
@@ -59,7 +60,7 @@ class ProviderRateLimitError(RuntimeError):
 class ProviderStatus(Model):
     """Tracks the most recent operation result for each provider."""
 
-    provider = CharField(unique=True)  # e.g. "strava", "ridewithgps"
+    provider = CharField()  # e.g. "strava", "ridewithgps"
     last_operation = CharField(null=True)  # e.g. "pull", "sync_name", "apply_change"
     last_operation_at = IntegerField(null=True)  # Unix timestamp
     last_success = BooleanField(null=True)  # True / False / None (never run)
@@ -67,10 +68,12 @@ class ProviderStatus(Model):
     # Rate-limit fields (Strava-specific but generic enough for others)
     rate_limit_type = CharField(null=True)  # RATE_LIMIT_SHORT_TERM | RATE_LIMIT_LONG_TERM
     rate_limit_reset_at = IntegerField(null=True)  # Unix timestamp when limit clears
+    user_id = IntegerField(default=0)
 
     class Meta:
         database = db
         table_name = "provider_status"
+        indexes = ((("provider", "user_id"), True),)  # unique together
 
     def to_dict(self) -> dict:
         return {
@@ -107,7 +110,7 @@ def record_operation(
     try:
         _ensure_connected()
         now = int(datetime.now(UTC).timestamp())
-        row, _ = ProviderStatus.get_or_create(provider=provider)
+        row, _ = ProviderStatus.get_or_create(provider=provider, user_id=get_user_id())
         row.last_operation = operation
         row.last_operation_at = now
         row.last_success = success
@@ -135,7 +138,7 @@ def record_rate_limit(
     try:
         _ensure_connected()
         now = int(datetime.now(UTC).timestamp())
-        row, _ = ProviderStatus.get_or_create(provider=provider)
+        row, _ = ProviderStatus.get_or_create(provider=provider, user_id=get_user_id())
         if operation:
             row.last_operation = operation
         row.last_operation_at = now
@@ -152,7 +155,10 @@ def get_all_statuses() -> dict[str, dict]:
     """Return {provider: status_dict} for all rows in the table."""
     try:
         _ensure_connected()
-        return {row.provider: row.to_dict() for row in ProviderStatus.select()}
+        return {
+            row.provider: row.to_dict()
+            for row in ProviderStatus.select().where(ProviderStatus.user_id == get_user_id())
+        }
     except Exception as exc:
         print(f"[provider_status] failed to read statuses: {exc}")
         return {}
@@ -180,11 +186,12 @@ class ProviderPullStatus(Model):
     job_id = CharField(null=True)  # Celery task ID; cleared on finish
     message = CharField(null=True, max_length=1024)  # error detail on failure
     updated_at = IntegerField(null=True)  # Unix timestamp of last update
+    user_id = IntegerField(default=0)
 
     class Meta:
         database = db
         table_name = "provider_pull_status"
-        indexes = ((("year_month", "provider"), True),)  # unique together
+        indexes = ((("year_month", "provider", "user_id"), True),)  # unique together
 
 
 def set_pull_status(
@@ -205,6 +212,7 @@ def set_pull_status(
         row, _ = ProviderPullStatus.get_or_create(
             year_month=year_month,
             provider=provider,
+            user_id=get_user_id(),
             defaults={"status": status, "updated_at": now},
         )
         row.status = status
@@ -223,7 +231,9 @@ def get_month_pull_statuses(year_month: str) -> dict[str, dict]:
     """Return {provider: status_dict} for all pull status rows in *year_month*."""
     try:
         _ensure_connected()
-        rows = ProviderPullStatus.select().where(ProviderPullStatus.year_month == year_month)
+        rows = ProviderPullStatus.select().where(
+            (ProviderPullStatus.year_month == year_month) & (ProviderPullStatus.user_id == get_user_id())
+        )
         return {
             row.provider: {
                 "status": row.status,
@@ -246,7 +256,9 @@ def is_pull_active(year_month: str, provider: str) -> bool:
     try:
         _ensure_connected()
         row = ProviderPullStatus.get_or_none(
-            (ProviderPullStatus.year_month == year_month) & (ProviderPullStatus.provider == provider)
+            (ProviderPullStatus.year_month == year_month)
+            & (ProviderPullStatus.provider == provider)
+            & (ProviderPullStatus.user_id == get_user_id())
         )
         return row is not None and row.status in _PULL_ACTIVE_STATUSES
     except Exception as exc:
@@ -268,13 +280,15 @@ class MonthSyncStatus(Model):
     activity data for the month changes (pull started or change applied).
     """
 
-    year_month = CharField(unique=True)  # e.g. "2025-02"
+    year_month = CharField()  # e.g. "2025-02"
     status = CharField(default=MONTH_SYNC_UNKNOWN)  # unknown | synced | requires_action
     updated_at = IntegerField(null=True)  # Unix timestamp of last update
+    user_id = IntegerField(default=0)
 
     class Meta:
         database = db
         table_name = "month_sync_status"
+        indexes = ((("year_month", "user_id"), True),)  # unique together
 
 
 def set_month_sync_status(year_month: str, status: str) -> None:
@@ -287,6 +301,7 @@ def set_month_sync_status(year_month: str, status: str) -> None:
         now = int(datetime.now(UTC).timestamp())
         row, _ = MonthSyncStatus.get_or_create(
             year_month=year_month,
+            user_id=get_user_id(),
             defaults={"status": status, "updated_at": now},
         )
         row.status = status
@@ -300,7 +315,9 @@ def get_month_sync_status(year_month: str) -> str:
     """Return the stored sync-review status for *year_month*, defaulting to 'unknown'."""
     try:
         _ensure_connected()
-        row = MonthSyncStatus.get_or_none(MonthSyncStatus.year_month == year_month)
+        row = MonthSyncStatus.get_or_none(
+            (MonthSyncStatus.year_month == year_month) & (MonthSyncStatus.user_id == get_user_id())
+        )
         return row.status if row else MONTH_SYNC_UNKNOWN
     except Exception as exc:
         print(f"[provider_status] failed to get month sync status: {exc}")

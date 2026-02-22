@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from peewee import BooleanField, CharField, IntegerField, Model
 
 from tracekit.db import db
+from tracekit.user_context import get_user_id
 
 EXPIRY_24H = int(timedelta(hours=24).total_seconds())
 
@@ -17,6 +18,7 @@ class Notification(Model):
     read = BooleanField(default=False)
     created = IntegerField()  # Unix timestamp
     expires = IntegerField(null=True, default=None)  # Unix timestamp; NULL = never expires
+    user_id = IntegerField(default=0, index=True)
 
     class Meta:
         database = db
@@ -59,6 +61,7 @@ def create_notification(
             category=category,
             created=int(datetime.now(UTC).timestamp()),
             expires=expires,
+            user_id=get_user_id(),
         )
     except Exception as e:
         # Never let notification creation crash the caller

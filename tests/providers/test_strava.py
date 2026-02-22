@@ -1,5 +1,5 @@
 import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -321,7 +321,10 @@ class TestStravaProviderCore:
         mock_activity3.start_time = "1609545600"  # Jan 2, 2021
 
         with patch("tracekit.providers.strava.strava_activity.StravaActivity.select") as mock_select:
-            mock_select.return_value = [mock_activity1, mock_activity2, mock_activity3]
+            mock_qs = MagicMock()
+            mock_qs.__iter__ = MagicMock(return_value=iter([mock_activity1, mock_activity2, mock_activity3]))
+            mock_qs.where.return_value = mock_qs
+            mock_select.return_value = mock_qs
 
             result = provider._get_strava_activities_for_month("2021-01")
 
@@ -341,7 +344,10 @@ class TestStravaProviderCore:
         mock_activity.start_time = "invalid"
 
         with patch("tracekit.providers.strava.strava_activity.StravaActivity.select") as mock_select:
-            mock_select.return_value = [mock_activity]
+            mock_qs = MagicMock()
+            mock_qs.__iter__ = MagicMock(return_value=iter([mock_activity]))
+            mock_qs.where.return_value = mock_qs
+            mock_select.return_value = mock_qs
 
             result = provider._get_strava_activities_for_month("2021-01")
 
@@ -483,7 +489,7 @@ class TestStravaProviderPullActivities:
             assert result == mock_final_activities
             mock_provider_sync.get_or_none.assert_called_once_with("2021-01", "strava")
             provider._fetch_strava_activities_for_month.assert_called_once_with("2021-01")
-            mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava")
+            mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava", user_id=0)
 
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_with_duplicate_activity(self, mock_provider_sync):
@@ -515,7 +521,7 @@ class TestStravaProviderPullActivities:
 
             # Verify duplicate was skipped (save not called)
             mock_converted_activity.save.assert_not_called()
-            mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava")
+            mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava", user_id=0)
 
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_with_error(self, mock_provider_sync):
@@ -540,7 +546,7 @@ class TestStravaProviderPullActivities:
 
         # Should handle error gracefully and still mark as synced
         assert result == mock_final_activities
-        mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava")
+        mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava", user_id=0)
 
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_rate_limit_propagates(self, mock_provider_sync):

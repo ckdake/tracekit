@@ -10,6 +10,7 @@ from typing import Any
 
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+from tracekit.user_context import get_user_id
 
 
 class StravaJsonProvider(FitnessProvider):
@@ -64,8 +65,9 @@ class StravaJsonProvider(FitnessProvider):
                 .where(
                     (StravaJsonActivity.start_time >= start_timestamp)
                     & (StravaJsonActivity.start_time <= end_timestamp)
+                    & (StravaJsonActivity.user_id == get_user_id())
                 )
                 .execute()
             )
         else:
-            return StravaJsonActivity.delete().execute()
+            return StravaJsonActivity.delete().where(StravaJsonActivity.user_id == get_user_id()).execute()

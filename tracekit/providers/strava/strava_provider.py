@@ -23,6 +23,7 @@ from tracekit.provider_status import (
 from tracekit.provider_sync import ProviderSync
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.strava.strava_activity import StravaActivity
+from tracekit.user_context import get_user_id
 
 
 class _RaisingRateLimiter:
@@ -223,12 +224,16 @@ class StravaProvider(FitnessProvider):
                     # Convert stravalib activity to our StravaActivity
                     strava_activity = self._convert_to_strava_activity(strava_lib_activity)
 
-                    # Check for duplicates
-                    existing = StravaActivity.get_or_none(StravaActivity.strava_id == strava_activity.strava_id)
+                    # Check for duplicates (scoped to current user)
+                    uid = get_user_id()
+                    existing = StravaActivity.get_or_none(
+                        (StravaActivity.strava_id == strava_activity.strava_id) & (StravaActivity.user_id == uid)
+                    )
                     if existing:
                         continue
 
                     # Save to database
+                    strava_activity.user_id = uid
                     strava_activity.save()
                     processed_count += 1
 
@@ -240,7 +245,7 @@ class StravaProvider(FitnessProvider):
                     continue
 
             # Mark this month as synced
-            ProviderSync.create(year_month=date_filter, provider=self.provider_name)
+            ProviderSync.create(year_month=date_filter, provider=self.provider_name, user_id=get_user_id())
             print(f"Synced {processed_count} Strava activities")
         else:
             print(f"Month {date_filter} already synced for {self.provider_name}")
@@ -254,7 +259,7 @@ class StravaProvider(FitnessProvider):
         year, month = map(int, date_filter.split("-"))
         strava_activities = []
 
-        for activity in StravaActivity.select():
+        for activity in StravaActivity.select().where(StravaActivity.user_id == get_user_id()):
             if hasattr(activity, "start_time") and activity.start_time:
                 try:
                     # Convert timestamp to datetime for comparison
@@ -347,11 +352,14 @@ class StravaProvider(FitnessProvider):
     # Abstract method implementations
     def create_activity(self, activity_data: dict[str, Any]) -> StravaActivity:
         """Create a new StravaActivity from activity data."""
+        activity_data["user_id"] = get_user_id()
         return StravaActivity.create(**activity_data)
 
     def get_activity_by_id(self, activity_id: str) -> StravaActivity | None:
         """Get a StravaActivity by its provider ID."""
-        return StravaActivity.get_or_none(StravaActivity.strava_id == activity_id)
+        return StravaActivity.get_or_none(
+            (StravaActivity.strava_id == activity_id) & (StravaActivity.user_id == get_user_id())
+        )
 
     def update_activity(self, activity_data: dict[str, Any]) -> bool:
         """Update an existing Strava activity via API."""
@@ -368,7 +376,9 @@ class StravaProvider(FitnessProvider):
             # Pull fresh data from upstream to sync our local copy (best-effort)
             try:
                 fresh_activity = self.client.get_activity(int(provider_id))
-                local = StravaActivity.get_or_none(StravaActivity.strava_id == str(provider_id))
+                local = StravaActivity.get_or_none(
+                    (StravaActivity.strava_id == str(provider_id)) & (StravaActivity.user_id == get_user_id())
+                )
                 if local and fresh_activity:
                     local.name = str(getattr(fresh_activity, "name", "") or "")
                     local.save()
@@ -435,7 +445,9 @@ class StravaProvider(FitnessProvider):
             # Pull fresh data from upstream to sync our local copy (best-effort)
             try:
                 fresh_activity = self.client.get_activity(int(activity_id))
-                local = StravaActivity.get_or_none(StravaActivity.strava_id == str(activity_id))
+                local = StravaActivity.get_or_none(
+                    (StravaActivity.strava_id == str(activity_id)) & (StravaActivity.user_id == get_user_id())
+                )
                 if local and fresh_activity:
                     gear = getattr(fresh_activity, "gear", None)
                     if gear and hasattr(gear, "name") and gear.name:
@@ -457,11 +469,16 @@ class StravaProvider(FitnessProvider):
                 date_filter, self.config.get("home_timezone", "US/Eastern")
             )
 
+            uid = get_user_id()
             deleted_count = (
                 StravaActivity.delete()
-                .where((StravaActivity.start_time >= start_timestamp) & (StravaActivity.start_time <= end_timestamp))
+                .where(
+                    (StravaActivity.start_time >= start_timestamp)
+                    & (StravaActivity.start_time <= end_timestamp)
+                    & (StravaActivity.user_id == uid)
+                )
                 .execute()
             )
             return deleted_count
         else:
-            return StravaActivity.delete().execute()
+            return StravaActivity.delete().where(StravaActivity.user_id == get_user_id()).execute()

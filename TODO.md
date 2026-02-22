@@ -5,7 +5,8 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 later:
-- [ ] users. database should have 'em and we should have to log in when in production
+- [ ] refactor auth to make it harder to write SQL that bypasses.
+- [ ] fix user icons, they are stacked vertically and overflowing the navbar
 - [ ] user limits and rate limiting. TBD!
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
 - [ ] sentry cloud

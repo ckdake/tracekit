@@ -33,9 +33,12 @@ def get_calendar_shell(home_timezone: str = "UTC") -> dict[str, Any]:
     import pytz
 
     from tracekit.provider_sync import ProviderSync
+    from tracekit.user_context import get_user_id
 
-    rows = ProviderSync.select(ProviderSync.year_month, ProviderSync.provider).order_by(
-        ProviderSync.year_month, ProviderSync.provider
+    rows = (
+        ProviderSync.select(ProviderSync.year_month, ProviderSync.provider)
+        .where(ProviderSync.user_id == get_user_id())
+        .order_by(ProviderSync.year_month, ProviderSync.provider)
     )
     records = [(r.year_month, r.provider) for r in rows]
 
@@ -116,14 +119,18 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
     from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+    from tracekit.user_context import get_user_id
 
     pull_statuses = get_month_pull_statuses(year_month)
     month_sync_status = get_month_sync_status(year_month)
 
-    synced_rows = ProviderSync.select(ProviderSync.provider).where(ProviderSync.year_month == year_month)
+    uid = get_user_id()
+    synced_rows = ProviderSync.select(ProviderSync.provider).where(
+        (ProviderSync.year_month == year_month) & (ProviderSync.user_id == uid)
+    )
     synced_providers = [r.provider for r in synced_rows]
 
-    all_rows = ProviderSync.select(ProviderSync.provider).distinct()
+    all_rows = ProviderSync.select(ProviderSync.provider).where(ProviderSync.user_id == uid).distinct()
     providers = sorted({r.provider for r in all_rows})
 
     provider_status = {p: p in synced_providers for p in providers}
@@ -147,7 +154,12 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
         try:
             count = (
                 model.select()
-                .where(model.start_time.is_null(False) & (model.start_time >= start_ts) & (model.start_time <= end_ts))
+                .where(
+                    model.start_time.is_null(False)
+                    & (model.start_time >= start_ts)
+                    & (model.start_time <= end_ts)
+                    & (model.user_id == uid)
+                )
                 .count()
             )
             if count > 0:
@@ -168,7 +180,10 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
             continue
         try:
             rows_ts = model.select(model.start_time).where(
-                model.start_time.is_null(False) & (model.start_time >= start_ts) & (model.start_time <= end_ts)
+                model.start_time.is_null(False)
+                & (model.start_time >= start_ts)
+                & (model.start_time <= end_ts)
+                & (model.user_id == uid)
             )
             days = sorted({datetime.fromtimestamp(r.start_time, tz=UTC).astimezone(local_tz).day for r in rows_ts})
             if days:
@@ -185,6 +200,7 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
                 & (GarminActivity.start_time >= start_ts)
                 & (GarminActivity.start_time <= end_ts)
                 & GarminActivity.device_name.is_null(False)
+                & (GarminActivity.user_id == uid)
             )
             .distinct()
         )

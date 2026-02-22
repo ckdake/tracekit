@@ -15,12 +15,16 @@ def _get_notifications_list() -> list[dict]:
 
         from tracekit.db import get_db
         from tracekit.notification import Notification
+        from tracekit.user_context import get_user_id
 
         get_db().connect(reuse_if_open=True)
         now = int(datetime.now(UTC).timestamp())
         rows = (
             Notification.select()
-            .where((Notification.expires.is_null()) | (Notification.expires > now))
+            .where(
+                (Notification.user_id == get_user_id())
+                & ((Notification.expires.is_null()) | (Notification.expires > now))
+            )
             .order_by(Notification.created.desc())
         )
         return [r.to_dict() for r in rows]
@@ -61,9 +65,12 @@ def api_notifications_read_all():
     try:
         from tracekit.db import get_db
         from tracekit.notification import Notification
+        from tracekit.user_context import get_user_id
 
         get_db().connect(reuse_if_open=True)
-        Notification.update(read=True).where(Notification.read == False).execute()
+        Notification.update(read=True).where(
+            (Notification.read == False) & (Notification.user_id == get_user_id())
+        ).execute()
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

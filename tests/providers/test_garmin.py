@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from garminconnect import GarminConnectConnectionError
@@ -167,7 +167,7 @@ class TestGarminProviderPullActivities:
                 assert result == mock_final_activities
                 mock_provider_sync.get_or_none.assert_called_once_with("2021-01", "garmin")
                 provider.fetch_activities_for_month.assert_called_once_with("2021-01")
-                mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="garmin")
+                mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="garmin", user_id=0)
 
                 # Check that GarminActivity was instantiated
                 mock_garmin_activity_class.assert_called_once()
@@ -202,7 +202,7 @@ class TestGarminProviderPullActivities:
 
                 # Verify duplicate was skipped (save not called)
                 mock_activity.save.assert_not_called()
-                mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="garmin")
+                mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="garmin", user_id=0)
 
 
 class TestGarminProviderFetchActivities:
@@ -331,11 +331,10 @@ class TestGarminProviderGetActivitiesForMonth:
         mock_activity3 = Mock()
         mock_activity3.start_time = "1609545600"  # Jan 2, 2021
 
-        mock_garmin_activity_class.select.return_value = [
-            mock_activity1,
-            mock_activity2,
-            mock_activity3,
-        ]
+        mock_qs = MagicMock()
+        mock_qs.__iter__ = MagicMock(return_value=iter([mock_activity1, mock_activity2, mock_activity3]))
+        mock_qs.where.return_value = mock_qs
+        mock_garmin_activity_class.select.return_value = mock_qs
 
         result = provider._get_garmin_activities_for_month("2021-01")
 
@@ -354,7 +353,10 @@ class TestGarminProviderGetActivitiesForMonth:
         mock_activity = Mock()
         mock_activity.start_time = "invalid"
 
-        mock_garmin_activity_class.select.return_value = [mock_activity]
+        mock_qs = MagicMock()
+        mock_qs.__iter__ = MagicMock(return_value=iter([mock_activity]))
+        mock_qs.where.return_value = mock_qs
+        mock_garmin_activity_class.select.return_value = mock_qs
 
         result = provider._get_garmin_activities_for_month("2021-01")
 

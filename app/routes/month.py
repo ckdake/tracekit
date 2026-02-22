@@ -119,8 +119,10 @@ def api_apply_change():
         if apply_sync_change is None:
             raise RuntimeError("Celery worker not available — is the worker running?")
 
+        from tracekit.user_context import get_user_id
+
         change_dict = data["change"]
-        task = apply_sync_change.delay(change_dict, year_month)
+        task = apply_sync_change.delay(change_dict, year_month, user_id=get_user_id())
         return jsonify({"task_id": task.id, "year_month": year_month, "status": "queued"})
     except Exception as exc:
         return jsonify({"error": f"Failed to enqueue task: {exc}"}), 503

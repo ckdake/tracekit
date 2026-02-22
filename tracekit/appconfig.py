@@ -22,9 +22,10 @@ import os
 from pathlib import Path
 from typing import Any
 
-from peewee import CharField, Model, TextField
+from peewee import CharField, IntegerField, Model, TextField
 
 from .db import db
+from .user_context import get_user_id
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -96,12 +97,14 @@ class AppConfig(Model):
     ``providers``) is stored as one row with the value JSON-encoded.
     """
 
-    key = CharField(unique=True, max_length=128)
+    key = CharField(max_length=128)
     value = TextField()  # JSON-encoded value
+    user_id = IntegerField(default=0)
 
     class Meta:
         database = db
         table_name = "appconfig"
+        indexes = ((("key", "user_id"), True),)  # unique together
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +115,7 @@ class AppConfig(Model):
 def _load_from_db() -> dict[str, Any] | None:
     """Return config dict from DB rows, or ``None`` if the table is empty."""
     try:
-        rows = list(AppConfig.select())
+        rows = list(AppConfig.select().where(AppConfig.user_id == get_user_id()))
         if not rows:
             return None
         return {r.key: json.loads(r.value) for r in rows}
@@ -183,11 +186,12 @@ def save_config(config: dict[str, Any]) -> None:
     Uses upsert semantics so it is safe to call repeatedly.
     """
     try:
+        uid = get_user_id()
         for key, value in config.items():
             (
-                AppConfig.insert(key=key, value=json.dumps(value))
+                AppConfig.insert(key=key, value=json.dumps(value), user_id=uid)
                 .on_conflict(
-                    conflict_target=[AppConfig.key],
+                    conflict_target=[AppConfig.key, AppConfig.user_id],
                     update={AppConfig.value: json.dumps(value)},
                 )
                 .execute()

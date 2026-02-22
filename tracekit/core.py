@@ -209,15 +209,23 @@ class Tracekit:
         date_start = f"{year_month}-01"
         date_end = f"{year_month}-{last_day:02d}"
 
+        from .user_context import get_user_id
+
+        uid = get_user_id()
+
         # Delete core Activity rows for the month
-        Activity.delete().where((Activity.date >= date_start) & (Activity.date <= date_end)).execute()
+        Activity.delete().where(
+            (Activity.date >= date_start) & (Activity.date <= date_end) & (Activity.user_id == uid)
+        ).execute()
 
         # Delete every provider-specific activity table for the month
         for model_cls in BaseProviderActivity.__subclasses__():
-            model_cls.delete().where((model_cls.start_time >= start_ts) & (model_cls.start_time <= end_ts)).execute()
+            model_cls.delete().where(
+                (model_cls.start_time >= start_ts) & (model_cls.start_time <= end_ts) & (model_cls.user_id == uid)
+            ).execute()
 
         # Clear sync-state so the month is treated as never-synced
-        ProviderSync.delete().where(ProviderSync.year_month == year_month).execute()
+        ProviderSync.delete().where((ProviderSync.year_month == year_month) & (ProviderSync.user_id == uid)).execute()
 
     def pull_provider_activities(self, year_month: str, provider_name: str) -> list[BaseProviderActivity]:
         """Pull activities for *year_month* from a single named provider.

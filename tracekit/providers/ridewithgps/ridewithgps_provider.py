@@ -15,6 +15,7 @@ from pyrwgps import RideWithGPS
 from tracekit.provider_sync import ProviderSync
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
+from tracekit.user_context import get_user_id
 
 
 class RideWithGPSProvider(FitnessProvider):
@@ -92,10 +93,14 @@ class RideWithGPSProvider(FitnessProvider):
                         rwgps_activity.state = str(trip.administrative_area)
                     if hasattr(trip, "gear") and trip.gear and hasattr(trip.gear, "name"):
                         rwgps_activity.equipment = str(trip.gear.name)
-                    existing = RideWithGPSActivity.get_or_none(RideWithGPSActivity.ridewithgps_id == str(trip.id))
+                    existing = RideWithGPSActivity.get_or_none(
+                        (RideWithGPSActivity.ridewithgps_id == str(trip.id))
+                        & (RideWithGPSActivity.user_id == get_user_id())
+                    )
                     if existing:
                         continue
                     try:
+                        rwgps_activity.user_id = get_user_id()
                         rwgps_activity.save()
                     except Exception as e:
                         print(f"Error saving RideWithGPS activity {trip.id}: {e}")
@@ -103,7 +108,7 @@ class RideWithGPSProvider(FitnessProvider):
                     print(f"Error processing RideWithGPS activity: {e}")
                     continue
 
-            ProviderSync.create(year_month=date_filter, provider=self.provider_name)
+            ProviderSync.create(year_month=date_filter, provider=self.provider_name, user_id=get_user_id())
             print(f"RideWithGPS Sync complete for {date_filter}")
 
         # Always return all activities for this month from the database
@@ -116,7 +121,9 @@ class RideWithGPSProvider(FitnessProvider):
         end_ts = int(end.timestamp())
         activities = list(
             RideWithGPSActivity.select().where(
-                (RideWithGPSActivity.start_time >= start_ts) & (RideWithGPSActivity.start_time < end_ts)
+                (RideWithGPSActivity.start_time >= start_ts)
+                & (RideWithGPSActivity.start_time < end_ts)
+                & (RideWithGPSActivity.user_id == get_user_id())
             )
         )
         return activities
@@ -125,11 +132,14 @@ class RideWithGPSProvider(FitnessProvider):
     def create_activity(self, activity_data: dict) -> RideWithGPSActivity:
         """Create a new RideWithGPSActivity from activity data."""
         # Create new activity
+        activity_data["user_id"] = get_user_id()
         return RideWithGPSActivity.create(**activity_data)
 
     def get_activity_by_id(self, activity_id: str) -> RideWithGPSActivity | None:
         """Get a RideWithGPSActivity by its provider ID."""
-        return RideWithGPSActivity.get_or_none(RideWithGPSActivity.ridewithgps_id == activity_id)
+        return RideWithGPSActivity.get_or_none(
+            (RideWithGPSActivity.ridewithgps_id == activity_id) & (RideWithGPSActivity.user_id == get_user_id())
+        )
 
     def update_activity(self, activity_data: dict) -> bool:
         """Update an existing RideWithGPS trip via API."""
@@ -147,7 +157,10 @@ class RideWithGPSProvider(FitnessProvider):
             # Pull fresh data from upstream to sync our local copy
             try:
                 fresh_trip = self.client.get(path=f"/trips/{provider_id}.json").trip
-                local = RideWithGPSActivity.get_or_none(RideWithGPSActivity.ridewithgps_id == str(provider_id))
+                local = RideWithGPSActivity.get_or_none(
+                    (RideWithGPSActivity.ridewithgps_id == str(provider_id))
+                    & (RideWithGPSActivity.user_id == get_user_id())
+                )
                 if local and fresh_trip:
                     if hasattr(fresh_trip, "name") and fresh_trip.name is not None:
                         local.name = str(fresh_trip.name)
@@ -201,7 +214,10 @@ class RideWithGPSProvider(FitnessProvider):
             # Pull fresh data from upstream to sync our local copy
             try:
                 fresh_trip = self.client.get(path=f"/trips/{activity_id}.json").trip
-                local = RideWithGPSActivity.get_or_none(RideWithGPSActivity.ridewithgps_id == str(activity_id))
+                local = RideWithGPSActivity.get_or_none(
+                    (RideWithGPSActivity.ridewithgps_id == str(activity_id))
+                    & (RideWithGPSActivity.user_id == get_user_id())
+                )
                 if local and fresh_trip:
                     if hasattr(fresh_trip, "gear") and fresh_trip.gear and hasattr(fresh_trip.gear, "name"):
                         local.equipment = str(fresh_trip.gear.name)
@@ -231,9 +247,10 @@ class RideWithGPSProvider(FitnessProvider):
                 .where(
                     (RideWithGPSActivity.start_time >= start_timestamp)
                     & (RideWithGPSActivity.start_time <= end_timestamp)
+                    & (RideWithGPSActivity.user_id == get_user_id())
                 )
                 .execute()
             )
             return deleted_count
         else:
-            return RideWithGPSActivity.delete().execute()
+            return RideWithGPSActivity.delete().where(RideWithGPSActivity.user_id == get_user_id()).execute()

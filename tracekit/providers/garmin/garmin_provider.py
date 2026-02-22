@@ -22,6 +22,7 @@ from garth.exc import GarthHTTPError
 from tracekit.provider_sync import ProviderSync
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.garmin.garmin_activity import GarminActivity
+from tracekit.user_context import get_user_id
 
 
 class GarminProvider(FitnessProvider):
@@ -165,13 +166,15 @@ class GarminProvider(FitnessProvider):
 
                 # Check for duplicates based on garmin_id
                 existing = GarminActivity.get_or_none(
-                    GarminActivity.garmin_id == str(raw_activity.get("activityId", ""))
+                    (GarminActivity.garmin_id == str(raw_activity.get("activityId", "")))
+                    & (GarminActivity.user_id == get_user_id())
                 )
                 if existing:
                     print(f"Skipping duplicate Garmin activity {raw_activity.get('activityId')}")
                     continue
 
                 # Save to garmin_activities table
+                garmin_activity.user_id = get_user_id()
                 garmin_activity.save()
                 persisted_activities.append(garmin_activity)
 
@@ -180,7 +183,7 @@ class GarminProvider(FitnessProvider):
                 continue
 
         # Mark this month as synced
-        ProviderSync.create(year_month=date_filter, provider=self.provider_name)
+        ProviderSync.create(year_month=date_filter, provider=self.provider_name, user_id=get_user_id())
 
         print(f"Synced {len(persisted_activities)} Garmin activities to garmin_activities table")
 
@@ -221,7 +224,9 @@ class GarminProvider(FitnessProvider):
 
     def get_activity_by_id(self, activity_id: str) -> GarminActivity | None:
         """Get a GarminActivity by its provider ID."""
-        return GarminActivity.get_or_none(GarminActivity.garmin_id == activity_id)
+        return GarminActivity.get_or_none(
+            (GarminActivity.garmin_id == activity_id) & (GarminActivity.user_id == get_user_id())
+        )
 
     def update_activity(self, activity_data: dict[str, Any]) -> Any:
         """Update an existing GarminActivity with new data."""
@@ -237,7 +242,9 @@ class GarminProvider(FitnessProvider):
                 print(f"Updated activity name in Garmin Connect: {activity_data['name']}")
 
                 # Sync our local copy with the value we just successfully pushed upstream
-                local = GarminActivity.get_or_none(GarminActivity.garmin_id == str(provider_id))
+                local = GarminActivity.get_or_none(
+                    (GarminActivity.garmin_id == str(provider_id)) & (GarminActivity.user_id == get_user_id())
+                )
                 if local:
                     local.name = activity_data["name"]
                     local.save()
@@ -288,7 +295,7 @@ class GarminProvider(FitnessProvider):
         year, month = map(int, date_filter.split("-"))
         garmin_activities = []
 
-        for activity in GarminActivity.select():
+        for activity in GarminActivity.select().where(GarminActivity.user_id == get_user_id()):
             if hasattr(activity, "start_time") and activity.start_time:
                 try:
                     # Convert timestamp to datetime for comparison
@@ -309,9 +316,13 @@ class GarminProvider(FitnessProvider):
 
             deleted_count = (
                 GarminActivity.delete()
-                .where((GarminActivity.start_time >= start_timestamp) & (GarminActivity.start_time <= end_timestamp))
+                .where(
+                    (GarminActivity.start_time >= start_timestamp)
+                    & (GarminActivity.start_time <= end_timestamp)
+                    & (GarminActivity.user_id == get_user_id())
+                )
                 .execute()
             )
             return deleted_count
         else:
-            return GarminActivity.delete().execute()
+            return GarminActivity.delete().where(GarminActivity.user_id == get_user_id()).execute()

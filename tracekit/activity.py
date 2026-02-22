@@ -72,8 +72,8 @@ class Activity(Model):
     original_filename = CharField(null=True)  # For imported files
     source = CharField(default="tracekit")  # Source of truth indicator
 
-    # User association (for multi-user support in the future)
-    user_id = CharField(null=True, index=True)
+    # User association — 0 = CLI/unscoped, web users get their own ID
+    user_id = IntegerField(default=0, index=True)
 
     class Meta:
         database = db

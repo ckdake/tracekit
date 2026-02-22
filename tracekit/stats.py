@@ -19,6 +19,7 @@ def get_provider_activity_counts() -> dict[str, int]:
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
     from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+    from tracekit.user_context import get_user_id
 
     models: dict[str, Any] = {
         "strava": StravaActivity,
@@ -28,7 +29,8 @@ def get_provider_activity_counts() -> dict[str, int]:
         "file": FileActivity,
         "stravajson": StravaJsonActivity,
     }
-    return {name: model.select().count() for name, model in models.items()}
+    uid = get_user_id()
+    return {name: model.select().where(model.user_id == uid).count() for name, model in models.items()}
 
 
 def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
@@ -58,12 +60,15 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
         StravaJsonActivity,
     ]
 
+    from tracekit.user_context import get_user_id
+
+    uid = get_user_id()
     max_ts: int | None = None
     for model in models:
         try:
             row = (
                 model.select(model.start_time)
-                .where(model.start_time.is_null(False))
+                .where(model.start_time.is_null(False) & (model.user_id == uid))
                 .order_by(model.start_time.desc())
                 .first()
             )

@@ -46,8 +46,13 @@ def test_file_provider_parses_gpx(mock_create, mock_get, mock_select, mock_sync_
     mock_activity.start_time = "1716811800"  # May 27, 2024 timestamp
     mock_create.return_value = mock_activity
 
-    # Mock the select method to return our mock activity
-    mock_select.return_value = [mock_activity]
+    # Mock the select method to return our mock activity (as a chainable queryset)
+    # Use side_effect so a fresh iterator is produced on each iteration attempt.
+    items = [mock_activity]
+    mock_qs = MagicMock()
+    mock_qs.__iter__ = MagicMock(side_effect=lambda: iter(items))
+    mock_qs.where.return_value = mock_qs
+    mock_select.return_value = mock_qs
 
     gpx_file = create_sample_gpx_file(tmp_path)
     provider = FileProvider(str(tmp_path), config={"home_timezone": "US/Eastern", "test_mode": True})
@@ -96,8 +101,13 @@ def test_file_provider_processes_multiple_files(
     # Mock create to return different activities for each call
     mock_create.side_effect = [mock_activity1, mock_activity2]
 
-    # Mock select to return both activities
-    mock_select.return_value = [mock_activity1, mock_activity2]
+    # Mock select to return both activities (as a chainable queryset)
+    # Use side_effect so a fresh iterator is produced on each iteration attempt.
+    items = [mock_activity1, mock_activity2]
+    mock_qs = MagicMock()
+    mock_qs.__iter__ = MagicMock(side_effect=lambda: iter(items))
+    mock_qs.where.return_value = mock_qs
+    mock_select.return_value = mock_qs
 
     # Create multiple sample files
     gpx1 = create_sample_gpx_file(tmp_path)
@@ -160,7 +170,11 @@ def test_file_provider_handles_gzipped(mock_create, mock_get, mock_select, mock_
     mock_activity = MagicMock()
     mock_activity.start_time = "1716811800"
     mock_create.return_value = mock_activity
-    mock_select.return_value = [mock_activity]
+    gzip_items = [mock_activity]
+    mock_qs = MagicMock()
+    mock_qs.__iter__ = MagicMock(side_effect=lambda: iter(gzip_items))
+    mock_qs.where.return_value = mock_qs
+    mock_select.return_value = mock_qs
 
     # Create a gzipped GPX file
     gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
@@ -262,7 +276,10 @@ def test_file_provider_get_all_gear(mock_select):
     mock_activity3 = MagicMock()
     mock_activity3.equipment = "Bike"  # Duplicate
 
-    mock_select.return_value = [mock_activity1, mock_activity2, mock_activity3]
+    mock_qs = MagicMock()
+    mock_qs.__iter__ = MagicMock(return_value=iter([mock_activity1, mock_activity2, mock_activity3]))
+    mock_qs.where.return_value = mock_qs
+    mock_select.return_value = mock_qs
 
     provider = FileProvider("/tmp", config={"home_timezone": "US/Eastern", "test_mode": True})
     gear = provider.get_all_gear()
