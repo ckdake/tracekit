@@ -627,6 +627,10 @@ select#timezone:focus {
 }
 .provider-pull-btn:hover:not(:disabled) { background: rgba(0,0,0,0.38); color: white; }
 .provider-pull-btn:disabled { cursor: default; opacity: 0.55; }
+/* Success state: show ✓ by default, swap to ⬇ on hover */
+.provider-pull-btn.pull-btn-success .btn-icon-pull { display: none; }
+.provider-pull-btn.pull-btn-success:hover:not(:disabled) .btn-icon-check { display: none; }
+.provider-pull-btn.pull-btn-success:hover:not(:disabled) .btn-icon-pull { display: inline; }
 /* Spinner inside provider pull button should use white tones */
 .provider-pull-btn .spinner-sm {
     border-color: rgba(255,255,255,.25);

@@ -118,12 +118,14 @@ function renderGrid(yearMonth, data) {
         // File provider has no per-month pull — only show footer if there is a status to display.
         let footerHtml = '';
         if (p !== 'file') {
-            const btnContent = isActive                             ? '<span class="spinner spinner-sm"></span>'
-                             : pullStatus && pullStatus.status === 'success' ? '✓'
-                             : pullStatus && pullStatus.status === 'error'   ? '✗'
+            const isSuccess = pullStatus && pullStatus.status === 'success';
+            const btnContent = isActive   ? '<span class="spinner spinner-sm"></span>'
+                             : isSuccess  ? '<span class="btn-icon-check">✓</span><span class="btn-icon-pull">⬇</span>'
+                             : pullStatus && pullStatus.status === 'error' ? '✗'
                              : '⬇';
+            const btnClass = 'provider-pull-btn' + (isSuccess ? ' pull-btn-success' : '');
             const btnDisabled = isActive ? ' disabled' : '';
-            const pullBtn = '<button class="provider-pull-btn"' + btnDisabled
+            const pullBtn = '<button class="' + btnClass + '"' + btnDisabled
                 + ' data-month="' + yearMonth + '" data-provider="' + p
                 + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">'
                 + btnContent + '</button>';
