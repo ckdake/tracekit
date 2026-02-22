@@ -46,17 +46,41 @@ def _set_user_context():
     if is_single_user_mode():
         set_user_id(0)
         return
-    uid = session.get("user_id")
-    if uid:
-        try:
-            from models.user import User
 
-            user = User.get_by_id(uid)
-            set_user_id(user.id)
-        except Exception:
+    uid = session.get("user_id")
+    if not uid:
+        set_user_id(0)
+        return
+
+    # Ensure the DB is initialised and connected before querying the User table.
+    # This matters for fresh Gunicorn worker processes where _db_initialized is
+    # still False — without it, User.get_by_id() raises and the bare
+    # `except Exception` below would have incorrectly wiped the session cookie.
+    try:
+        from db_init import _init_db
+
+        from tracekit.db import get_db
+
+        _init_db()
+        get_db().connect(reuse_if_open=True)
+    except Exception:
+        # DB not available at all — keep the session intact and use 0 for now.
+        set_user_id(0)
+        return
+
+    try:
+        from models.user import User
+
+        user = User.get_by_id(uid)
+        set_user_id(user.id)
+    except Exception as exc:
+        import peewee
+
+        if isinstance(exc, peewee.DoesNotExist):
+            # The user row was deleted — log out cleanly.
             session.pop("user_id", None)
-            set_user_id(0)
-    else:
+        # For any other exception (transient DB error, etc.) keep the session
+        # so the next request can retry; just fall back to 0 for this request.
         set_user_id(0)
 
 
@@ -73,8 +97,11 @@ def inject_current_user():
             from models.user import User
 
             return {"current_user": User.get_by_id(user_id), "single_user_mode": False}
-        except Exception:
-            session.pop("user_id", None)
+        except Exception as exc:
+            import peewee
+
+            if isinstance(exc, peewee.DoesNotExist):
+                session.pop("user_id", None)
     return {"current_user": None, "single_user_mode": False}
 
 
