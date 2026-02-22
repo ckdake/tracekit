@@ -68,6 +68,13 @@ Edit `~/.env`:
 TRACEKIT_UID=
 TRACEKIT_GID=
 
+# Flask session signing key — must be set and must be the same value across
+# all web container replicas/workers. Without a consistent key, sessions
+# encrypted by one worker cannot be decrypted by another and users will be
+# randomly logged out. Generate once with:
+#   python3 -c "import secrets; print(secrets.token_hex(32))"
+SESSION_KEY=change_me_to_a_long_random_string
+
 # PostgreSQL — used by both the postgres container and the tracekit container.
 # Choose a strong random password; it never needs to leave this file.
 POSTGRES_PASSWORD=change_me_to_a_strong_random_password

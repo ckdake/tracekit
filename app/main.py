@@ -77,7 +77,9 @@ app = Flask(
     static_folder=str(app_dir / "static"),
 )
 
-app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+# default works for development mode with single thread. Multi-threaded or services
+# cycling require a SESSION_KEY
+app.secret_key = os.environ.get("SESSION_KEY", secrets.token_hex(32))
 
 # ---------------------------------------------------------------------------
 # Template context — inject current_user into every template
