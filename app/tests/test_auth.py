@@ -288,7 +288,9 @@ class TestLogout:
     def test_logout_shows_login_and_signup_links_again(self, client, auth_database):
         _signup(client)
         _logout(client)
-        response = client.get("/")
+        # Unauthenticated GET / redirects to /login; follow it so we land on the
+        # full login page which renders the header with login + signup links.
+        response = client.get("/", follow_redirects=True)
         assert b'href="/login"' in response.data
         assert b'href="/signup"' in response.data
 
@@ -309,7 +311,8 @@ class TestHeaderAuthIcons:
         assert b'href="/login"' in client.get("/").data
 
     def test_logged_out_shows_signup_link(self, client, auth_database):
-        assert b'href="/signup"' in client.get("/").data
+        # GET / redirects to /login; the login page header contains the signup link.
+        assert b'href="/signup"' in client.get("/", follow_redirects=True).data
 
     def test_logged_out_no_logout_form(self, client, auth_database):
         assert b'action="/logout"' not in client.get("/").data

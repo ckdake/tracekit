@@ -4,12 +4,15 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
+- [ ] admin UI for user=1 to manage users, see data volume per user, see data volume per provider
+
 later:
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] fix user icons, they are stacked vertically and overflowing the navbar
 - [ ] user limits and rate limiting. TBD!
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
-- [ ] sentry cloud
+- [ ] move app api keys from per-user to admin thing
+- [ ] sentry cloud for exceptions
 - [ ] add new source data files to file data when found in other places
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)

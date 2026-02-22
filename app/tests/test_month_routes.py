@@ -30,9 +30,11 @@ def reset_db_state():
 
 @pytest.fixture
 def client():
+    os.environ["SINGLE_USER_MODE"] = "true"
     app.config["TESTING"] = True
     with app.test_client() as client:
         yield client
+    os.environ.pop("SINGLE_USER_MODE", None)
 
 
 _CONFIG = {
