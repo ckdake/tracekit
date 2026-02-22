@@ -79,12 +79,22 @@ def api_month_changes(year_month: str):
 
         provider_list, rows = build_comparison_rows(grouped, provider_config, home_tz)
 
+        # Persist the computed result so the dashboard can display it.
+        sync_status = "synced" if not changes else "requires_action"
+        try:
+            from tracekit.provider_status import set_month_sync_status
+
+            set_month_sync_status(year_month, sync_status)
+        except Exception:
+            pass
+
         return jsonify(
             {
                 "year_month": year_month,
                 "provider_list": provider_list,
                 "rows": rows,
                 "changes": [c.to_dict() for c in changes],
+                "sync_status": sync_status,
             }
         )
     except Exception as exc:

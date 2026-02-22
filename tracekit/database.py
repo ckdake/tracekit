@@ -7,7 +7,7 @@ from .activity import Activity
 from .appconfig import AppConfig
 from .db import get_db
 from .notification import Notification
-from .provider_status import ProviderPullStatus, ProviderStatus
+from .provider_status import MonthSyncStatus, ProviderPullStatus, ProviderStatus
 from .provider_sync import ProviderSync
 from .providers.base_provider_activity import BaseProviderActivity
 
@@ -59,6 +59,7 @@ def get_all_models() -> list[type[Model]]:
         ProviderSync,
         ProviderStatus,
         ProviderPullStatus,
+        MonthSyncStatus,
         Notification,
         *list(cast(list[type[Model]], BaseProviderActivity.__subclasses__())),
     ]

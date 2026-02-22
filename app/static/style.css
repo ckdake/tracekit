@@ -1354,6 +1354,22 @@ select#timezone:focus {
 .month-page-title h1 { margin: 0; font-size: 1.5rem; }
 .month-page-subtitle { color: #888; font-weight: 400; font-size: 1.1rem; }
 
+/* Sync status badge — shared base, used on both dashboard cards and the month header */
+.month-sync-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    vertical-align: middle;
+    letter-spacing: 0.01em;
+}
+.month-sync-synced { background: #d4edda; color: #155724; }
+.month-sync-action { background: #fff3cd; color: #7a5800; }
+/* Larger variant in the sync-review page header */
+#month-sync-badge { font-size: 13px; padding: 3px 10px; }
+
 .btn-refresh {
     padding: 6px 14px;
     border: 1px solid #ccc;

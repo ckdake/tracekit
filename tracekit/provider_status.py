@@ -252,3 +252,56 @@ def is_pull_active(year_month: str, provider: str) -> bool:
     except Exception as exc:
         print(f"[provider_status] failed to check pull active: {exc}")
         return False
+
+
+# ---- per-month sync review status --------------------------------------------
+
+MONTH_SYNC_UNKNOWN = "unknown"  # not yet computed (or invalidated)
+MONTH_SYNC_SYNCED = "synced"  # computed — no changes needed
+MONTH_SYNC_REQUIRES_ACTION = "requires_action"  # computed — changes pending
+
+
+class MonthSyncStatus(Model):
+    """Stores the computed sync-review result for each year_month.
+
+    Written when the sync-review page is visited; reset to 'unknown' whenever
+    activity data for the month changes (pull started or change applied).
+    """
+
+    year_month = CharField(unique=True)  # e.g. "2025-02"
+    status = CharField(default=MONTH_SYNC_UNKNOWN)  # unknown | synced | requires_action
+    updated_at = IntegerField(null=True)  # Unix timestamp of last update
+
+    class Meta:
+        database = db
+        table_name = "month_sync_status"
+
+
+def set_month_sync_status(year_month: str, status: str) -> None:
+    """Upsert the sync-review status for *year_month*.
+
+    Safe to call from anywhere; never raises.
+    """
+    try:
+        _ensure_connected()
+        now = int(datetime.now(UTC).timestamp())
+        row, _ = MonthSyncStatus.get_or_create(
+            year_month=year_month,
+            defaults={"status": status, "updated_at": now},
+        )
+        row.status = status
+        row.updated_at = now
+        row.save()
+    except Exception as exc:
+        print(f"[provider_status] failed to set month sync status: {exc}")
+
+
+def get_month_sync_status(year_month: str) -> str:
+    """Return the stored sync-review status for *year_month*, defaulting to 'unknown'."""
+    try:
+        _ensure_connected()
+        row = MonthSyncStatus.get_or_none(MonthSyncStatus.year_month == year_month)
+        return row.status if row else MONTH_SYNC_UNKNOWN
+    except Exception as exc:
+        print(f"[provider_status] failed to get month sync status: {exc}")
+        return MONTH_SYNC_UNKNOWN

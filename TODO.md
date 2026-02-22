@@ -4,8 +4,8 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
-in web app:
-- [ ] Each month has a "sync review" page that shows changes that need to be applied for a given month so that everything "matches up".  It's run on-demand when this page is viewed, lets store this "sync status" for the month, similar to how we store "provider status".  a month can be "synchronized" (all good) when "no changes needed" is the calcualted state. It's "requires action" when changes are needed, and "unknown" when we have not yet run. any changes (pull or activity modification in any provider in the month) should reset the status to "unknown" until the sync review page is visited again. (later, we'll automate this up). Most of this change will be in the python package, with just some UI in the app.
+- [ ] file provider "syncs" when month button is pushed and has a sync job, might as well give it the same UI as the other providers and run its job.
+- [ ] if a user starts multiple "syncs" from the / page for multiple months, whent he first month completes, the other months "refresh" and look complete when they are still queued/syncing. they should not do this.
 
 later:
 - [ ] users. database should have 'em and we should have to log in when in production

@@ -60,7 +60,19 @@ function renderGrid(yearMonth, data) {
     enabledProviders.forEach(p => {
         ((data.activity_days || {})[p] || []).forEach(d => allActiveDays.add(d));
     });
-    totalEl.textContent = allActiveDays.size > 0 ? allActiveDays.size + ' active days' : '';
+    const daysText = allActiveDays.size > 0 ? allActiveDays.size + ' active days' : '';
+    const syncStatus = data.month_sync_status;
+    let syncBadge = '';
+    if (syncStatus === 'synced') {
+        syncBadge = '<span class="month-sync-badge month-sync-synced" title="Synchronized — no changes needed">✓</span>';
+    } else if (syncStatus === 'requires_action') {
+        syncBadge = '<span class="month-sync-badge month-sync-action" title="Sync review needed — changes required">!</span>';
+    }
+    if (syncBadge) {
+        totalEl.innerHTML = (daysText ? daysText + ' ' : '') + syncBadge;
+    } else {
+        totalEl.textContent = daysText;
+    }
 
     const PROVIDER_DISPLAY = {
         strava:      { cls: 'provider-strava',      label: 'Strava',       logo: '/static/powered_by_strava.svg',      logoAlt: 'Powered by Strava',      logoHref: 'https://www.strava.com' },

@@ -8,6 +8,7 @@
     <div class="month-page-title">
       <a href="/" class="back-link">← Dashboard</a>
       <h1>{{ month_name }} {{ year }} <span class="month-page-subtitle">Sync Review</span></h1>
+      <span id="month-sync-badge" hidden></span>
     </div>
     <button class="btn-refresh" id="refresh-btn" onclick="loadChanges()">
       ↻ Refresh
@@ -185,6 +186,20 @@ async function loadChanges() {
 
     renderTable(data.provider_list || [], data.rows || []);
     renderChanges(_changes);
+
+    // Update the sync status badge in the header.
+    const badge = document.getElementById('month-sync-badge');
+    if (data.sync_status === 'synced') {
+      badge.textContent = '✓ synchronized';
+      badge.className = 'month-sync-badge month-sync-synced';
+      badge.hidden = false;
+    } else if (data.sync_status === 'requires_action') {
+      badge.textContent = '! action needed';
+      badge.className = 'month-sync-badge month-sync-action';
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
 
     status.hidden = true;
     sectionTable.hidden   = false;

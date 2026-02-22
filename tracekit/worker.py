@@ -60,6 +60,11 @@ def pull_month(self, year_month: str):
             tk.delete_month_activities(year_month)
             providers = tk.enabled_providers
 
+        with contextlib.suppress(Exception):
+            from tracekit.provider_status import MONTH_SYNC_UNKNOWN, set_month_sync_status
+
+            set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)
+
         for provider_name in providers:
             if is_pull_active(year_month, provider_name):
                 continue  # already queued or running — skip to avoid duplicates
@@ -89,6 +94,11 @@ def pull_provider_month(self, year_month: str, provider_name: str):
         set_pull_status(year_month, provider_name, PULL_STATUS_STARTED, job_id=self.request.id)
     except Exception:
         pass
+
+    with contextlib.suppress(Exception):
+        from tracekit.provider_status import MONTH_SYNC_UNKNOWN, set_month_sync_status
+
+        set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)
 
     try:
         from tracekit.core import tracekit as tracekit_class
@@ -220,6 +230,10 @@ def apply_sync_change(self, change_dict: dict, year_month: str):
                 record_operation(provider, change_dict.get("change_type", "apply_change"), True, msg)
             except Exception:
                 pass
+            with contextlib.suppress(Exception):
+                from tracekit.provider_status import MONTH_SYNC_UNKNOWN, set_month_sync_status
+
+                set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)
             return {"success": True, "message": msg}
         else:
             try:
