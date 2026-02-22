@@ -153,6 +153,32 @@ async function loadCard(yearMonth) {
     }
 }
 
+// ── Poll a card until all active provider syncs complete ─────────────────────
+// Calls loadCard on an interval while any provider shows queued/started status,
+// then stops.  The re-renders give the one-by-one chicklet update effect.
+function pollCard(yearMonth, { interval = 2000, maxElapsed = 3600000 } = {}) {
+    const start = Date.now();
+
+    async function attempt() {
+        try {
+            const res  = await fetch('/api/calendar/' + yearMonth);
+            const data = await res.json();
+            renderGrid(yearMonth, data);
+
+            const statuses = data.pull_statuses || {};
+            const anyActive = Object.values(statuses).some(
+                s => s && (s.status === 'queued' || s.status === 'started')
+            );
+
+            if (anyActive && Date.now() - start < maxElapsed) {
+                setTimeout(attempt, interval);
+            }
+        } catch (_) { /* ignore transient errors */ }
+    }
+
+    setTimeout(attempt, interval);
+}
+
 // ── Exponential-backoff task poller ──────────────────────────────────────────
 // Polls /api/sync/status/<taskId> with increasing delays.
 //   initialDelay  – ms before first check  (default 2 s)
@@ -187,60 +213,27 @@ function pollTaskStatus(taskId, { onSuccess, onFailure, onTimeout,
 // ── Pull a month and refresh the card ─────────────────────────────────────────
 
 async function pullMonth(btn) {
-    const month  = btn.dataset.month;
-    const status = document.getElementById('status-' + month);
+    const month = btn.dataset.month;
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner spinner-sm"></span>';
-    status.textContent = '';
-    status.className = 'pull-status';
 
-    let taskId;
     try {
-        const res  = await fetch('/api/sync/' + month, { method: 'POST' });
-        const data = await res.json();
+        const res = await fetch('/api/sync/' + month, { method: 'POST' });
         if (!res.ok) {
-            status.textContent = data.error || 'Error';
-            status.className = 'pull-status err';
             btn.disabled = false;
             btn.textContent = '⬇';
             return;
         }
-        taskId = data.task_id;
     } catch (e) {
-        status.textContent = 'Network error';
-        status.className = 'pull-status err';
         btn.disabled = false;
         btn.textContent = '⬇';
         return;
     }
 
-    btn.innerHTML = '<span class="spinner spinner-sm"></span>';
-    status.textContent = 'In progress';
-    status.className = 'pull-status running';
-
-    pollTaskStatus(taskId, {
-        onSuccess: () => {
-            btn.disabled = false;
-            btn.textContent = '⬇';
-            status.textContent = 'Done ✓';
-            status.className = 'pull-status ok';
-            loadCard(month);
-            setTimeout(() => { status.textContent = ''; status.className = 'pull-status'; }, 30000);
-        },
-        onFailure: (data) => {
-            btn.disabled = false;
-            btn.textContent = '⬇';
-            status.textContent = data.info || 'Failed';
-            status.className = 'pull-status err';
-        },
-        onTimeout: () => {
-            btn.disabled = false;
-            btn.textContent = '⬇';
-            status.textContent = 'Timed out – try again';
-            status.className = 'pull-status err';
-        },
-    });
+    btn.disabled = false;
+    btn.textContent = '⬇';
+    pollCard(month);
 }
 
 // ── Pull a single provider for a month and refresh the card ──────────────────
