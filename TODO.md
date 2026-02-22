@@ -4,9 +4,6 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
-in fitler python package:
-- [ ] after updating an activity in a provider, pull that activity again to our local so "our version" is "in sync" with the upstream.
-
 in web app:
 - [ ] Order providers by provider priority in the UI, not ABC
 - [ ] The chicklet "check" status showing success should turn into a "pull" icon on hover to indicate what it will do when clicked. Make the

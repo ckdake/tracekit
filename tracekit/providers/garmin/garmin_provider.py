@@ -235,6 +235,13 @@ class GarminProvider(FitnessProvider):
             try:
                 client.set_activity_name(provider_id, activity_data["name"])
                 print(f"Updated activity name in Garmin Connect: {activity_data['name']}")
+
+                # Sync our local copy with the value we just successfully pushed upstream
+                local = GarminActivity.get_or_none(GarminActivity.garmin_id == str(provider_id))
+                if local:
+                    local.name = activity_data["name"]
+                    local.save()
+
                 return True
 
             except Exception as e:

@@ -131,7 +131,6 @@ class RideWithGPSProvider(FitnessProvider):
         """Get a RideWithGPSActivity by its provider ID."""
         return RideWithGPSActivity.get_or_none(RideWithGPSActivity.ridewithgps_id == activity_id)
 
-    # TODO: "pull" the activity again after setting gear to update our local copy.
     def update_activity(self, activity_data: dict) -> bool:
         """Update an existing RideWithGPS trip via API."""
         provider_id = activity_data["ridewithgps_id"]
@@ -144,6 +143,17 @@ class RideWithGPSProvider(FitnessProvider):
             # Check if there's an error in the response
             if hasattr(response, "error"):
                 raise RuntimeError(f"RideWithGPS API error: {response.error}")
+
+            # Pull fresh data from upstream to sync our local copy
+            try:
+                fresh_trip = self.client.get(path=f"/trips/{provider_id}.json").trip
+                local = RideWithGPSActivity.get_or_none(RideWithGPSActivity.ridewithgps_id == str(provider_id))
+                if local and fresh_trip:
+                    if hasattr(fresh_trip, "name") and fresh_trip.name is not None:
+                        local.name = str(fresh_trip.name)
+                    local.save()
+            except Exception as e:
+                print(f"Could not refresh local RideWithGPS activity {provider_id} after update: {e}")
 
             return True
 
@@ -161,7 +171,6 @@ class RideWithGPSProvider(FitnessProvider):
                 gear_dict[gear_id] = gear_name
         return gear_dict
 
-    # TODO: "pull" the activity again after setting gear to update our local copy.
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
         """Set gear for a RideWithGPS trip by gear name."""
         try:
@@ -188,6 +197,17 @@ class RideWithGPSProvider(FitnessProvider):
             if hasattr(response, "error"):
                 print(f"API returned error: {response.error}")
                 return False
+
+            # Pull fresh data from upstream to sync our local copy
+            try:
+                fresh_trip = self.client.get(path=f"/trips/{activity_id}.json").trip
+                local = RideWithGPSActivity.get_or_none(RideWithGPSActivity.ridewithgps_id == str(activity_id))
+                if local and fresh_trip:
+                    if hasattr(fresh_trip, "gear") and fresh_trip.gear and hasattr(fresh_trip.gear, "name"):
+                        local.equipment = str(fresh_trip.gear.name)
+                    local.save()
+            except Exception as e:
+                print(f"Could not refresh local RideWithGPS activity {activity_id} after set_gear: {e}")
 
             return True
 

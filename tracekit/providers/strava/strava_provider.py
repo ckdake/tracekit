@@ -365,6 +365,16 @@ class StravaProvider(FitnessProvider):
             # Use stravalib to update the activity
             self.client.update_activity(activity_id=int(provider_id), **update_data)
 
+            # Pull fresh data from upstream to sync our local copy (best-effort)
+            try:
+                fresh_activity = self.client.get_activity(int(provider_id))
+                local = StravaActivity.get_or_none(StravaActivity.strava_id == str(provider_id))
+                if local and fresh_activity:
+                    local.name = str(getattr(fresh_activity, "name", "") or "")
+                    local.save()
+            except Exception as e:
+                print(f"Could not refresh local Strava activity {provider_id} after update: {e}")
+
             return True
 
         except (RateLimitExceeded, RateLimitTimeout) as exc:
@@ -421,6 +431,18 @@ class StravaProvider(FitnessProvider):
 
             # Use stravalib to update the activity with gear_id
             self.client.update_activity(activity_id=int(activity_id), gear_id=gear_id)
+
+            # Pull fresh data from upstream to sync our local copy (best-effort)
+            try:
+                fresh_activity = self.client.get_activity(int(activity_id))
+                local = StravaActivity.get_or_none(StravaActivity.strava_id == str(activity_id))
+                if local and fresh_activity:
+                    gear = getattr(fresh_activity, "gear", None)
+                    if gear and hasattr(gear, "name") and gear.name:
+                        local.equipment = self._normalize_strava_gear_name(str(gear.name))
+                    local.save()
+            except Exception as e:
+                print(f"Could not refresh local Strava activity {activity_id} after set_gear: {e}")
 
             return True
 
