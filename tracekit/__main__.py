@@ -31,6 +31,17 @@ def main():
         help=("Correlate and show all activities for a given month (YYYY-MM) across all sources, dry run"),
     )
     sync_month_parser.add_argument("year_month", type=str, help="Year and month in YYYY-MM format")
+
+    subparsers.add_parser("status", help="Show provider activity counts and last sync times")
+
+    calendar_parser = subparsers.add_parser("calendar", help="Show month-by-month sync grid")
+    calendar_parser.add_argument(
+        "--months",
+        type=int,
+        default=0,
+        help="Limit to the most recent N months (default: show all)",
+    )
+
     subparsers.add_parser("help", help="Show usage and documentation")
     pull_parser = subparsers.add_parser("pull", help="Pull activities from all providers")
     pull_parser.add_argument(
@@ -66,6 +77,15 @@ def main():
         from tracekit.commands.sync_month import run
 
         run(args.year_month)
+    elif args.command == "status":
+        from tracekit.commands.status import run
+
+        run()
+    elif args.command == "calendar":
+        from tracekit.commands.calendar_cmd import run
+
+        calendar_args = ["--months", str(args.months)] if args.months else []
+        run(calendar_args)
     elif args.command == "pull":
         from tracekit.commands.pull import run
 
@@ -90,7 +110,9 @@ Commands:
     auth-strava   Authenticate with Strava and get an access token
     auth-garmin   Authenticate with Garmin Connect and store tokens
     configure     Configure tracekit for your environment (paths, API keys, etc)
-    show-month    Show all activities for a given month (YYYY-MM) from all sources
+    migrate       Bootstrap / migrate the database schema
+    status        Show provider activity counts and last sync times
+    calendar      Show month-by-month sync grid (--months N to limit)
     sync-month    Correlate and show all activities for a given month (YYYY-MM)
                   across all sources, dry run
     pull          Pull activities from all providers

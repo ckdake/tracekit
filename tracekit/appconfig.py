@@ -196,6 +196,40 @@ def save_config(config: dict[str, Any]) -> None:
         print(f"Warning: could not save config to DB: {e}")
 
 
+def save_strava_tokens(token_dict: dict[str, Any]) -> None:
+    """Persist Strava OAuth tokens returned by stravalib into the config store.
+
+    Args:
+        token_dict: Dict with keys ``access_token``, ``refresh_token``,
+                    ``expires_at`` as returned by
+                    ``stravalib.Client.exchange_code_for_token()``.
+    """
+    config = load_config()
+    providers = config.get("providers", {})
+    strava_updated = providers.get("strava", {}).copy()
+    strava_updated["access_token"] = str(token_dict["access_token"])
+    strava_updated["refresh_token"] = str(token_dict.get("refresh_token", ""))
+    strava_updated["token_expires"] = str(token_dict.get("expires_at", "0"))
+    providers["strava"] = strava_updated
+    save_config({**config, "providers": providers})
+
+
+def save_garmin_tokens(email: str, garth_tokens: str) -> None:
+    """Persist Garmin email + garth token blob into the config store.
+
+    Args:
+        email:        Garmin account email address.
+        garth_tokens: Serialised token blob from ``garmin.garth.dumps()``.
+    """
+    config = load_config()
+    providers = config.get("providers", {})
+    garmin_updated = providers.get("garmin", {}).copy()
+    garmin_updated["email"] = email
+    garmin_updated["garth_tokens"] = garth_tokens
+    providers["garmin"] = garmin_updated
+    save_config({**config, "providers": providers})
+
+
 def get_db_path_from_env() -> str:
     """Return the SQLite path to use when no DATABASE_URL is set.
 

@@ -9,12 +9,11 @@ This module is intentionally thin.  All business logic lives in
 """
 
 from collections import defaultdict
-from datetime import UTC, datetime
 
 from tabulate import tabulate
 
 from tracekit.core import tracekit as tracekit_class
-from tracekit.sync import ChangeType, apply_change, compute_month_changes
+from tracekit.sync import ChangeType, apply_change, build_comparison_rows, compute_month_changes
 
 # ---------------------------------------------------------------------------
 # ANSI colour helpers
@@ -52,119 +51,42 @@ def _render_table(grouped: dict, all_changes: list, config: dict, home_tz) -> No
     """Print the ANSI-coloured comparison table for the given grouped activities."""
     provider_config = config.get("providers", {})
 
-    # Determine all providers present
-    all_providers: set[str] = set()
-    for group in grouped.values():
-        for act in group:
-            all_providers.add(act["provider"])
-    for name, settings in provider_config.items():
-        if settings.get("enabled", False):
-            all_providers.add(name)
-    provider_list = sorted(all_providers)
-
-    # Determine authoritative name/equipment for each group
-    provider_priorities = {
-        name: settings.get("priority", 999)
-        for name, settings in provider_config.items()
-        if settings.get("enabled", False)
-    }
-    priority_order = sorted(provider_priorities.items(), key=lambda x: x[1])
-    provider_priority = [p for p, _ in priority_order]
-
-    # Build sorted rows (only multi-provider groups)
-    rows = []
-    for _key, group in grouped.items():
-        if len(group) < 2:
-            continue
-        start = min(
-            (
-                datetime.fromtimestamp(a["timestamp"], UTC).astimezone(home_tz)
-                if a["timestamp"]
-                else datetime.fromtimestamp(0, UTC).astimezone(home_tz)
-            )
-            for a in group
-        )
-        by_provider = {a["provider"]: a for a in group}
-        rows.append({"start": start, "providers": by_provider})
-
-    rows.sort(key=lambda r: r["start"])
+    provider_list, rows = build_comparison_rows(grouped, provider_config, home_tz)
 
     if not rows:
         return
 
+    # Map structured row data to ANSI-coloured table rows
+    _status_to_ansi = {
+        "auth": (True, False, False),
+        "ok": (False, False, False),
+        "missing": (False, True, False),
+        "wrong": (False, False, True),
+    }
+
     table_rows = []
     for row in rows:
-        providers = row["providers"]
-
-        auth_provider = None
-        auth_name = ""
-        auth_equipment = ""
-
-        for p in provider_priority:
-            if p in providers and providers[p]["name"]:
-                auth_provider = p
-                auth_name = providers[p]["name"]
-                break
-        if not auth_provider:
-            for p in provider_priority:
-                if p in providers:
-                    auth_provider = p
-                    auth_name = providers[p]["name"]
-                    break
-        for p in provider_priority:
-            if p in providers and providers[p]["equipment"]:
-                auth_equipment = providers[p]["equipment"]
-                break
-
-        if not auth_provider:
-            continue
-
-        auth_activity = providers[auth_provider]
-        table_row = [row["start"].strftime("%Y-%m-%d %H:%M")]
+        table_row = [row["start"]]
 
         for provider in provider_list:
             sync_name = provider_config.get(provider, {}).get("sync_name", True)
             sync_equipment = provider_config.get(provider, {}).get("sync_equipment", True)
+            cell = row["providers"][provider]
 
-            if provider in providers:
-                activity = providers[provider]
-                table_row.append(color_id(activity["id"], True))
-
-                if sync_name:
-                    current_name = activity["name"]
-                    if provider == auth_provider and current_name:
-                        name_colored = color_text(current_name, True, False, False)
-                    elif current_name == auth_name:
-                        name_colored = color_text(current_name, False, False, False)
-                    elif not current_name and auth_name:
-                        name_colored = color_text(auth_name, False, True, False)
-                    elif current_name != auth_name and auth_name:
-                        name_colored = color_text(current_name, False, False, True)
-                    else:
-                        name_colored = color_text(current_name, False, False, False)
-                    table_row.append(name_colored)
-
-                if sync_equipment:
-                    if provider == auth_provider:
-                        equip_colored = color_text(activity["equipment"], True, False, False)
-                    else:
-                        equip_val = (activity["equipment"] or "").strip().lower()
-                        equip_wrong = auth_equipment and (
-                            activity["equipment"] != auth_equipment or equip_val in ("", "no equipment")
-                        )
-                        if equip_wrong and equip_val in ("", "no equipment"):
-                            equip_colored = color_text(auth_equipment, False, True, False)
-                        else:
-                            equip_colored = color_text(activity["equipment"], False, False, bool(equip_wrong))
-                    table_row.append(equip_colored)
+            if cell["present"]:
+                table_row.append(color_id(cell["id"], True))
             else:
                 table_row.append(color_text("TBD", False, True, False))
-                if sync_name:
-                    table_row.append(color_text(auth_name, False, True, False) if auth_name else "")
-                if sync_equipment:
-                    table_row.append(color_text(auth_equipment, False, True, False) if auth_equipment else "")
 
-        table_row.append(f"{auth_activity['distance']:.2f}")
+            if sync_name:
+                flags = _status_to_ansi.get(cell["name_status"], (False, False, False))
+                table_row.append(color_text(cell["display_name"], *flags) if cell["display_name"] else "")
+
+            if sync_equipment:
+                flags = _status_to_ansi.get(cell["equip_status"], (False, False, False))
+                table_row.append(color_text(cell["display_equipment"], *flags) if cell["display_equipment"] else "")
+
+        table_row.append(f"{row['distance']:.2f}")
         table_rows.append(table_row)
 
     headers = ["Start"]

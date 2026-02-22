@@ -95,7 +95,7 @@ def api_auth_strava_callback():
 
     try:
         _init_db()
-        from tracekit.appconfig import load_config, save_config
+        from tracekit.appconfig import load_config, save_strava_tokens
 
         config = load_config()
         strava_cfg = config.get("providers", {}).get("strava", {})
@@ -113,14 +113,7 @@ def api_auth_strava_callback():
             client_secret=client_secret,
             code=code,
         )
-
-        providers = config.get("providers", {})
-        strava_updated = providers.get("strava", {}).copy()
-        strava_updated["access_token"] = str(token_dict["access_token"])
-        strava_updated["refresh_token"] = str(token_dict.get("refresh_token", ""))
-        strava_updated["token_expires"] = str(token_dict.get("expires_at", "0"))
-        providers["strava"] = strava_updated
-        save_config({**config, "providers": providers})
+        save_strava_tokens(token_dict)
 
         return _strava_callback_page(True, "Strava authentication successful!")
     except Exception as e:

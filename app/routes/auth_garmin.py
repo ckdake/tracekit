@@ -24,15 +24,9 @@ def _cleanup_garmin_sessions() -> None:
 def _save_garmin_tokens(email: str, garth_tokens: str) -> None:
     """Persist Garmin email + garth tokens to the config store."""
     _init_db()
-    from tracekit.appconfig import load_config, save_config
+    from tracekit.appconfig import save_garmin_tokens
 
-    config = load_config()
-    providers = config.get("providers", {})
-    garmin_cfg = providers.get("garmin", {}).copy()
-    garmin_cfg["email"] = email
-    garmin_cfg["garth_tokens"] = garth_tokens
-    providers["garmin"] = garmin_cfg
-    save_config({**config, "providers": providers})
+    save_garmin_tokens(email, garth_tokens)
 
 
 @garmin_bp.route("/api/auth/garmin", methods=["POST"])

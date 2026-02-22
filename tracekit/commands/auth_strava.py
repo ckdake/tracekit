@@ -6,7 +6,7 @@ from stravalib.client import Client
 
 
 def run():
-    from tracekit.appconfig import load_config, save_config
+    from tracekit.appconfig import load_config, save_strava_tokens
 
     config = load_config()
     strava_cfg = config.get("providers", {}).get("strava", {})
@@ -65,14 +65,5 @@ def run():
         client_secret=client_secret,
         code=code,
     )
-    access_token = token_dict["access_token"]
-    refresh_token = token_dict.get("refresh_token")
-    expires_at = token_dict.get("expires_at")
-    providers = config.get("providers", {})
-    strava_updated = providers.get("strava", {}).copy()
-    strava_updated["access_token"] = access_token
-    strava_updated["refresh_token"] = refresh_token or ""
-    strava_updated["token_expires"] = str(expires_at) if expires_at else "0"
-    providers["strava"] = strava_updated
-    save_config({**config, "providers": providers})
+    save_strava_tokens(token_dict)
     print("✓ Strava tokens saved to database.")

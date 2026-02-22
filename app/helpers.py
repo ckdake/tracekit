@@ -1,6 +1,6 @@
 """Shared helper functions for the tracekit web app."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 import pytz
@@ -22,24 +22,13 @@ def get_database_info(config: dict[str, Any] | None = None) -> dict[str, Any]:
     """Get basic information about the configured database."""
     if not _init_db():
         return {"error": "Database not available"}
-
     try:
-        from tracekit.database import get_all_models
         from tracekit.db import get_db
+        from tracekit.stats import get_database_info as _get_database_info
 
         db = get_db()
         db.connect(reuse_if_open=True)
-
-        models = get_all_models()
-        table_counts = {}
-        for model in models:
-            table_name = model._meta.table_name
-            table_counts[table_name] = model.select().count()
-
-        return {
-            "tables": table_counts,
-            "total_tables": len(table_counts),
-        }
+        return _get_database_info()
     except Exception as e:
         return {"error": f"Database error: {e}"}
 
@@ -48,56 +37,14 @@ def get_most_recent_activity(config: dict[str, Any] | None = None) -> dict[str, 
     """Return the timestamp and timezone-formatted datetime of the most recent activity."""
     if not _init_db():
         return {"error": "Database not available"}
-
     try:
-        from tracekit.providers.file.file_activity import FileActivity
-        from tracekit.providers.garmin.garmin_activity import GarminActivity
-        from tracekit.providers.ridewithgps.ridewithgps_activity import (
-            RideWithGPSActivity,
-        )
-        from tracekit.providers.spreadsheet.spreadsheet_activity import (
-            SpreadsheetActivity,
-        )
-        from tracekit.providers.strava.strava_activity import StravaActivity
-        from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+        from tracekit.db import get_db
+        from tracekit.stats import get_most_recent_activity as _get_most_recent
 
-        models = [
-            StravaActivity,
-            GarminActivity,
-            RideWithGPSActivity,
-            SpreadsheetActivity,
-            FileActivity,
-            StravaJsonActivity,
-        ]
-
-        max_ts: int | None = None
-        for model in models:
-            try:
-                row = (
-                    model.select(model.start_time)
-                    .where(model.start_time.is_null(False))
-                    .order_by(model.start_time.desc())
-                    .first()
-                )
-                if row and row.start_time:
-                    ts = int(row.start_time)
-                    if max_ts is None or ts > max_ts:
-                        max_ts = ts
-            except Exception:
-                pass
-
-        if max_ts is None:
-            return {"timestamp": None, "formatted": None}
-
+        db = get_db()
+        db.connect(reuse_if_open=True)
         tz_str = (config or {}).get("home_timezone", "UTC")
-        try:
-            tz = pytz.timezone(tz_str)
-        except Exception:
-            tz = pytz.UTC
-
-        dt = datetime.fromtimestamp(max_ts, tz=UTC).astimezone(tz)
-        formatted = dt.strftime("%-d %b %Y, %H:%M %Z")
-        return {"timestamp": max_ts, "formatted": formatted}
+        return _get_most_recent(tz_str)
     except Exception as e:
         return {"error": f"Database error: {e}"}
 
@@ -106,43 +53,19 @@ def get_provider_activity_counts() -> dict[str, int]:
     """Return {provider_name: activity_count} for all known providers."""
     if not _init_db():
         return {}
-
     try:
-        from tracekit.providers.file.file_activity import FileActivity
-        from tracekit.providers.garmin.garmin_activity import GarminActivity
-        from tracekit.providers.ridewithgps.ridewithgps_activity import (
-            RideWithGPSActivity,
-        )
-        from tracekit.providers.spreadsheet.spreadsheet_activity import (
-            SpreadsheetActivity,
-        )
-        from tracekit.providers.strava.strava_activity import StravaActivity
-        from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
+        from tracekit.db import get_db
+        from tracekit.stats import get_provider_activity_counts as _get_counts
 
-        models: dict[str, Any] = {
-            "strava": StravaActivity,
-            "garmin": GarminActivity,
-            "ridewithgps": RideWithGPSActivity,
-            "spreadsheet": SpreadsheetActivity,
-            "file": FileActivity,
-            "stravajson": StravaJsonActivity,
-        }
-
-        return {name: model.select().count() for name, model in models.items()}
+        db = get_db()
+        db.connect(reuse_if_open=True)
+        return _get_counts()
     except Exception as e:
         return {"error": f"Database error: {e}"}  # type: ignore[return-value]
 
 
 def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """Sort providers by priority (lowest first) with disabled providers at the end."""
-    enabled: list[tuple[int, str, dict[str, Any]]] = []
-    disabled: list[tuple[str, dict[str, Any]]] = []
-    for name, cfg in providers.items():
-        if cfg.get("enabled", False):
-            enabled.append((cfg.get("priority", 999), name, cfg))
-        else:
-            disabled.append((name, cfg))
-    enabled.sort(key=lambda x: x[0])
-    result = [(name, cfg) for _, name, cfg in enabled]
-    result.extend(disabled)
-    return result
+    from tracekit.utils import sort_providers as _sort_providers
+
+    return _sort_providers(providers)

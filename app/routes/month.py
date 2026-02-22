@@ -19,7 +19,7 @@ POST /api/month-sync/apply
 """
 
 import re
-from datetime import UTC, datetime
+from datetime import datetime
 
 from db_init import load_tracekit_config
 from flask import Blueprint, jsonify, render_template, request
@@ -34,7 +34,7 @@ month_bp = Blueprint("month", __name__)
 # ---------------------------------------------------------------------------
 
 from tracekit.core import tracekit as tracekit_class
-from tracekit.sync import compute_month_changes
+from tracekit.sync import build_comparison_rows, compute_month_changes
 
 try:
     from tracekit.worker import apply_sync_change
@@ -83,119 +83,7 @@ def api_month_changes(year_month: str):
             grouped, changes = compute_month_changes(tk, year_month)
             home_tz = tk.home_tz
 
-        # -------------------------------------------------------------------
-        # Build a JSON-serialisable activity table for the UI
-        # -------------------------------------------------------------------
-        # Determine provider list sorted consistently
-        all_providers: set[str] = set()
-        for group in grouped.values():
-            for act in group:
-                all_providers.add(act["provider"])
-        for pname, psettings in provider_config.items():
-            if psettings.get("enabled", False):
-                all_providers.add(pname)
-        provider_list = sorted(all_providers)
-
-        # Provider priority order
-        provider_priorities = {
-            name: settings.get("priority", 999)
-            for name, settings in provider_config.items()
-            if settings.get("enabled", False)
-        }
-        priority_order = sorted(provider_priorities.items(), key=lambda x: x[1])
-        provider_priority = [p for p, _ in priority_order]
-
-        rows = []
-        for key, group in grouped.items():
-            if len(group) < 2:
-                continue
-
-            by_provider = {a["provider"]: a for a in group}
-
-            # Determine auth provider / name / equipment
-            auth_provider = None
-            auth_name = ""
-            auth_equipment = ""
-            for p in provider_priority:
-                if p in by_provider and by_provider[p]["name"]:
-                    auth_provider = p
-                    auth_name = by_provider[p]["name"]
-                    break
-            if not auth_provider:
-                for p in provider_priority:
-                    if p in by_provider:
-                        auth_provider = p
-                        auth_name = by_provider[p]["name"]
-                        break
-            for p in provider_priority:
-                if p in by_provider and by_provider[p]["equipment"]:
-                    auth_equipment = by_provider[p]["equipment"]
-                    break
-            if not auth_provider:
-                continue
-
-            # Start time from the earliest activity in the group
-            auth_act = by_provider[auth_provider]
-            ts = min((a["timestamp"] for a in group if a["timestamp"]), default=0)
-            try:
-                start_local = datetime.fromtimestamp(ts, UTC).astimezone(home_tz).strftime("%Y-%m-%d %H:%M")
-            except Exception:
-                start_local = "—"
-
-            # Per-provider cells
-            provider_cells = {}
-            for pname in provider_list:
-                cell: dict = {"present": False}
-                if pname in by_provider:
-                    act = by_provider[pname]
-                    current_name = act["name"]
-                    name_status = "ok"
-                    if pname == auth_provider:
-                        name_status = "auth"
-                    elif not current_name and auth_name:
-                        name_status = "missing"
-                    elif current_name and current_name != auth_name and auth_name:
-                        name_status = "wrong"
-
-                    equip_val = (act["equipment"] or "").strip().lower()
-                    equip_status = "ok"
-                    if pname == auth_provider:
-                        equip_status = "auth"
-                    elif auth_equipment and (act["equipment"] != auth_equipment or equip_val in ("", "no equipment")):
-                        equip_status = "missing" if equip_val in ("", "no equipment") else "wrong"
-
-                    cell = {
-                        "present": True,
-                        "id": str(act["id"]),
-                        "name": current_name,
-                        "display_name": (current_name if name_status not in ("missing",) else auth_name),
-                        "name_status": name_status,
-                        "equipment": act["equipment"],
-                        "display_equipment": (act["equipment"] if equip_status not in ("missing",) else auth_equipment),
-                        "equip_status": equip_status,
-                    }
-                else:
-                    cell = {
-                        "present": False,
-                        "id": None,
-                        "display_name": auth_name,
-                        "name_status": "missing",
-                        "display_equipment": auth_equipment,
-                        "equip_status": "missing",
-                    }
-                provider_cells[pname] = cell
-
-            rows.append(
-                {
-                    "start": start_local,
-                    "correlation_key": key,
-                    "auth_provider": auth_provider,
-                    "distance": round(auth_act["distance"], 2),
-                    "providers": provider_cells,
-                }
-            )
-
-        rows.sort(key=lambda r: r["start"])
+        provider_list, rows = build_comparison_rows(grouped, provider_config, home_tz)
 
         return jsonify(
             {

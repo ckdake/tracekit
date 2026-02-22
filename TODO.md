@@ -7,6 +7,10 @@ Tracked here for visibility. PRs and issues welcome.
 - [ ] users. database should have 'em and we should have to log in when in production
 - [ ] know which months are pulling, show that
 - [ ] add new source data files to file data when found in other places
+- [ ] know which months are "fully synced" and only reset that when we get new data/etc
+- [ ] know sync status, which months+providers are queued, their last sync state, etc.
+- [ ] fix / view so that we get all "action" buttons on each month tile, for both on-load and pulled in
+
 
 ## Providers & Sync
 

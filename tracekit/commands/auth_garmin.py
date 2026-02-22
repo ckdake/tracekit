@@ -31,7 +31,7 @@ def run():
         print("Please install it with: pip install garminconnect")
         return
 
-    from tracekit.appconfig import load_config, save_config
+    from tracekit.appconfig import load_config, save_garmin_tokens
 
     config = load_config()
     garmin_cfg = config.get("providers", {}).get("garmin", {})
@@ -78,13 +78,7 @@ def run():
 
         # Serialize tokens and save to DB
         garth_tokens = garmin.garth.dumps()
-
-        providers = config.get("providers", {})
-        garmin_updated = providers.get("garmin", {}).copy()
-        garmin_updated["email"] = email
-        garmin_updated["garth_tokens"] = garth_tokens
-        providers["garmin"] = garmin_updated
-        save_config({**config, "providers": providers})
+        save_garmin_tokens(email, garth_tokens)
 
         print(f"✓ Successfully authenticated as: {garmin.get_full_name()}")
         print("✓ Garmin tokens saved to database.")
