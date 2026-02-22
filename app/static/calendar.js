@@ -160,10 +160,17 @@ async function loadCard(yearMonth) {
 }
 
 // ── Poll a card until all active provider syncs complete ─────────────────────
-// Calls loadCard on an interval while any provider shows queued/started status,
-// then stops.  The re-renders give the one-by-one chicklet update effect.
-function pollCard(yearMonth, { interval = 2000, maxElapsed = 3600000 } = {}) {
+// Polls the month API on an interval and re-renders the card each tick.
+// Stops when every provider has finished (no queued/started status).
+//
+// minElapsed: keep polling for this long even if nothing appears active yet.
+//   This covers the race between the HTTP response and the pull_month Celery
+//   task actually running and writing statuses to the DB.  Without it, a
+//   second month started while the worker is busy with the first would see an
+//   empty status table, think it was done, and stop polling prematurely.
+function pollCard(yearMonth, { interval = 2000, maxElapsed = 3600000, minElapsed = 30000 } = {}) {
     const start = Date.now();
+    let sawActive = false; // have we ever seen a queued/started status for this month?
 
     async function attempt() {
         try {
@@ -176,9 +183,17 @@ function pollCard(yearMonth, { interval = 2000, maxElapsed = 3600000 } = {}) {
                 s => s && (s.status === 'queued' || s.status === 'started')
             );
 
-            if (anyActive && Date.now() - start < maxElapsed) {
-                setTimeout(attempt, interval);
-            }
+            if (anyActive) sawActive = true;
+
+            const elapsed = Date.now() - start;
+
+            // Keep polling while within the hard cap AND either:
+            //  - a provider is still active, OR
+            //  - we haven't seen any activity yet and are within the grace window
+            const keepPolling = elapsed < maxElapsed &&
+                (anyActive || (!sawActive && elapsed < minElapsed));
+
+            if (keepPolling) setTimeout(attempt, interval);
         } catch (_) { /* ignore transient errors */ }
     }
 
