@@ -12,7 +12,7 @@ from db_init import (
     _init_db,  # noqa: F401
     load_tracekit_config,
 )
-from flask import Flask, session
+from flask import Flask, abort, g, session
 from helpers import (
     get_current_date_in_timezone,  # noqa: F401
     get_database_info,  # noqa: F401
@@ -49,13 +49,17 @@ def _set_user_context():
 
     uid = session.get("user_id")
     if not uid:
+        # Unauthenticated request — explicitly reset to 0.  ContextVars are not
+        # reset between requests in a single-threaded WSGI process, so without
+        # this a previous authenticated request's user_id would bleed through.
         set_user_id(0)
         return
 
     # Ensure the DB is initialised and connected before querying the User table.
     # This matters for fresh Gunicorn worker processes where _db_initialized is
-    # still False — without it, User.get_by_id() raises and the bare
-    # `except Exception` below would have incorrectly wiped the session cookie.
+    # still False.  If the DB is genuinely unavailable, abort with 503 rather
+    # than falling through with user_id=0 and accidentally writing data under
+    # the wrong owner.
     try:
         from db_init import _init_db
 
@@ -64,24 +68,27 @@ def _set_user_context():
         _init_db()
         get_db().connect(reuse_if_open=True)
     except Exception:
-        # DB not available at all — keep the session intact and use 0 for now.
-        set_user_id(0)
-        return
+        abort(503)
 
     try:
+        import peewee
         from models.user import User
 
         user = User.get_by_id(uid)
         set_user_id(user.id)
+        # Cache on g so the context processor never needs to re-query the DB.
+        # Tracekit.cleanup() closes the connection before templates render, so a
+        # second DB round-trip in inject_current_user() would intermittently fail.
+        g.current_user = user
     except Exception as exc:
         import peewee
 
         if isinstance(exc, peewee.DoesNotExist):
             # The user row was deleted — log out cleanly.
             session.pop("user_id", None)
-        # For any other exception (transient DB error, etc.) keep the session
-        # so the next request can retry; just fall back to 0 for this request.
-        set_user_id(0)
+        else:
+            # Any other DB error: abort rather than writing data under user_id=0.
+            abort(503)
 
 
 @app.context_processor
@@ -91,18 +98,10 @@ def inject_current_user():
     single_user_mode = is_single_user_mode()
     if single_user_mode:
         return {"current_user": None, "single_user_mode": True}
-    user_id = session.get("user_id")
-    if user_id:
-        try:
-            from models.user import User
 
-            return {"current_user": User.get_by_id(user_id), "single_user_mode": False}
-        except Exception as exc:
-            import peewee
-
-            if isinstance(exc, peewee.DoesNotExist):
-                session.pop("user_id", None)
-    return {"current_user": None, "single_user_mode": False}
+    # Use the user cached by before_request — no additional DB query needed.
+    current_user = g.get("current_user")
+    return {"current_user": current_user, "single_user_mode": False}
 
 
 # ---------------------------------------------------------------------------
