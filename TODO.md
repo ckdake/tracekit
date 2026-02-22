@@ -4,13 +4,11 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
-- [ ] file provider "syncs" when month button is pushed and has a sync job, might as well give it the same UI as the other providers and run its job.
-- [ ] if a user starts multiple "syncs" from the / page for multiple months, whent he first month completes, the other months "refresh" and look complete when they are still queued/syncing. they should not do this.
-
 later:
 - [ ] users. database should have 'em and we should have to log in when in production
 - [ ] user limits and rate limiting. TBD!
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
+- [ ] sentry cloud
 - [ ] add new source data files to file data when found in other places
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)
@@ -22,6 +20,7 @@ later:
 - [ ] Ensure no API calls are made if the month is already synced
 - [ ] Fix Strava gear matching to work for running shoes
 - [ ] Fix "create" in providers to `create_from_activity`, get all that out of `sync_month` command
+- [ ] Add intevals.icu as provider
 - [ ] Add TrainingPeaks as provider
 - [ ] Add Wandrer.earth as provider
 - [ ] What about choochoo?

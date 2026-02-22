@@ -127,24 +127,18 @@ function renderGrid(yearMonth, data) {
         }
 
         // Footer strip: status on left, pull button on right.
-        // File provider has no per-month pull — only show footer if there is a status to display.
-        let footerHtml = '';
-        if (p !== 'file') {
-            const isSuccess = pullStatus && pullStatus.status === 'success';
-            const btnContent = isActive   ? '<span class="spinner spinner-sm"></span>'
-                             : isSuccess  ? '<span class="btn-icon-check">✓</span><span class="btn-icon-pull">⬇</span>'
-                             : pullStatus && pullStatus.status === 'error' ? '✗'
-                             : '⬇';
-            const btnClass = 'provider-pull-btn' + (isSuccess ? ' pull-btn-success' : '');
-            const btnDisabled = isActive ? ' disabled' : '';
-            const pullBtn = '<button class="' + btnClass + '"' + btnDisabled
-                + ' data-month="' + yearMonth + '" data-provider="' + p
-                + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">'
-                + btnContent + '</button>';
-            footerHtml = '<div class="provider-footer">' + statusHtml + pullBtn + '</div>';
-        } else if (statusHtml) {
-            footerHtml = '<div class="provider-footer">' + statusHtml + '</div>';
-        }
+        const isSuccess = pullStatus && pullStatus.status === 'success';
+        const btnContent = isActive   ? '<span class="spinner spinner-sm"></span>'
+                         : isSuccess  ? '<span class="btn-icon-check">✓</span><span class="btn-icon-pull">⬇</span>'
+                         : pullStatus && pullStatus.status === 'error' ? '✗'
+                         : '⬇';
+        const btnClass = 'provider-pull-btn' + (isSuccess ? ' pull-btn-success' : '');
+        const btnDisabled = isActive ? ' disabled' : '';
+        const pullBtn = '<button class="' + btnClass + '"' + btnDisabled
+            + ' data-month="' + yearMonth + '" data-provider="' + p
+            + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">'
+            + btnContent + '</button>';
+        const footerHtml = '<div class="provider-footer">' + statusHtml + pullBtn + '</div>';
 
         return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">'
             + '<div class="provider-content">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div>'
