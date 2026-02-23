@@ -31,6 +31,8 @@ def signup():
             user = User.create(
                 email=email,
                 password_hash=generate_password_hash(password),
+                # The first user (admin) is active immediately; all others are blocked.
+                status="active" if is_first_user else "blocked",
             )
             session["user_id"] = user.id
             if is_first_user:
@@ -64,6 +66,8 @@ def login():
                 user = User.get(User.email == email)
                 if not check_password_hash(user.password_hash, password):
                     error = "Invalid email or password."
+                elif user.status != "active":
+                    error = "Your account is pending approval. Please contact the administrator."
             except User.DoesNotExist:
                 error = "Invalid email or password."
 

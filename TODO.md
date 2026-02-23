@@ -4,11 +4,8 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
-- [ ] admin UI for user=1 to manage users, see data volume per user, see data volume per provider
-
 later:
 - [ ] refactor auth to make it harder to write SQL that bypasses.
-- [ ] fix user icons, they are stacked vertically and overflowing the navbar
 - [ ] user limits and rate limiting. TBD!
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
 - [ ] move app api keys from per-user to admin thing

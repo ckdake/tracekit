@@ -190,6 +190,7 @@ def _log_request(response):
 # Blueprint registration
 # ---------------------------------------------------------------------------
 
+from routes.admin import admin_bp
 from routes.api import api_bp
 from routes.auth import auth_bp
 from routes.auth_garmin import garmin_bp
@@ -201,6 +202,7 @@ from routes.pages import pages_bp
 
 app.register_blueprint(pages_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(calendar_bp)
 app.register_blueprint(month_bp)

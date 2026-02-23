@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}tracekit — Admin{% endblock %}
+
+{% block body %}
+<div class="container-narrow">
+    <div class="card">
+        <h2>Users</h2>
+        <p class="field-help">New signups are blocked by default. Toggle a user to active to allow them to log in.</p>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Providers &amp; Activities</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in user_data %}
+                <tr id="user-row-{{ u.id }}">
+                    <td class="admin-user-cell">
+                        <span class="admin-user-email">{{ u.email }}</span>
+                        {% if u.is_admin %}<span class="badge badge-auth" style="margin-left:6px">admin</span>{% endif %}
+                    </td>
+                    <td class="admin-status-cell">
+                        {% if u.is_admin %}
+                        <span class="admin-status-label active">active</span>
+                        {% else %}
+                        <label class="toggle" title="Toggle user access">
+                            <input type="checkbox"
+                                   {% if u.status == 'active' %}checked{% endif %}
+                                   onchange="toggleUser({{ u.id }}, this)">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
+                        <span class="admin-status-label {{ u.status }}" id="status-label-{{ u.id }}">{{ u.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="admin-providers-cell">
+                        {% set has_any = namespace(val=false) %}
+                        {% for name, info in u.providers.items() %}
+                            {% if info.enabled or info.count > 0 %}
+                                {% set has_any.val = true %}
+                                <span class="admin-provider-chip {% if info.enabled %}enabled{% endif %}">
+                                    {{ name }}{% if info.count > 0 %}&nbsp;<span class="admin-provider-count">{{ info.count }}</span>{% endif %}
+                                </span>
+                            {% endif %}
+                        {% endfor %}
+                        {% if not has_any.val %}
+                        <span class="field-help" style="margin:0">none</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+.admin-table th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 2px solid #e0e0e0;
+    color: #666;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.admin-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-user-email { font-weight: 500; }
+.admin-status-cell { white-space: nowrap; display: flex; align-items: center; gap: 8px; padding-top: 14px; }
+.admin-status-label { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.admin-status-label.active { color: #27ae60; }
+.admin-status-label.blocked { color: #e74c3c; }
+.admin-providers-cell { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.admin-provider-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    background: #f0f0f0;
+    color: #666;
+    border: 1px solid #ddd;
+}
+.admin-provider-chip.enabled {
+    background: #eaf6ef;
+    color: #1e8449;
+    border-color: #a9dfbf;
+}
+.admin-provider-count {
+    background: rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 0 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+</style>
+
+<script>
+function toggleUser(userId, checkbox) {
+    const label = document.getElementById('status-label-' + userId);
+    checkbox.disabled = true;
+    fetch('/admin/users/' + userId + '/toggle', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status) {
+                const active = data.status === 'active';
+                checkbox.checked = active;
+                if (label) {
+                    label.textContent = data.status;
+                    label.className = 'admin-status-label ' + data.status;
+                }
+            } else {
+                checkbox.checked = !checkbox.checked;
+            }
+        })
+        .catch(() => { checkbox.checked = !checkbox.checked; })
+        .finally(() => { checkbox.disabled = false; });
+}
+</script>
+{% endblock %}

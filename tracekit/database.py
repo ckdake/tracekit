@@ -213,8 +213,14 @@ def _run_schema_upgrades() -> None:
             ("spreadsheet_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
             ("file_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
             ("stravajson_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
+            # user account status (blocked by default; admin sets active)
+            ("user", "status", "VARCHAR(16) NOT NULL DEFAULT 'blocked'"),
         ],
     )
+
+    # Ensure the admin user (id=1) is always active.
+    with contextlib.suppress(Exception):
+        db.execute_sql('UPDATE "user" SET "status" = \'active\' WHERE "id" = 1')
 
     # ---- activity.user_id: VARCHAR(null=True) → INTEGER NOT NULL DEFAULT 0 --
     _migrate_activity_user_id(db, is_sqlite)

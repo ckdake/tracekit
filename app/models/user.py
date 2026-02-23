@@ -11,10 +11,16 @@ class User(Model):
 
     email = CharField(unique=True)
     password_hash = CharField()
+    # "active" — can log in; "blocked" — pending admin approval
+    status = CharField(default="blocked")
 
     class Meta:
         database = db
         table_name = "user"
+
+    @property
+    def is_admin(self) -> bool:
+        return self.id == 1
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)

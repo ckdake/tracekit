@@ -135,12 +135,15 @@ class Tracekit:
         provider_config = self.config.get("providers", {}).get("file", {})
 
         if not self._file and provider_config.get("enabled", False):
-            # The data folder is fixed: $TRACEKIT_DATA_DIR/activities (or the
-            # default /opt/tracekit/data/activities used in production).  There
-            # is no user-configurable glob — all supported files in the folder
-            # are picked up automatically.
+            # Each user's files live in their own subdirectory:
+            #   $TRACEKIT_DATA_DIR/activities/<user_id>/
+            # This keeps data isolated between users.  User 1 is the admin and
+            # their files should be placed at .../activities/1/ on disk.
+            from .user_context import get_user_id
+
             data_dir = os.environ.get("TRACEKIT_DATA_DIR", "/opt/tracekit/data")
-            data_folder = os.path.join(data_dir, "activities")
+            user_id = get_user_id()
+            data_folder = os.path.join(data_dir, "activities", str(user_id))
             enhanced_config = provider_config.copy()
             enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
             self._file = FileProvider(data_folder, config=enhanced_config)
