@@ -18,10 +18,16 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
             return 0.0
         return 1.0
 
+    def _before_send_transaction(event, hint):
+        if event.get("transaction") == "api.health":
+            return None
+        return event
+
     sentry_sdk.init(
         dsn=_sentry_dsn,
         send_default_pii=True,
         traces_sampler=_traces_sampler,
+        before_send_transaction=_before_send_transaction,
         enable_logs=True,
         profile_session_sample_rate=1.0,
         profile_lifecycle="trace",
