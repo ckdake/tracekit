@@ -76,6 +76,7 @@ def index():
                 "status": u.status,
                 "is_admin": u.is_admin,
                 "providers": provider_info,
+                "subscription_status": u.stripe_subscription_status,
             }
         )
 

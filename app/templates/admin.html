@@ -3,12 +3,6 @@
 
 {% block body %}
 <div class="container-narrow">
-    <div class="card card-danger">
-        <h2>Sentry</h2>
-        <p class="field-help">Trigger a test error to verify Sentry is receiving events.</p>
-        <a href="/admin/sentry-test" class="btn btn-danger btn-sm">Trigger test error</a>
-    </div>
-
     <div class="card">
         <h2>Users</h2>
         <p class="field-help">New signups are blocked by default. Toggle a user to active to allow them to log in.</p>
@@ -17,6 +11,7 @@
                 <tr>
                     <th>User</th>
                     <th>Status</th>
+                    <th>Subscription</th>
                     <th>Providers &amp; Activities</th>
                 </tr>
             </thead>
@@ -40,6 +35,13 @@
                         <span class="admin-status-label {{ u.status }}" id="status-label-{{ u.id }}">{{ u.status }}</span>
                         {% endif %}
                     </td>
+                    <td>
+                        {% if u.subscription_status %}
+                        <span class="admin-sub-chip {{ u.subscription_status }}">{{ u.subscription_status }}</span>
+                        {% else %}
+                        <span class="field-help" style="margin:0">—</span>
+                        {% endif %}
+                    </td>
                     <td class="admin-providers-cell">
                         {% set has_any = namespace(val=false) %}
                         {% for name, info in u.providers.items() %}
@@ -58,6 +60,12 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <div class="card card-danger">
+        <h2>Sentry</h2>
+        <p class="field-help">Trigger a test error to verify Sentry is receiving events.</p>
+        <a href="/admin/sentry-test" class="btn btn-danger btn-sm">Trigger test error</a>
     </div>
 </div>
 
@@ -111,6 +119,33 @@
     padding: 0 5px;
     font-size: 0.75rem;
     font-weight: 600;
+}
+.admin-sub-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #f0f0f0;
+    color: #666;
+    border: 1px solid #ddd;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.admin-sub-chip.active {
+    background: #eaf6ef;
+    color: #1e8449;
+    border-color: #a9dfbf;
+}
+.admin-sub-chip.past_due, .admin-sub-chip.unpaid {
+    background: #fef9e7;
+    color: #b7770d;
+    border-color: #f9e79f;
+}
+.admin-sub-chip.canceled, .admin-sub-chip.incomplete_expired {
+    background: #fdf2f2;
+    color: #c0392b;
+    border-color: #f5c6c6;
 }
 </style>
 
