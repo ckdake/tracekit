@@ -13,8 +13,8 @@ pages_bp = Blueprint("pages", __name__)
 
 @pages_bp.route("/privacy")
 def privacy():
-    """Privacy policy and terms of service page."""
-    return render_template("privacy.html", page_name="Privacy Policy")
+    """Redirect to the privacy policy on the public site."""
+    return redirect("https://tracekit.app/privacy.html", code=301)
 
 
 @pages_bp.route("/settings")

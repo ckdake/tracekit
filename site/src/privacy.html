@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Privacy Policy — tracekit</title>
+        <meta
+            name="description"
+            content="Privacy policy for tracekit — self-hosted and SaaS platform"
+        />
+        <link rel="stylesheet" href="/assets/css/style.css" />
+        <style>
+            .prose {
+                max-width: 720px;
+                margin: 0 auto;
+                padding: 2rem 1rem 4rem;
+            }
+            .prose h1 {
+                font-size: 2rem;
+                margin-bottom: 0.25rem;
+            }
+            .prose .lead {
+                color: var(--muted-text);
+                margin-bottom: 2rem;
+            }
+            .prose h2 {
+                font-size: 1.2rem;
+                margin-top: 2.5rem;
+                margin-bottom: 0.5rem;
+                border-bottom: 1px solid var(--borders);
+                padding-bottom: 0.25rem;
+            }
+            .prose h3 {
+                font-size: 1rem;
+                margin-top: 1.5rem;
+                margin-bottom: 0.4rem;
+                font-weight: 600;
+            }
+            .prose p {
+                margin-bottom: 0.85rem;
+                line-height: 1.65;
+                color: #374151;
+            }
+            .prose ul {
+                margin: 0.5rem 0 0.85rem 1.5rem;
+                line-height: 1.65;
+                color: #374151;
+            }
+            .prose ul li {
+                margin-bottom: 0.3rem;
+            }
+            .prose hr {
+                border: none;
+                border-top: 1px solid var(--borders);
+                margin: 2.5rem 0;
+            }
+            .prose a {
+                color: var(--signal-blue);
+            }
+            .section-label {
+                display: inline-block;
+                background: #eff6ff;
+                color: var(--signal-blue);
+                border: 1px solid #bfdbfe;
+                border-radius: 4px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                padding: 2px 8px;
+                margin-bottom: 1rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            .section-label.saas {
+                background: #f0fdf4;
+                color: #16a34a;
+                border-color: #bbf7d0;
+            }
+        </style>
+    </head>
+    <body>
+        <header class="header">
+            <div class="container">
+                <a href="/" class="logo">
+                    <img src="/assets/img/logo.png" alt="tracekit logo" />
+                </a>
+                <nav class="nav">
+                    <a href="/">Home</a>
+                    <a href="https://github.com/ckdake/tracekit" target="_blank"
+                        >GitHub</a
+                    >
+                    <a href="/developer.html">Developers</a>
+                    <a href="/providers.html">Providers</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="prose">
+                <h1>Privacy Policy</h1>
+                <p class="lead">Effective Date: February 23, 2026</p>
+
+                <p>
+                    tracekit can be used in two ways — self-hosted (you run it
+                    on your own hardware) or as a hosted SaaS product at
+                    <a href="https://app.tracekit.app">app.tracekit.app</a>.
+                    This page covers both. Sections that only apply to one mode
+                    are labelled accordingly.
+                </p>
+
+                <hr />
+
+                <h2>1. Self-Hosted tracekit</h2>
+                <span class="section-label">Self-hosted only</span>
+
+                <p>
+                    When you run tracekit on your own hardware or a server you
+                    control, <strong>you are the operator</strong> and you are
+                    responsible for your own data. tracekit stores everything in
+                    a database you own — SQLite by default, or PostgreSQL if you
+                    configure it.
+                </p>
+
+                <h3>What is stored locally</h3>
+                <ul>
+                    <li>
+                        <strong>Activity metadata:</strong> name, type,
+                        date/time, duration, distance, elevation, equipment,
+                        heart-rate averages, temperature, and provider-assigned
+                        IDs
+                    </li>
+                    <li>
+                        <strong>Provider credentials:</strong> OAuth tokens and
+                        API credentials for connected services, in your own
+                        database or <code>.env</code> file
+                    </li>
+                    <li>
+                        <strong>Source activity files (optional):</strong> GPX,
+                        FIT, or TCX files you place in your data directory —
+                        these stay on your own filesystem
+                    </li>
+                </ul>
+
+                <p>
+                    tracekit does not store GPS tracks, per-second sensor
+                    streams, or any data belonging to other users.
+                </p>
+
+                <h3>Your control</h3>
+                <ul>
+                    <li>
+                        <strong>Access:</strong> all data is in the database
+                        file on your server
+                    </li>
+                    <li>
+                        <strong>Delete:</strong> use Settings &rarr; Danger
+                        Zone, or
+                        <code>python&nbsp;-m&nbsp;tracekit&nbsp;reset</code>
+                    </li>
+                    <li>
+                        <strong>Revoke:</strong> disconnect tracekit from any
+                        provider via that provider's connected-apps page
+                    </li>
+                </ul>
+
+                <hr />
+
+                <h2>2. tracekit SaaS Platform (app.tracekit.app)</h2>
+                <span class="section-label saas">SaaS only</span>
+
+                <p>
+                    The hosted platform is operated by
+                    <a href="https://ithought.org">ithought</a>. The following
+                    applies when you use
+                    <a href="https://app.tracekit.app">app.tracekit.app</a>.
+                </p>
+
+                <h3>What we store</h3>
+                <ul>
+                    <li>
+                        <strong>Activity metadata</strong> &mdash; same fields
+                        as listed above
+                    </li>
+                    <li>
+                        <strong>Source activity files (optional):</strong> if
+                        you upload or sync GPX/FIT/TCX files, we store them on
+                        the platform so tracekit can read them. You can delete
+                        them at any time.
+                    </li>
+                    <li>
+                        <strong>Provider credentials:</strong> OAuth tokens and
+                        API credentials are stored encrypted at rest on the
+                        platform so tracekit can sync on your behalf. They are
+                        never shared with anyone other than the provider they
+                        belong to.
+                    </li>
+                    <li>
+                        <strong>Account information:</strong> your email address
+                        and a hashed password. If you subscribe, your Stripe
+                        customer ID and subscription status are stored alongside
+                        your account &mdash; no card numbers or billing details.
+                    </li>
+                </ul>
+
+                <h3>What we do NOT store</h3>
+                <ul>
+                    <li>GPS coordinates, route geometry, or map data</li>
+                    <li>
+                        Per-second sensor streams (heart rate, power, cadence
+                        time series)
+                    </li>
+                    <li>
+                        Any data belonging to other users &mdash; tracekit never
+                        aggregates or cross-references data across accounts
+                    </li>
+                </ul>
+
+                <hr />
+
+                <h2>3. How Data Is Used</h2>
+
+                <ul>
+                    <li>
+                        <strong>Display:</strong> your cached activities are
+                        shown in the tracekit calendar and sync status pages
+                        &mdash; only to you.
+                    </li>
+                    <li>
+                        <strong>Matching:</strong> records from different
+                        providers are compared by timestamp and distance to
+                        identify the same activity across platforms.
+                    </li>
+                    <li>
+                        <strong>Writeback:</strong> tracekit only writes to a
+                        third-party platform (e.g. setting an activity name or
+                        gear assignment on Strava) when you
+                        <strong>explicitly click a button</strong> to trigger
+                        that action. No writes to connected services happen
+                        without your direct instruction. In the future, you may
+                        be able to create rules for specific automatic actions
+                        &mdash; any such feature will require explicit opt-in.
+                    </li>
+                </ul>
+
+                <p>tracekit <strong>never</strong>:</p>
+                <ul>
+                    <li>Aggregates or compares data across different users</li>
+                    <li>
+                        Shares your data with third parties (other than
+                        sub-processors listed below)
+                    </li>
+                    <li>Uses your data for advertising or machine learning</li>
+                    <li>Sells, licenses, or discloses your data to anyone</li>
+                </ul>
+
+                <hr />
+
+                <h2>4. Third-Party Platforms You Connect</h2>
+
+                <p>
+                    tracekit connects to the platforms below using credentials
+                    you provide. Your use of those platforms is governed by
+                    their own terms. tracekit is not affiliated with or endorsed
+                    by any of them.
+                </p>
+
+                <ul>
+                    <li>
+                        <strong>Strava</strong> &mdash;
+                        <a
+                            href="https://www.strava.com/legal/api"
+                            target="_blank"
+                            rel="noopener"
+                            >Strava API terms</a
+                        >
+                    </li>
+                    <li>
+                        <strong>Garmin</strong> &mdash;
+                        <a
+                            href="https://www.garmin.com"
+                            target="_blank"
+                            rel="noopener"
+                            >garmin.com</a
+                        >
+                    </li>
+                    <li>
+                        <strong>RideWithGPS</strong> &mdash;
+                        <a
+                            href="https://ridewithgps.com"
+                            target="_blank"
+                            rel="noopener"
+                            >ridewithgps.com</a
+                        >
+                    </li>
+                </ul>
+
+                <hr />
+
+                <h2>5. Sub-processors</h2>
+                <span class="section-label saas">SaaS only</span>
+
+                <ul>
+                    <li>
+                        <strong>Digital Ocean</strong> &mdash; cloud
+                        infrastructure. All data is stored and processed on
+                        Digital Ocean servers.
+                    </li>
+                    <li>
+                        <strong>Stripe</strong> &mdash; payment processing.
+                        Billing information is handled by Stripe and governed by
+                        <a
+                            href="https://stripe.com/privacy"
+                            target="_blank"
+                            rel="noopener"
+                            >Stripe's privacy policy</a
+                        >. tracekit stores only your Stripe customer ID and
+                        subscription status.
+                    </li>
+                    <li>
+                        <strong>Sentry</strong> &mdash; error monitoring. When
+                        the application encounters an unexpected error, a report
+                        including request metadata (but not your activity data
+                        or credentials) may be sent to Sentry to help diagnose
+                        bugs.
+                    </li>
+                </ul>
+
+                <hr />
+
+                <h2>6. Data Retention &amp; Deletion</h2>
+
+                <p>
+                    <strong>Self-hosted:</strong> you control retention
+                    entirely. Delete data via Settings or the CLI at any time.
+                </p>
+
+                <p>
+                    <strong>SaaS platform:</strong> your data is retained for as
+                    long as your account is active. When you request account
+                    deletion, <strong>all</strong> data associated with your
+                    account is permanently deleted &mdash; including activity
+                    metadata, source files, and provider credentials &mdash;
+                    within 24 hours of a confirmed request. Billing records held
+                    by Stripe are subject to Stripe's own retention policies.
+                </p>
+
+                <hr />
+
+                <h2>7. Security</h2>
+                <ul>
+                    <li>
+                        Provider credentials are stored encrypted at rest (SaaS)
+                        or in your own database/config file (self-hosted)
+                    </li>
+                    <li>All traffic uses HTTPS</li>
+                    <li>
+                        Passwords are stored as bcrypt hashes and never in
+                        plaintext
+                    </li>
+                </ul>
+
+                <hr />
+
+                <h2>8. Your Rights</h2>
+                <ul>
+                    <li>
+                        <strong>Access:</strong> request a copy of the data we
+                        hold about you
+                    </li>
+                    <li>
+                        <strong>Delete:</strong> use Settings &rarr; Danger
+                        Zone, or contact us for full account deletion within 24
+                        hours
+                    </li>
+                    <li>
+                        <strong>Revoke:</strong> disconnect tracekit from any
+                        provider via that provider's connected-apps settings. No
+                        further data will be fetched.
+                    </li>
+                    <li>
+                        <strong>Export:</strong> contact us and we will provide
+                        a copy of your activity metadata in a common format
+                    </li>
+                </ul>
+
+                <hr />
+
+                <h2>9. Changes to This Policy</h2>
+                <p>
+                    This policy may be updated as the platform evolves. The
+                    effective date at the top reflects when it was last changed.
+                </p>
+
+                <hr />
+
+                <h2>10. Contact</h2>
+                <ul>
+                    <li>
+                        Open an issue at
+                        <a
+                            href="https://github.com/ckdake/tracekit"
+                            target="_blank"
+                            rel="noopener"
+                            >github.com/ckdake/tracekit</a
+                        >
+                    </li>
+                    <li>Or contact the maintainer directly via GitHub</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>
+                    &copy; 2026 tracekit. Open source fitness data integration
+                    tool.
+                </p>
+                <p><a href="/privacy.html">Privacy Policy</a></p>
+            </div>
+        </footer>
+
+        <script src="/assets/js/main.js"></script>
+    </body>
+</html>

@@ -10,6 +10,7 @@ export default defineConfig({
             input: {
                 main: 'src/index.html',
                 developer: 'src/developer.html',
+                providers: 'src/providers.html',
             },
         },
     },
