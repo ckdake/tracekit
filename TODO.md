@@ -5,7 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 later:
-- [ ] releases to Sentry
+- [ ] releases to Sentry, metrics
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] user limits and rate limiting. TBD!
 - [ ] move app api keys from per-user to admin thing
