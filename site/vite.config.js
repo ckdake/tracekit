@@ -11,6 +11,7 @@ export default defineConfig({
                 main: 'src/index.html',
                 developer: 'src/developer.html',
                 providers: 'src/providers.html',
+                privacy: 'src/privacy.html',
             },
         },
     },
