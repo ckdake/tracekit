@@ -5,6 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 later:
+- [ ] update privacy policy for self-hosted -vs- cloud hosted
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] user limits and rate limiting. TBD!
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
