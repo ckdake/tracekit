@@ -23,6 +23,33 @@
         </div>
     </div>
 
+    {% if stripe_enabled %}
+    <div class="card">
+        <h2>Subscription</h2>
+        {% if subscription_status == 'active' %}
+        <p class="field-help">
+            Your subscription is <strong>active</strong>
+            {% if subscription_end %}
+             and renews on <strong>{{ subscription_end }}</strong>
+            {% endif %}.
+        </p>
+        <div class="field-row">
+            <button class="btn btn-secondary" id="stripe-portal-btn">Manage subscription</button>
+        </div>
+        {% else %}
+        <p class="field-help">Subscribe to unlock all features. Cancel anytime.</p>
+        <div class="field-row" style="gap: 0.75rem;">
+            <button class="btn btn-primary" id="stripe-monthly-btn">Subscribe monthly</button>
+            <button class="btn btn-primary" id="stripe-annual-btn">Subscribe annually</button>
+        </div>
+        {% if subscription_status and subscription_status != 'active' %}
+        <p class="field-help" style="margin-top: 0.5rem;">Previous subscription status: <strong>{{ subscription_status }}</strong>.</p>
+        {% endif %}
+        {% endif %}
+        <div id="stripe-error" class="modal-error" style="margin-top:0.5rem;"></div>
+    </div>
+    {% endif %}
+
     <div class="card">
         <h2>Providers</h2>
         <p class="drag-hint">drag to set priority order — the top provider has the highest priority.
@@ -82,4 +109,29 @@
 
 <script>const INITIAL_CONFIG = {{ config | tojson }};</script>
 <script src="{{ url_for('static', filename='settings.js') }}"></script>
+{% if stripe_enabled %}
+<script>
+async function stripeAction(plan) {
+    const errorEl = document.getElementById('stripe-error');
+    errorEl.textContent = '';
+    const endpoint = plan === 'portal' ? '/api/stripe/portal' : '/api/stripe/checkout';
+    const body = plan === 'portal' ? {} : { plan };
+    try {
+        const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) { errorEl.textContent = data.error || 'Something went wrong.'; return; }
+        window.location.href = data.url;
+    } catch (e) {
+        errorEl.textContent = 'Network error: ' + e.message;
+    }
+}
+document.getElementById('stripe-monthly-btn')?.addEventListener('click', () => stripeAction('monthly'));
+document.getElementById('stripe-annual-btn')?.addEventListener('click', () => stripeAction('annual'));
+document.getElementById('stripe-portal-btn')?.addEventListener('click', () => stripeAction('portal'));
+</script>
+{% endif %}
 {% endblock %}

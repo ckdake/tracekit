@@ -170,6 +170,7 @@ _PUBLIC_ENDPOINTS = frozenset(
         "auth.logout",
         "api.health",
         "pages.privacy",
+        "stripe.webhook",
         "static",
     }
 )
@@ -208,6 +209,7 @@ from routes.calendar import calendar_bp
 from routes.month import month_bp
 from routes.notifications import notifications_bp
 from routes.pages import pages_bp
+from routes.stripe_bp import stripe_bp
 
 app.register_blueprint(pages_bp)
 app.register_blueprint(auth_bp)
@@ -218,6 +220,7 @@ app.register_blueprint(month_bp)
 app.register_blueprint(notifications_bp)
 app.register_blueprint(garmin_bp)
 app.register_blueprint(strava_bp)
+app.register_blueprint(stripe_bp)
 
 # ---------------------------------------------------------------------------
 # CLI entry point

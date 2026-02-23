@@ -215,6 +215,10 @@ def _run_schema_upgrades() -> None:
             ("stravajson_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
             # user account status (blocked by default; admin sets active)
             ("user", "status", "VARCHAR(16) NOT NULL DEFAULT 'blocked'"),
+            # Stripe subscription fields
+            ("user", "stripe_customer_id", "VARCHAR(255)"),
+            ("user", "stripe_subscription_status", "VARCHAR(64)"),
+            ("user", "stripe_subscription_end", "INTEGER"),
         ],
     )
 

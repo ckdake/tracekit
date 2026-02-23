@@ -22,7 +22,8 @@ dependencies = [
     "stravalib==2.4",
     "flask>=3.0.0,<4.0.0",
     "tabulate==0.9.0",
-    "garminconnect==0.2.38"
+    "garminconnect==0.2.38",
+    "stripe>=10.0.0",
 ]
 
 [project.optional-dependencies]

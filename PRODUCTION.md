@@ -97,6 +97,47 @@ SENTRY_DSN=https://<key>@o<org>.ingest.us.sentry.io/<project>
 
 Get the DSN from your Sentry project under **Settings → Client Keys (DSN)**.
 
+### Optional: Stripe subscriptions
+
+Add the following to `.env` to enable the Subscription section on the Settings page. If any of the required keys are absent, the section is hidden entirely.
+
+```sh
+# The public URL users reach your tracekit instance at — used to build
+# Stripe success/cancel/webhook callback URLs.
+APP_URL=https://tracekit.example.com
+
+# Stripe — all four values are required to enable subscriptions.
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_MONTHLY_PRICE_ID=price_...
+STRIPE_ANNUAL_PRICE_ID=price_...
+```
+
+#### Stripe dashboard setup
+
+1. **Create your products & prices** in the [Stripe Dashboard → Product catalog](https://dashboard.stripe.com/products):
+   - Create a product (e.g. "tracekit subscription").
+   - Add two recurring prices: one monthly, one annual.
+   - Copy each price's ID (starts with `price_`) into `STRIPE_MONTHLY_PRICE_ID` / `STRIPE_ANNUAL_PRICE_ID`.
+
+2. **Get your API keys** from [Dashboard → Developers → API keys](https://dashboard.stripe.com/apikeys):
+   - Copy the **Secret key** (`sk_live_…`) → `STRIPE_SECRET_KEY`.
+   - Copy the **Publishable key** (`pk_live_…`) → `STRIPE_PUBLISHABLE_KEY`.
+
+3. **Create a webhook endpoint** in [Dashboard → Developers → Webhooks](https://dashboard.stripe.com/webhooks):
+   - Endpoint URL: `https://tracekit.example.com/api/stripe/webhook`
+   - Subscribe to these events:
+     - `checkout.session.completed`
+     - `customer.subscription.created`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+   - After saving, reveal the **Signing secret** (`whsec_…`) → `STRIPE_WEBHOOK_SECRET`.
+
+4. **Enable the Customer Portal** in [Dashboard → Settings → Billing → Customer portal](https://dashboard.stripe.com/settings/billing/portal) so users can cancel or change their plan without contacting you.
+
+> Use `sk_test_…` / `pk_test_…` keys and test price IDs during development. Switch to live keys for production.
+
 Tables are created automatically on every container start — the app retries the DB connection for up to 60 s, so containers can start in any order.
 
 ## Provider Authentication

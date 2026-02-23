@@ -8,7 +8,6 @@ later:
 - [ ] update privacy policy for self-hosted -vs- cloud hosted
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] user limits and rate limiting. TBD!
-- [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
 - [ ] move app api keys from per-user to admin thing
 - [ ] move sessions to redis
 - [ ] user docs -> tracekit will not modify unless you click individual button
