@@ -5,10 +5,35 @@ import os
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Sentry — initialise before anything else so all errors are captured
+# Logging — configure first so every subsequent import sees the right level
 # ---------------------------------------------------------------------------
-# Set root logger to INFO before Sentry init so its handler captures INFO+.
+
+
+class _UserIdFilter(logging.Filter):
+    """Injects ``user_id`` into every log record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            from flask import g as flask_g
+            from flask import has_request_context
+
+            record.user_id = flask_g.get("uid", 0) if has_request_context() else 0
+        except Exception:
+            record.user_id = "?"
+        return True
+
+
+_handler = logging.StreamHandler()
+_handler.addFilter(_UserIdFilter())
+_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s uid=%(user_id)s %(name)s: %(message)s"))
+logging.root.addHandler(_handler)
 logging.root.setLevel(logging.INFO)
+
+_access_log = logging.getLogger("tracekit.access")
+
+# ---------------------------------------------------------------------------
+# Sentry — initialise after logging so its handler inherits the INFO level
+# ---------------------------------------------------------------------------
 
 if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
@@ -42,58 +67,11 @@ from db_init import (
     load_tracekit_config,
 )
 from flask import Flask, abort, g, redirect, request, session, url_for
-
-_access_log = logging.getLogger("tracekit.access")
 from helpers import (
     get_current_date_in_timezone,  # noqa: F401
     get_database_info,  # noqa: F401
     sort_providers,  # noqa: F401
 )
-
-# ---------------------------------------------------------------------------
-# Logging — inject user_id into every record produced by the web process
-# ---------------------------------------------------------------------------
-
-
-class _UserIdFilter(logging.Filter):
-    """Adds ``user_id`` to every log record.
-
-    Prefers ``g.uid`` (set per-request by ``_set_user_context``) when inside a
-    Flask request context so concurrent requests on different threads each get
-    their own value.  Falls back to the ContextVar for log lines emitted outside
-    of a request (e.g. Celery workers, startup).
-    """
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        try:
-            from flask import g as flask_g
-            from flask import has_request_context
-
-            if has_request_context():
-                record.user_id = flask_g.get("uid", 0)
-            else:
-                from tracekit.user_context import get_user_id
-
-                record.user_id = get_user_id()
-        except Exception:
-            record.user_id = "?"
-        return True
-
-
-def _configure_logging() -> None:
-    """Attach the user_id filter + formatter to the root logger."""
-    handler = logging.StreamHandler()
-    handler.addFilter(_UserIdFilter())
-    handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s uid=%(user_id)s %(name)s: %(message)s"))
-    root = logging.getLogger()
-    # Avoid duplicate handlers when the module is reloaded in tests.
-    if not any(isinstance(h, logging.StreamHandler) and hasattr(h, "stream") for h in root.handlers):
-        root.addHandler(handler)
-    root.setLevel(logging.INFO)
-
-
-_configure_logging()
-
 
 # ---------------------------------------------------------------------------
 # Flask app
