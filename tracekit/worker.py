@@ -13,6 +13,17 @@ Observe via Flower (runs as its own container in production):
 import contextlib
 import os
 
+if _sentry_dsn := os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        send_default_pii=True,
+        traces_sample_rate=1.0,
+        integrations=[CeleryIntegration(monitor_beat_tasks=True)],
+    )
+
 from celery import Celery
 from celery.schedules import crontab
 

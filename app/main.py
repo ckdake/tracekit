@@ -10,7 +10,7 @@ from pathlib import Path
 if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
 
-    sentry_sdk.init(dsn=_sentry_dsn, send_default_pii=True)
+    sentry_sdk.init(dsn=_sentry_dsn, send_default_pii=True, traces_sample_rate=1.0)
 
 # ---------------------------------------------------------------------------
 # Re-exports kept for backward-compatibility with the test suite
