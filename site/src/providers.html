@@ -266,253 +266,200 @@
                 <h2>Becoming a Provider</h2>
 
                 <p>
-                    Any fitness platform with a public API can become a tracekit
-                    provider. Providers are Python classes that implement a
-                    standard interface defined by the
-                    <code>FitnessProvider</code> base class. If your platform
-                    exposes the required endpoints, adding support is
-                    straightforward.
+                    If you run a fitness platform and want tracekit to support
+                    it, this section describes exactly what your API needs to
+                    expose. You don't need to write any tracekit code yourself —
+                    just make sure your platform meets the requirements below,
+                    then <a href="#request">open an issue</a>.
                 </p>
 
-                <h3>Requirements</h3>
+                <h3>What your API needs</h3>
+
+                <p>tracekit needs two things from your platform:</p>
                 <ol>
                     <li>
-                        <strong>A public API.</strong> Your platform must have
-                        an API that third-party applications can access. Rate
-                        limits and authentication methods will vary — tracekit
-                        can accommodate most common patterns.
+                        <strong>A JSON REST API over HTTPS.</strong> Endpoints
+                        must return <code>application/json</code>. No special
+                        framework is required — any HTTP server that can handle
+                        GET, POST, and PATCH requests will work.
                     </li>
                     <li>
-                        <strong>Developer access.</strong> You must be able to
-                        grant tracekit access to your API, either by registering
-                        an application (OAuth) or issuing an API key. Read and
-                        write scopes are required for the endpoints below.
-                    </li>
-                    <li>
-                        <strong>The required endpoints.</strong> Your API must
-                        provide the operations listed in the table below.
-                        Optional endpoints can be left as stubs.
+                        <strong>Per-user API keys.</strong> Each user must be
+                        able to generate a personal API key from their account
+                        settings. tracekit passes this key as a header on every
+                        request:
+                        <pre><code>Authorization: Bearer &lt;user_api_key&gt;</code></pre>
+                        OAuth is also supported if you already have it. API keys
+                        are simpler to integrate and are preferred.
                     </li>
                 </ol>
 
-                <h3>Required and Optional Endpoints</h3>
+                <h3>Required endpoints</h3>
+
                 <p>
-                    Provider classes must implement the following methods.
-                    Required methods must be fully functional. Optional methods
-                    may return empty results or raise
-                    <code>NotImplementedError</code> if the underlying API does
-                    not support them.
+                    The following four endpoints are the minimum tracekit needs.
+                    Field names can differ — the tracekit provider maps your
+                    schema to its internal model.
                 </p>
 
-                <table class="endpoint-table">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Required</th>
-                            <th>Description</th>
-                            <th>Underlying API capability needed</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>pull_activities(date_filter)</code></td>
-                            <td>
-                                <span class="badge badge-required"
-                                    >Required</span
-                                >
-                            </td>
-                            <td>
-                                Fetch all activities within a given time range.
-                            </td>
-                            <td>
-                                List activities filtered by start/end timestamp
-                                or date range.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <code>get_activity_by_id(activity_id)</code>
-                            </td>
-                            <td>
-                                <span class="badge badge-required"
-                                    >Required</span
-                                >
-                            </td>
-                            <td>
-                                Retrieve full metadata for a single activity by
-                                its provider-assigned ID.
-                            </td>
-                            <td>Fetch a single activity record by ID.</td>
-                        </tr>
-                        <tr>
-                            <td><code>update_activity(activity_data)</code></td>
-                            <td>
-                                <span class="badge badge-required"
-                                    >Required</span
-                                >
-                            </td>
-                            <td>
-                                Write changes back to the provider. At minimum,
-                                updating the activity name must be supported.
-                            </td>
-                            <td>
-                                PATCH or PUT an activity record; name field must
-                                be writable.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><code>create_activity(activity_data)</code></td>
-                            <td>
-                                <span class="badge badge-required"
-                                    >Required</span
-                                >
-                            </td>
-                            <td>
-                                Create a new activity on the platform from
-                                tracekit data.
-                            </td>
-                            <td>
-                                POST a new activity with name, type, start time,
-                                and duration.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><code>get_all_gear()</code></td>
-                            <td>
-                                <span class="badge badge-optional"
-                                    >Optional</span
-                                >
-                            </td>
-                            <td>
-                                Return a list of gear (bikes, shoes, devices,
-                                etc.) associated with the account.
-                            </td>
-                            <td>
-                                Endpoint that lists equipment or athlete gear.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <code>set_gear(gear_name, activity_id)</code>
-                            </td>
-                            <td>
-                                <span class="badge badge-optional"
-                                    >Optional</span
-                                >
-                            </td>
-                            <td>
-                                Associate a piece of gear with a specific
-                                activity.
-                            </td>
-                            <td>
-                                PATCH or PUT an activity with a gear/equipment
-                                reference.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <h4
+                    style="
+                        margin-top: 1.5rem;
+                        margin-bottom: 0.25rem;
+                        font-size: 0.9rem;
+                        color: var(--muted-text);
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                    "
+                >
+                    List activities by date range
+                </h4>
+                <pre><code>GET /activities?after=1700000000&amp;before=1702000000
+Authorization: Bearer &lt;api_key&gt;
 
-                <h3>Activity Data Model</h3>
-                <p>
-                    Each provider returns activities as instances of a class
-                    that inherits from
-                    <code>BaseProviderActivity</code>. The fields below are
-                    populated from API responses and stored locally. Not every
-                    field needs to be available from every provider — populate
-                    what your API provides.
-                </p>
-                <ul>
-                    <li><strong>name</strong> &mdash; activity title</li>
-                    <li><strong>distance</strong> &mdash; in miles</li>
-                    <li><strong>start_time</strong> &mdash; Unix timestamp</li>
-                    <li>
-                        <strong>activity_type</strong> &mdash; e.g. Run, Ride,
-                        Swim
-                    </li>
-                    <li>
-                        <strong>duration_hms</strong> &mdash; elapsed time as
-                        HH:MM:SS
-                    </li>
-                    <li>
-                        <strong>avg_heart_rate, max_heart_rate</strong> &mdash;
-                        beats per minute
-                    </li>
-                    <li>
-                        <strong>total_elevation_gain, max_elevation</strong>
-                        &mdash; in feet
-                    </li>
-                    <li><strong>calories, avg_cadence, temperature</strong></li>
-                    <li><strong>location_name, city, state</strong></li>
-                    <li><strong>equipment</strong> &mdash; gear name</li>
-                    <li><strong>notes</strong></li>
-                    <li>
-                        <strong>raw_data</strong> &mdash; JSON blob of any
-                        provider-specific fields
-                    </li>
-                </ul>
-
-                <h3>Implementation Guide</h3>
-                <p>To add a new provider:</p>
-                <ol>
-                    <li>
-                        Create a directory under
-                        <code>tracekit/providers/&lt;name&gt;/</code> with
-                        <code>&lt;name&gt;_provider.py</code> and
-                        <code>&lt;name&gt;_activity.py</code>.
-                    </li>
-                    <li>
-                        Subclass <code>FitnessProvider</code> from
-                        <code>tracekit.providers.base_provider</code> and
-                        implement each required method.
-                    </li>
-                    <li>
-                        Subclass <code>BaseProviderActivity</code> from
-                        <code>tracekit.providers.base_provider_activity</code>
-                        for the activity model.
-                    </li>
-                    <li>
-                        Add authentication credential fields (API key, OAuth
-                        tokens, etc.) to the provider's
-                        <code>__init__</code>, loaded from environment variables
-                        or the database config.
-                    </li>
-                    <li>
-                        Register the provider in
-                        <code>tracekit/providers/__init__.py</code> so it is
-                        discoverable by the CLI and web interface.
-                    </li>
-                    <li>
-                        Open a pull request on
-                        <a
-                            href="https://github.com/ckdake/tracekit"
-                            target="_blank"
-                            rel="noopener"
-                            >GitHub</a
-                        >
-                        with your implementation and any necessary credential
-                        documentation.
-                    </li>
-                </ol>
-
-                <p>
-                    The existing Strava and Ride with GPS providers are good
-                    reference implementations that cover the full required +
-                    optional surface area. The Garmin provider shows how to
-                    handle read-only gear and name-only updates. The File
-                    provider demonstrates a non-API, import-only pattern.
+[
+  {
+    "id": "abc123",
+    "name": "Morning Run",
+    "type": "run",
+    "start_time": 1700500000,
+    "duration_seconds": 3600,
+    "distance_miles": 6.2
+  }
+]</code></pre>
+                <p style="font-size: 0.875rem; color: var(--muted-text)">
+                    <code>after</code> and <code>before</code> are Unix
+                    timestamps. Return all activities whose start time falls in
+                    that range. Pagination is fine; tracekit will follow it.
                 </p>
 
-                <h3>Questions</h3>
+                <h4
+                    style="
+                        margin-top: 1.5rem;
+                        margin-bottom: 0.25rem;
+                        font-size: 0.9rem;
+                        color: var(--muted-text);
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                    "
+                >
+                    Get a single activity
+                </h4>
+                <pre><code>GET /activities/abc123
+Authorization: Bearer &lt;api_key&gt;
+
+{
+  "id": "abc123",
+  "name": "Morning Run",
+  "type": "run",
+  "start_time": 1700500000,
+  "duration_seconds": 3600,
+  "distance_miles": 6.2
+}</code></pre>
+
+                <h4
+                    style="
+                        margin-top: 1.5rem;
+                        margin-bottom: 0.25rem;
+                        font-size: 0.9rem;
+                        color: var(--muted-text);
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                    "
+                >
+                    Update an activity
+                </h4>
+                <pre><code>PATCH /activities/abc123
+Authorization: Bearer &lt;api_key&gt;
+Content-Type: application/json
+
+{ "name": "Easy 10K" }</code></pre>
+                <p style="font-size: 0.875rem; color: var(--muted-text)">
+                    At minimum the <code>name</code> field must be writable.
+                    Other fields (type, notes, gear) can also be accepted here
+                    if your platform supports them.
+                </p>
+
+                <h4
+                    style="
+                        margin-top: 1.5rem;
+                        margin-bottom: 0.25rem;
+                        font-size: 0.9rem;
+                        color: var(--muted-text);
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                    "
+                >
+                    Create an activity
+                </h4>
+                <pre><code>POST /activities
+Authorization: Bearer &lt;api_key&gt;
+Content-Type: application/json
+
+{
+  "name": "Morning Run",
+  "type": "run",
+  "start_time": 1700500000,
+  "duration_seconds": 3600
+}
+
+{ "id": "xyz789" }</code></pre>
+                <p style="font-size: 0.875rem; color: var(--muted-text)">
+                    Return the new activity's ID in the response so tracekit can
+                    reference it later.
+                </p>
+
+                <h3>Optional endpoints</h3>
+
                 <p>
-                    If you're interested in adding a provider or have questions
-                    about the interface, open an issue on
+                    Gear support is optional. If your platform tracks equipment
+                    (bikes, shoes, devices), two additional endpoints allow
+                    tracekit to read and assign gear:
+                </p>
+
+                <pre><code>GET /gear
+Authorization: Bearer &lt;api_key&gt;
+
+[{ "id": "g1", "name": "Trek Domane" }]</code></pre>
+
+                <pre><code>PATCH /activities/abc123
+Authorization: Bearer &lt;api_key&gt;
+Content-Type: application/json
+
+{ "gear_id": "g1" }</code></pre>
+
+                <hr />
+
+                <h2 id="request">Request tracekit support</h2>
+
+                <p>
+                    You don't need to write any tracekit code. Once your API is
+                    ready, open an issue on
                     <a
-                        href="https://github.com/ckdake/tracekit"
+                        href="https://github.com/ckdake/tracekit/issues"
                         target="_blank"
                         rel="noopener"
                         >GitHub</a
-                    >.
+                    >
+                    titled
+                    <strong>"Provider request: [Your Platform Name]"</strong>
+                    and include:
                 </p>
+                <ul>
+                    <li>A link to your API documentation</li>
+                    <li>Confirmation that per-user API keys are available</li>
+                    <li>Which of the optional endpoints (gear) you support</li>
+                    <li>
+                        <strong>An email address</strong> so we can reach out to
+                        set up a test account — tracekit needs to authenticate
+                        against a real account to build and verify the
+                        integration
+                    </li>
+                </ul>
             </div>
         </main>
 
