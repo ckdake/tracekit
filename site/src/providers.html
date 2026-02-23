@@ -367,7 +367,11 @@ Authorization: Bearer &lt;api_key&gt;
                 <p style="font-size: 0.875rem; color: var(--muted-text)">
                     At a minimum, have an endpoint that returns the full set of
                     metadata about a single activity. It can be a ?id paramater
-                    or part of a REST URL. Example:
+                    or part of a REST URL. If you can support providing the
+                    original activity file via a param to this api method, or
+                    you can provide another API endpoint for the source file,
+                    thats great and make you an awesome player in this
+                    ecosystem. Users should own their data! Example:
                 </p>
                 <pre><code>GET /activities/abc123
 Authorization: Bearer &lt;api_key&gt;
