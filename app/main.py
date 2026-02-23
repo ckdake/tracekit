@@ -10,7 +10,19 @@ from pathlib import Path
 if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
 
-    sentry_sdk.init(dsn=_sentry_dsn, send_default_pii=True, traces_sample_rate=1.0)
+    def _traces_sampler(sampling_context: dict) -> float:
+        if sampling_context.get("transaction_context", {}).get("name") == "GET /health":
+            return 0.0
+        return 1.0
+
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        send_default_pii=True,
+        traces_sampler=_traces_sampler,
+        enable_logs=True,
+        profile_session_sample_rate=1.0,
+        profile_lifecycle="trace",
+    )
 
 # ---------------------------------------------------------------------------
 # Re-exports kept for backward-compatibility with the test suite
@@ -192,7 +204,8 @@ def _require_auth():
 
 @app.after_request
 def _log_request(response):
-    _access_log.info("%s %s %s", request.method, request.path, response.status_code)
+    if request.endpoint != "api.health":
+        _access_log.info("%s %s %s", request.method, request.path, response.status_code)
     return response
 
 
