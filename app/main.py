@@ -20,7 +20,6 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
         send_default_pii=True,
         traces_sampler=_traces_sampler,
         enable_logs=True,
-        logging_minimum_level=logging.INFO,
         profile_session_sample_rate=1.0,
         profile_lifecycle="trace",
     )
