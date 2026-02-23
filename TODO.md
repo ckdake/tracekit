@@ -13,11 +13,14 @@ later:
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
 - [ ] move app api keys from per-user to admin thing
 - [ ] sentry cloud for exceptions
+- [ ] move sessions to redis
+- [ ] better top/right nav UI
 - [ ] outbound email sending for email verificaiton on login, and password reset
 - [ ] add new source data files to file data when found in other places
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)
 - [ ] download file from providers if file is missing. see https://raw.githubusercontent.com/cyberjunky/python-garminconnect/master/demo.py in download_activities_by_date for garmin
+- [ ] allow exporting all files
 
 ## Providers & Sync
 

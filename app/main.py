@@ -97,19 +97,10 @@ def _set_user_context():
         set_user_id(0)
         return
 
-    uid = session.get("user_id")
-    if not uid:
-        # Unauthenticated request — explicitly reset to 0.  ContextVars are not
-        # reset between requests in a single-threaded WSGI process, so without
-        # this a previous authenticated request's user_id would bleed through.
-        set_user_id(0)
-        return
-
-    # Ensure the DB is initialised and connected before querying the User table.
-    # This matters for fresh Gunicorn worker processes where _db_initialized is
-    # still False.  If the DB is genuinely unavailable, abort with 503 rather
-    # than falling through with user_id=0 and accidentally writing data under
-    # the wrong owner.
+    # Ensure the DB is initialised and connected before any route that may query
+    # it — including unauthenticated routes like /login and /signup.  This
+    # matters for fresh Gunicorn worker processes where _db_initialized is still
+    # False.  If the DB is genuinely unavailable, abort with 503.
     try:
         from db_init import _init_db
 
@@ -119,6 +110,14 @@ def _set_user_context():
         get_db().connect(reuse_if_open=True)
     except Exception:
         abort(503)
+
+    uid = session.get("user_id")
+    if not uid:
+        # Unauthenticated request — explicitly reset to 0.  ContextVars are not
+        # reset between requests in a single-threaded WSGI process, so without
+        # this a previous authenticated request's user_id would bleed through.
+        set_user_id(0)
+        return
 
     try:
         import peewee
