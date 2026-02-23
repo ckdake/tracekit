@@ -289,7 +289,21 @@
                         request:
                         <pre><code>Authorization: Bearer &lt;user_api_key&gt;</code></pre>
                         OAuth is also supported if you already have it. API keys
-                        are simpler to integrate and are preferred.
+                        are simpler to integrate, but OAuth is better!
+                    </li>
+                </ol>
+
+                <p>Other APIs out there</p>
+                <ol>
+                    <li>
+                        <a href="https://developers.strava.com/docs/reference/"
+                            >Strava API v3</a
+                        >
+                    </li>
+                    <li>
+                        <a href="https://ridewithgps.com/api/v1/doc"
+                            >Ride with GPS API v1</a
+                        >
                     </li>
                 </ol>
 
@@ -298,7 +312,9 @@
                 <p>
                     The following four endpoints are the minimum tracekit needs.
                     Field names can differ — the tracekit provider maps your
-                    schema to its internal model.
+                    schema to its internal model. Endpoints can have any URL
+                    structure as long as they respond to the correct HTTP method
+                    and accept necessary parameters.
                 </p>
 
                 <h4
@@ -314,6 +330,13 @@
                 >
                     List activities by date range
                 </h4>
+                <p style="font-size: 0.875rem; color: var(--muted-text)">
+                    At a minimum, have an endpoint that returns a list of IDs
+                    for a date range. Ideally, include a little bit more
+                    metadata to help the sync process run smoothly. We recommend
+                    accepting page size and page number params to support
+                    pagination. Example:
+                </p>
                 <pre><code>GET /activities?after=1700000000&amp;before=1702000000
 Authorization: Bearer &lt;api_key&gt;
 
@@ -327,11 +350,6 @@ Authorization: Bearer &lt;api_key&gt;
     "distance_miles": 6.2
   }
 ]</code></pre>
-                <p style="font-size: 0.875rem; color: var(--muted-text)">
-                    <code>after</code> and <code>before</code> are Unix
-                    timestamps. Return all activities whose start time falls in
-                    that range. Pagination is fine; tracekit will follow it.
-                </p>
 
                 <h4
                     style="
@@ -346,6 +364,11 @@ Authorization: Bearer &lt;api_key&gt;
                 >
                     Get a single activity
                 </h4>
+                <p style="font-size: 0.875rem; color: var(--muted-text)">
+                    At a minimum, have an endpoint that returns the full set of
+                    metadata about a single activity. It can be a ?id paramater
+                    or part of a REST URL. Example:
+                </p>
                 <pre><code>GET /activities/abc123
 Authorization: Bearer &lt;api_key&gt;
 
@@ -355,7 +378,8 @@ Authorization: Bearer &lt;api_key&gt;
   "type": "run",
   "start_time": 1700500000,
   "duration_seconds": 3600,
-  "distance_miles": 6.2
+  "distance_miles": 6.2,
+  "description": "Felt great, nice weather!"
 }</code></pre>
 
                 <h4
@@ -371,16 +395,17 @@ Authorization: Bearer &lt;api_key&gt;
                 >
                     Update an activity
                 </h4>
+                <p style="font-size: 0.875rem; color: var(--muted-text)">
+                    At minimum the <code>name</code> field must be writable.
+                    Other fields (type, notes, gear) can also be accepted here
+                    if your platform supports them. POST or PUT is ok too. As is
+                    the activity id as a paramater. Example:
+                </p>
                 <pre><code>PATCH /activities/abc123
 Authorization: Bearer &lt;api_key&gt;
 Content-Type: application/json
 
 { "name": "Easy 10K" }</code></pre>
-                <p style="font-size: 0.875rem; color: var(--muted-text)">
-                    At minimum the <code>name</code> field must be writable.
-                    Other fields (type, notes, gear) can also be accepted here
-                    if your platform supports them.
-                </p>
 
                 <h4
                     style="
@@ -395,6 +420,17 @@ Content-Type: application/json
                 >
                     Create an activity
                 </h4>
+                <p style="font-size: 0.875rem; color: var(--muted-text)">
+                    Create an activity based on simple metadata, and return the
+                    new activity's ID in the response so tracekit can reference
+                    it later. Preferably, this endpoint would accept a file
+                    upload of the "source" data for an activity and do the magic
+                    based on that. See Strava's API for an example
+                    <a
+                        href="https://developers.strava.com/docs/reference/#api-Uploads-createUpload"
+                        >Strava Upload Activity (createUpload).</a
+                    >
+                </p>
                 <pre><code>POST /activities
 Authorization: Bearer &lt;api_key&gt;
 Content-Type: application/json
@@ -407,17 +443,15 @@ Content-Type: application/json
 }
 
 { "id": "xyz789" }</code></pre>
-                <p style="font-size: 0.875rem; color: var(--muted-text)">
-                    Return the new activity's ID in the response so tracekit can
-                    reference it later.
-                </p>
 
                 <h3>Optional endpoints</h3>
 
                 <p>
                     Gear support is optional. If your platform tracks equipment
                     (bikes, shoes, devices), two additional endpoints allow
-                    tracekit to read and assign gear:
+                    tracekit to read and assign gear. Tracekit can also build a
+                    gear mapping based on the gear attribute on activities if
+                    you don't maintain this as a table.
                 </p>
 
                 <pre><code>GET /gear
@@ -450,7 +484,10 @@ Content-Type: application/json
                 </p>
                 <ul>
                     <li>A link to your API documentation</li>
-                    <li>Confirmation that per-user API keys are available</li>
+                    <li>
+                        Confirmation that per-user API keys are available, or
+                        OAuth availability
+                    </li>
                     <li>Which of the optional endpoints (gear) you support</li>
                     <li>
                         <strong>An email address</strong> so we can reach out to
