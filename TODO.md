@@ -8,7 +8,6 @@ later:
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] user limits and rate limiting. TBD!
 - [ ] move app api keys from per-user to admin thing
-- [ ] move sessions to redis
 - [ ] user docs -> tracekit will not modify unless you click individual button
 - [ ] better top/right nav UI
 - [ ] outbound email sending for email verificaiton on login, and password reset
