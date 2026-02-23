@@ -9,8 +9,8 @@ later:
 - [ ] user limits and rate limiting. TBD!
 - [ ] paid subscription: user must have active $5/mo subscription with Stripe to pull/sync.
 - [ ] move app api keys from per-user to admin thing
-- [ ] sentry cloud for exceptions
 - [ ] move sessions to redis
+- [ ] user docs -> tracekit will not modify unless you click individual button
 - [ ] better top/right nav UI
 - [ ] outbound email sending for email verificaiton on login, and password reset
 - [ ] add new source data files to file data when found in other places

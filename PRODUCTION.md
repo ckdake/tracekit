@@ -86,6 +86,17 @@ SINGLE_USER_MODE=true
 
 Docker Compose picks this up automatically from the working directory. All provider credentials (Strava, RideWithGPS, Garmin) are stored in the database and configured through the Settings UI — no credentials belong in this file.
 
+### Optional: Sentry error monitoring
+
+Add your DSN to `.env` to enable Sentry. If unset, Sentry is completely disabled:
+
+```sh
+# Sentry error monitoring — leave unset to disable
+SENTRY_DSN=https://<key>@o<org>.ingest.us.sentry.io/<project>
+```
+
+Get the DSN from your Sentry project under **Settings → Client Keys (DSN)**.
+
 Tables are created automatically on every container start — the app retries the DB connection for up to 60 s, so containers can start in any order.
 
 ## Provider Authentication

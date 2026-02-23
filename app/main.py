@@ -5,6 +5,14 @@ import os
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
+# Sentry — initialise before anything else so all errors are captured
+# ---------------------------------------------------------------------------
+if _sentry_dsn := os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+
+    sentry_sdk.init(dsn=_sentry_dsn, send_default_pii=True)
+
+# ---------------------------------------------------------------------------
 # Re-exports kept for backward-compatibility with the test suite
 # ---------------------------------------------------------------------------
 from calendar_data import get_sync_calendar_data  # noqa: F401
@@ -64,6 +72,7 @@ def _configure_logging() -> None:
 
 
 _configure_logging()
+
 
 # ---------------------------------------------------------------------------
 # Flask app

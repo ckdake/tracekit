@@ -41,6 +41,8 @@ production = [
     "celery[redis]>=5.3",
     # Production WSGI server
     "gunicorn>=23.0",
+    # Error monitoring (opt-in via SENTRY_DSN env var)
+    "sentry-sdk[flask]>=2.0",
 ]
 
 [project.urls]
