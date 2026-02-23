@@ -3,6 +3,12 @@
 
 {% block body %}
 <div class="container-narrow">
+    <div class="card card-danger">
+        <h2>Sentry</h2>
+        <p class="field-help">Trigger a test error to verify Sentry is receiving events.</p>
+        <a href="/admin/sentry-test" class="btn btn-danger btn-sm">Trigger test error</a>
+    </div>
+
     <div class="card">
         <h2>Users</h2>
         <p class="field-help">New signups are blocked by default. Toggle a user to active to allow them to log in.</p>

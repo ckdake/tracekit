@@ -82,6 +82,13 @@ def index():
     return render_template("admin.html", page_name="Admin", user_data=user_data)
 
 
+@admin_bp.route("/admin/sentry-test")
+def sentry_test():
+    """Deliberately raise an exception to verify Sentry is wired up correctly."""
+    _require_admin()
+    raise RuntimeError("Sentry test error triggered from admin page")
+
+
 @admin_bp.route("/admin/users/<int:user_id>/toggle", methods=["POST"])
 def toggle_user(user_id: int):
     """Toggle a user's status between active and blocked. Returns JSON."""
