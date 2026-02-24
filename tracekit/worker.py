@@ -19,6 +19,7 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
 
     sentry_sdk.init(
         dsn=_sentry_dsn,
+        environment=os.getenv("SENTRY_ENV", "production"),
         send_default_pii=True,
         traces_sample_rate=1.0,
         integrations=[CeleryIntegration(monitor_beat_tasks=True)],
