@@ -39,6 +39,7 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
         profile_session_sample_rate=1.0,
         enable_logs=True,
         send_default_pii=True,
+        debug=True,
     )
 
 app_dir = Path(__file__).parent
