@@ -38,8 +38,10 @@ def post_fork(server, worker):
     if _sentry_dsn := os.environ.get("SENTRY_DSN"):
         import sentry_sdk
         from flask import has_request_context
+        from sentry_sdk.integrations.flask import FlaskIntegration
         from sentry_sdk.integrations.logging import LoggingIntegration
 
+        from app import app
         from tracekit.user_context import get_user_id
 
         # Logging integration: breadcrumbs for INFO, errors as events
@@ -78,5 +80,7 @@ def post_fork(server, worker):
             profile_lifecycle="trace",
             debug=True,  # optional, remove in high-volume production
         )
+
+        app.wsgi_app = FlaskIntegration().wsgi_middleware(app.wsgi_app)
 
     logging.info("Worker post_fork: Sentry initialized and logging configured")
