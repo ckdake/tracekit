@@ -95,6 +95,15 @@ def _set_user_context():
 
 
 @app.context_processor
+def inject_sentry():
+    return {
+        "sentry_dsn": _sentry_dsn,
+        "sentry_release": os.getenv("SENTRY_RELEASE"),
+        "sentry_env": os.getenv("SENTRY_ENV", "production"),
+    }
+
+
+@app.context_processor
 def inject_current_user():
     from auth_mode import is_single_user_mode
 
