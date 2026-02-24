@@ -5,6 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 later:
+- [ ] do migrations less. just on web task start, not on each worker
 - [ ] metrics to Sentry for providers/syncing
 - [ ] switch to flask login
 - [ ] longer caching of static pages, so cloudflare can cache. rotate filenames on build
