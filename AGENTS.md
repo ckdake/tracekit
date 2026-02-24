@@ -160,6 +160,28 @@ python -m tracekit sync-month 2025-11
 
 ---
 
+## Production vs local dev — Flask app runtime differences
+
+The Flask app runs differently in the two environments. Changes that affect observability or logging must account for both.
+
+| | Local dev (`python main.py`) | Production (gunicorn) |
+|---|---|---|
+| Entry point | `if __name__ == "__main__": app.run(...)` | `gunicorn ... main:app` |
+| Process model | Single process, threaded | Multi-process pre-fork (`--workers N`) |
+| Config file | n/a | `app/gunicorn.conf.py` |
+| Sentry init | Module-level `sentry_sdk.init()` in `main.py` | Same, **plus** re-init in `post_fork` hook (gunicorn forks from master after import; threads don't survive `fork()`, killing Sentry's background transport) |
+| Request logging | `logging.basicConfig(format="%(message)s")` takes effect | `basicConfig` is a no-op (gunicorn already owns root logger); `post_fork` resets handler formatters to `%(message)s` so JSON lines are clean |
+| Access log | n/a | `accesslog = None` in `gunicorn.conf.py` — `_log_request` in `main.py` already emits structured JSON per request |
+
+### Key rules for this gap
+
+- **Sentry tracing only works in production if `sentry_sdk.init()` is called inside `post_fork`** in `app/gunicorn.conf.py`. Without it, transactions are enqueued but never flushed (dead transport thread). Errors may still surface via a sync fallback, so error-only Sentry in prod with no traces is a symptom of this bug.
+- **Never rely on `logging.basicConfig()` taking effect under gunicorn.** Configure log formatting in `post_fork` instead.
+- **Do not add `--access-logfile` to the gunicorn CMD.** `_log_request` in `main.py` is the single source of request logs.
+- When adding new gunicorn CLI flags, prefer putting them in `app/gunicorn.conf.py` as Python assignments (e.g. `workers = 2`) so the config stays in one place.
+
+---
+
 ## Code style
 
 - **Formatter / linter**: Ruff (configured in `ruff.toml`). Pre-commit runs it automatically.
