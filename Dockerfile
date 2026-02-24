@@ -8,9 +8,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/home/tracekit/.local/bin:${PATH}"
 
-ARG GIT_SHA
-ENV SENTRY_RELEASE=${GIT_SHA}
-
 WORKDIR /app
 
 # Install minimal system deps (libpq-dev needed for psycopg2 when not using binary)
@@ -35,6 +32,9 @@ USER tracekit
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD curl -f http://127.0.0.1:5000/health || exit 1
+
+ARG GIT_SHA
+ENV SENTRY_RELEASE=${GIT_SHA}
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "--chdir", "/app/app", "main:app"]
