@@ -48,6 +48,7 @@ app = Flask(
     static_folder=str(app_dir / "static"),
 )
 
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 900  # 15 minutes
 app.secret_key = os.environ["SESSION_KEY"]
 
 
