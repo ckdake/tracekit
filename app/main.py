@@ -10,7 +10,7 @@ from db_init import _init_db, load_tracekit_config
 from flask import Flask, abort, g, has_request_context, redirect, request, session, url_for
 
 logging.basicConfig(
-    level=logging.DEBUG,  # todo change to INFO for prod
+    level=logging.INFO,
     stream=sys.stdout,
     format="%(message)s",
 )
@@ -39,7 +39,6 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
         profile_session_sample_rate=1.0,
         enable_logs=True,
         send_default_pii=True,
-        debug=True,
     )
 
 app_dir = Path(__file__).parent
