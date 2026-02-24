@@ -22,14 +22,6 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     # initialized by main.py — re-initializing here would clobber settings like
     # enable_logs=True and traces_sampler that are set there.
     if not sentry_sdk.get_client().is_active():
-        _integrations = [CeleryIntegration(monitor_beat_tasks=True)]
-        try:
-            from sentry_sdk.integrations.psycopg2 import Psycopg2Integration
-
-            _integrations.append(Psycopg2Integration())
-        except ImportError:
-            pass  # psycopg2 not installed (dev/SQLite)
-
         sentry_sdk.init(
             dsn=_sentry_dsn,
             release=os.getenv("SENTRY_RELEASE"),
@@ -40,8 +32,12 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
             enable_logs=True,
             send_default_pii=True,
             debug=os.getenv("SENTRY_DEBUG", "false").lower() == "true",
-            integrations=_integrations,
+            integrations=[CeleryIntegration(monitor_beat_tasks=True)],
         )
+
+        from tracekit.db import patch_peewee_for_sentry
+
+        patch_peewee_for_sentry()
 
 from celery import Celery
 from celery.schedules import crontab

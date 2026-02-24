@@ -43,3 +43,43 @@ def get_db():
     if not _configured:
         raise RuntimeError("Database not configured. Call configure_db() first.")
     return db
+
+
+def patch_peewee_for_sentry() -> None:
+    """Monkey-patch peewee.Database.execute_sql to emit Sentry DB spans.
+
+    Safe to call multiple times — subsequent calls are no-ops.
+    Call once after sentry_sdk.init() and before any DB queries.
+    """
+    try:
+        import peewee
+        from sentry_sdk.consts import SPANSTATUS
+        from sentry_sdk.tracing_utils import record_sql_queries
+    except ImportError:
+        return
+
+    if getattr(peewee.Database.execute_sql, "_sentry_patched", False):
+        return
+
+    _original = peewee.Database.execute_sql
+
+    def _execute_sql(self, sql, params=None):
+        with record_sql_queries(
+            cursor=None,
+            query=sql,
+            params_list=None,
+            paramstyle=None,
+            executemany=False,
+            span_origin="auto.db.peewee",
+        ) as span:
+            with peewee.__exception_wrapper__:
+                cursor = self.cursor()
+                try:
+                    cursor.execute(sql, params or ())
+                except Exception:
+                    span.set_status(SPANSTATUS.INTERNAL_ERROR)
+                    raise
+        return cursor
+
+    _execute_sql._sentry_patched = True
+    peewee.Database.execute_sql = _execute_sql
