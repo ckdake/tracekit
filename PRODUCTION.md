@@ -93,6 +93,8 @@ Add your DSN to `.env` to enable Sentry. If unset, Sentry is completely disabled
 ```sh
 # Sentry error monitoring — leave unset to disable
 SENTRY_DSN=https://<key>@o<org>.ingest.us.sentry.io/<project>
+SENTRY_ENV=production
+SENTRY_DEBUG=false
 ```
 
 Get the DSN from your Sentry project under **Settings → Client Keys (DSN)**.

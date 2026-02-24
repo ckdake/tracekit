@@ -7,7 +7,7 @@ Tracked here for visibility. PRs and issues welcome.
 later:
 - [ ] releases to Sentry, metrics
 - [ ] switch to flask login
-- [ ] allow caching of static pages, so cloudflare can cache. rotate filenames on build
+- [ ] longer caching of static pages, so cloudflare can cache. rotate filenames on build
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] user limits and rate limiting. TBD!
 - [ ] move app api keys from per-user to admin thing

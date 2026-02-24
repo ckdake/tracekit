@@ -33,7 +33,7 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
         profile_session_sample_rate=1.0,
         enable_logs=True,
         send_default_pii=True,
-        debug=True,
+        debug=os.getenv("SENTRY_DEBUG", "false"),
     )
 
 app_dir = Path(__file__).parent
@@ -80,6 +80,10 @@ def _set_user_context():
         user = User.get_by_id(uid)
         set_user_id(user.id)
         g.current_user = user
+        if _sentry_dsn:
+            import sentry_sdk
+
+            sentry_sdk.set_user({"id": str(user.id), "email": user.email})
     except Exception as exc:
         import peewee
 
@@ -131,11 +135,13 @@ def _require_auth():
 @app.after_request
 def _log_request(response):
     if request.path != "/health":
+        from tracekit.user_context import get_user_id
+
         log_record = {
             "method": request.method,
             "path": request.path,
             "status": response.status_code,
-            "user_id": g.get("uid", 0) if has_request_context() else 0,
+            "user_id": get_user_id() if has_request_context() else 0,
             "remote_addr": request.remote_addr,
             "user_agent": request.headers.get("User-Agent"),
         }
