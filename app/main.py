@@ -1,75 +1,46 @@
 """tracekit web application — entry point and blueprint registration."""
 
+import json
 import logging
 import os
+import sys
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Logging — configure first
-# ---------------------------------------------------------------------------
+from db_init import _init_db, load_tracekit_config
+from flask import Flask, abort, g, has_request_context, redirect, request, session, url_for
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+    level=logging.DEBUG,  # todo change to INFO for prod
+    stream=sys.stdout,
+    format="%(message)s",
 )
-
-_access_log = logging.getLogger("tracekit.access")
-
-# ---------------------------------------------------------------------------
-# Sentry — modern SDK 2.x setup (Flask + Gunicorn safe)
-# ---------------------------------------------------------------------------
 
 if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
-    from sentry_sdk.integrations.flask import FlaskIntegration
 
-    def _traces_sampler(sampling_context: dict) -> float:
+    def _traces_sampler(sampling_context):
         """
-        Drop healthcheck traces.
-        Sample everything else at 100%.
+        sampling_context is a dict with keys like:
+            "wsgi_environ": Flask WSGI environ
+            "parent_sampled": bool
+            "transaction_context": dict
         """
-        tx_ctx = sampling_context.get("transaction_context") or {}
-        name = tx_ctx.get("name")
-
-        if name == "api.health":
-            return 0.0
-
-        return 1.0
+        wsgi_environ = sampling_context.get("wsgi_environ") or {}
+        path = wsgi_environ.get("PATH_INFO", "")
+        if path == "/health":
+            return 0.0  # do not sample
+        return 1.0  # sample everything else
 
     sentry_sdk.init(
         dsn=_sentry_dsn,
         environment=os.getenv("SENTRY_ENV", "production"),
-        # Performance
         traces_sampler=_traces_sampler,
         profile_lifecycle="trace",
         profile_session_sample_rate=1.0,
-        # Logs (new 2.x logs product)
         enable_logs=True,
-        # Flask integration
-        integrations=[FlaskIntegration()],
-        # Attach user + request info automatically
         send_default_pii=True,
+        debug=True,
     )
-
-# ---------------------------------------------------------------------------
-# Re-exports kept for backward-compatibility with the test suite
-# ---------------------------------------------------------------------------
-
-from calendar_data import get_sync_calendar_data  # noqa: F401
-from db_init import (
-    _init_db,
-    load_tracekit_config,
-)
-from flask import Flask, abort, g, redirect, request, session, url_for
-from helpers import (
-    get_current_date_in_timezone,  # noqa: F401
-    get_database_info,  # noqa: F401
-    sort_providers,  # noqa: F401
-)
-
-# ---------------------------------------------------------------------------
-# Flask app
-# ---------------------------------------------------------------------------
 
 app_dir = Path(__file__).parent
 app = Flask(
@@ -80,10 +51,6 @@ app = Flask(
 
 app.secret_key = os.environ["SESSION_KEY"]
 
-# ---------------------------------------------------------------------------
-# User context + DB initialization
-# ---------------------------------------------------------------------------
-
 
 @app.before_request
 def _set_user_context():
@@ -92,7 +59,10 @@ def _set_user_context():
     from tracekit.user_context import set_user_id
 
     if is_single_user_mode():
+        from types import SimpleNamespace
+
         set_user_id(0)
+        g.current_user = SimpleNamespace(id=0, is_admin=True)
         return
 
     try:
@@ -129,7 +99,7 @@ def inject_current_user():
     from auth_mode import is_single_user_mode
 
     if is_single_user_mode():
-        return {"current_user": None, "single_user_mode": True}
+        return {"current_user": g.get("current_user"), "single_user_mode": True}
 
     return {
         "current_user": g.get("current_user"),
@@ -137,17 +107,12 @@ def inject_current_user():
     }
 
 
-# ---------------------------------------------------------------------------
-# Auth enforcement
-# ---------------------------------------------------------------------------
-
 _PUBLIC_ENDPOINTS = frozenset(
     {
         "auth.login",
         "auth.signup",
         "auth.logout",
         "api.health",
-        "pages.privacy",
         "stripe.webhook",
         "static",
     }
@@ -168,26 +133,20 @@ def _require_auth():
     return redirect(url_for("auth.login"))
 
 
-# ---------------------------------------------------------------------------
-# Request logging
-# ---------------------------------------------------------------------------
-
-
 @app.after_request
 def _log_request(response):
-    if request.endpoint != "api.health":
-        _access_log.info(
-            "%s %s %s",
-            request.method,
-            request.path,
-            response.status_code,
-        )
+    if request.path != "/health":
+        log_record = {
+            "method": request.method,
+            "path": request.path,
+            "status": response.status_code,
+            "user_id": g.get("uid", 0) if has_request_context() else 0,
+            "remote_addr": request.remote_addr,
+            "user_agent": request.headers.get("User-Agent"),
+        }
+        logging.info(json.dumps(log_record))
     return response
 
-
-# ---------------------------------------------------------------------------
-# Blueprint registration
-# ---------------------------------------------------------------------------
 
 from routes.admin import admin_bp
 from routes.api import api_bp

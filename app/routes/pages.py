@@ -11,12 +11,6 @@ from helpers import get_current_date_in_timezone
 pages_bp = Blueprint("pages", __name__)
 
 
-@pages_bp.route("/privacy")
-def privacy():
-    """Redirect to the privacy policy on the public site."""
-    return redirect("https://tracekit.app/privacy.html", code=301)
-
-
 @pages_bp.route("/settings")
 def settings():
     """Settings page — edit providers, timezone and debug flag."""

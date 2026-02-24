@@ -10,11 +10,9 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from main import (
-    app,
-    get_current_date_in_timezone,
-    get_sync_calendar_data,
-)
+from calendar_data import get_sync_calendar_data
+from helpers import get_current_date_in_timezone
+from main import app
 
 
 @pytest.fixture(autouse=True)

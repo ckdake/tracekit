@@ -12,12 +12,9 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from main import (
-    app,
-    get_database_info,
-    load_tracekit_config,
-    sort_providers,
-)
+from db_init import load_tracekit_config
+from helpers import get_database_info, sort_providers
+from main import app
 
 # ---------------------------------------------------------------------------
 # Shared config data used across fixtures

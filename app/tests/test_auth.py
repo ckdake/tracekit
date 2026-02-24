@@ -335,8 +335,3 @@ class TestHeaderAuthIcons:
 
     def test_auth_icons_present_on_settings_page(self, client, auth_database):
         assert b'href="/login"' in client.get("/settings").data
-
-    def test_privacy_redirects_to_external_site(self, client, auth_database):
-        response = client.get("/privacy")
-        assert response.status_code == 301
-        assert b"privacy.html" in response.data
