@@ -90,18 +90,6 @@ def sentry_test():
     raise RuntimeError("Sentry test error triggered from admin page")
 
 
-@admin_bp.route("/admin/sentry-log-test")
-def sentry_log_test():
-    """Emit a test log record to verify Sentry Logs is receiving entries."""
-    import logging
-
-    _require_admin()
-    logging.getLogger("tracekit.admin").info("Sentry log test triggered from admin page")
-    from flask import jsonify
-
-    return jsonify({"status": "log sent"})
-
-
 @admin_bp.route("/admin/users/<int:user_id>/toggle", methods=["POST"])
 def toggle_user(user_id: int):
     """Toggle a user's status between active and blocked. Returns JSON."""
