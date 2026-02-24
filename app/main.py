@@ -27,13 +27,14 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
 
     sentry_sdk.init(
         dsn=_sentry_dsn,
+        release=os.getenv("SENTRY_RELEASE"),
         environment=os.getenv("SENTRY_ENV", "production"),
         traces_sampler=_traces_sampler,
         profile_lifecycle="trace",
         profile_session_sample_rate=1.0,
         enable_logs=True,
         send_default_pii=True,
-        debug=os.getenv("SENTRY_DEBUG", "false"),
+        debug=os.getenv("SENTRY_DEBUG", "false").lower() == "true",
     )
 
 app_dir = Path(__file__).parent

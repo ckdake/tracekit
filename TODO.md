@@ -5,7 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 later:
-- [ ] releases to Sentry, metrics
+- [ ] metrics to Sentry for providers/syncing
 - [ ] switch to flask login
 - [ ] longer caching of static pages, so cloudflare can cache. rotate filenames on build
 - [ ] refactor auth to make it harder to write SQL that bypasses.

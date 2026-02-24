@@ -8,6 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/home/tracekit/.local/bin:${PATH}"
 
+ARG GIT_SHA
+ENV SENTRY_RELEASE=${GIT_SHA}
+
 WORKDIR /app
 
 # Install minimal system deps (libpq-dev needed for psycopg2 when not using binary)
