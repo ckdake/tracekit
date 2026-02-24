@@ -19,12 +19,6 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
 
     def _traces_sampler(sampling_context):
-        """
-        sampling_context is a dict with keys like:
-            "wsgi_environ": Flask WSGI environ
-            "parent_sampled": bool
-            "transaction_context": dict
-        """
         wsgi_environ = sampling_context.get("wsgi_environ") or {}
         path = wsgi_environ.get("PATH_INFO", "")
         if path == "/health":
