@@ -5,63 +5,59 @@ import os
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Logging — configure first so every subsequent import sees the right level
+# Logging — configure first
 # ---------------------------------------------------------------------------
 
-
-class _UserIdFilter(logging.Filter):
-    """Injects ``user_id`` into every log record."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        try:
-            from flask import g as flask_g
-            from flask import has_request_context
-
-            record.user_id = flask_g.get("uid", 0) if has_request_context() else 0
-        except Exception:
-            record.user_id = "?"
-        return True
-
-
-_handler = logging.StreamHandler()
-_handler.addFilter(_UserIdFilter())
-_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s uid=%(user_id)s %(name)s: %(message)s"))
-logging.root.addHandler(_handler)
-logging.root.setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+)
 
 _access_log = logging.getLogger("tracekit.access")
 
 # ---------------------------------------------------------------------------
-# Sentry — initialise after logging so its handler inherits the INFO level
+# Sentry — modern SDK 2.x setup (Flask + Gunicorn safe)
 # ---------------------------------------------------------------------------
 
 if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
 
     def _traces_sampler(sampling_context: dict) -> float:
-        request = sampling_context.get("request") or {}
-        url = request.get("url", "")
+        """
+        Drop healthcheck traces.
+        Sample everything else at 100%.
+        """
+        tx_ctx = sampling_context.get("transaction_context") or {}
+        name = tx_ctx.get("name")
 
-        if url.endswith("/health"):
+        if name == "api.health":
             return 0.0
 
         return 1.0
 
     sentry_sdk.init(
         dsn=_sentry_dsn,
-        send_default_pii=True,
+        environment=os.getenv("SENTRY_ENV", "production"),
+        # Performance
         traces_sampler=_traces_sampler,
-        enable_logs=True,
-        profile_session_sample_rate=1.0,
         profile_lifecycle="trace",
+        profile_session_sample_rate=1.0,
+        # Logs (new 2.x logs product)
+        enable_logs=True,
+        # Flask integration
+        integrations=[FlaskIntegration()],
+        # Attach user + request info automatically
+        send_default_pii=True,
     )
 
 # ---------------------------------------------------------------------------
 # Re-exports kept for backward-compatibility with the test suite
 # ---------------------------------------------------------------------------
+
 from calendar_data import get_sync_calendar_data  # noqa: F401
 from db_init import (
-    _init_db,  # noqa: F401
+    _init_db,
     load_tracekit_config,
 )
 from flask import Flask, abort, g, redirect, request, session, url_for
@@ -85,7 +81,7 @@ app = Flask(
 app.secret_key = os.environ["SESSION_KEY"]
 
 # ---------------------------------------------------------------------------
-# Template context — inject current_user into every template
+# User context + DB initialization
 # ---------------------------------------------------------------------------
 
 
@@ -95,21 +91,11 @@ def _set_user_context():
 
     from tracekit.user_context import set_user_id
 
-    # Initialise g.uid so the log filter always has a value for this request,
-    # even if we return early or abort below.
-    g.uid = 0
-
     if is_single_user_mode():
         set_user_id(0)
         return
 
-    # Ensure the DB is initialised and connected before any route that may query
-    # it — including unauthenticated routes like /login and /signup.  This
-    # matters for fresh Gunicorn worker processes where _db_initialized is still
-    # False.  If the DB is genuinely unavailable, abort with 503.
     try:
-        from db_init import _init_db
-
         from tracekit.db import get_db
 
         _init_db()
@@ -119,9 +105,6 @@ def _set_user_context():
 
     uid = session.get("user_id")
     if not uid:
-        # Unauthenticated request — explicitly reset to 0.  ContextVars are not
-        # reset between requests in a single-threaded WSGI process, so without
-        # this a previous authenticated request's user_id would bleed through.
         set_user_id(0)
         return
 
@@ -131,19 +114,13 @@ def _set_user_context():
 
         user = User.get_by_id(uid)
         set_user_id(user.id)
-        g.uid = user.id
-        # Cache on g so the context processor never needs to re-query the DB.
-        # Tracekit.cleanup() closes the connection before templates render, so a
-        # second DB round-trip in inject_current_user() would intermittently fail.
         g.current_user = user
     except Exception as exc:
         import peewee
 
         if isinstance(exc, peewee.DoesNotExist):
-            # The user row was deleted — log out cleanly.
             session.pop("user_id", None)
         else:
-            # Any other DB error: abort rather than writing data under user_id=0.
             abort(503)
 
 
@@ -151,14 +128,18 @@ def _set_user_context():
 def inject_current_user():
     from auth_mode import is_single_user_mode
 
-    single_user_mode = is_single_user_mode()
-    if single_user_mode:
+    if is_single_user_mode():
         return {"current_user": None, "single_user_mode": True}
 
-    # Use the user cached by before_request — no additional DB query needed.
-    current_user = g.get("current_user")
-    return {"current_user": current_user, "single_user_mode": False}
+    return {
+        "current_user": g.get("current_user"),
+        "single_user_mode": False,
+    }
 
+
+# ---------------------------------------------------------------------------
+# Auth enforcement
+# ---------------------------------------------------------------------------
 
 _PUBLIC_ENDPOINTS = frozenset(
     {
@@ -175,7 +156,6 @@ _PUBLIC_ENDPOINTS = frozenset(
 
 @app.before_request
 def _require_auth():
-    """Redirect unauthenticated users to /login in multi-user mode."""
     from auth_mode import is_single_user_mode
 
     if is_single_user_mode():
@@ -184,13 +164,24 @@ def _require_auth():
         return
     if g.get("current_user"):
         return
+
     return redirect(url_for("auth.login"))
+
+
+# ---------------------------------------------------------------------------
+# Request logging
+# ---------------------------------------------------------------------------
 
 
 @app.after_request
 def _log_request(response):
     if request.endpoint != "api.health":
-        _access_log.info("%s %s %s", request.method, request.path, response.status_code)
+        _access_log.info(
+            "%s %s %s",
+            request.method,
+            request.path,
+            response.status_code,
+        )
     return response
 
 
@@ -221,7 +212,7 @@ app.register_blueprint(strava_bp)
 app.register_blueprint(stripe_bp)
 
 # ---------------------------------------------------------------------------
-# CLI entry point
+# CLI entry point (dev only)
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -238,8 +229,9 @@ if __name__ == "__main__":
     print("  Health:       http://localhost:5000/health")
     print("\nPress Ctrl+C to stop")
 
-    try:
-        app.run(debug=config.get("debug", False), host="0.0.0.0", port=5000, threaded=True)
-    except Exception as e:
-        print(f"Server failed to start: {e}")
-        exit(1)
+    app.run(
+        debug=config.get("debug", False),
+        host="0.0.0.0",
+        port=5000,
+        threaded=True,
+    )
