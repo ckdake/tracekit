@@ -25,11 +25,32 @@ class RideWithGPSProvider(FitnessProvider):
         self.password = (self.config or {}).get("password", "")
         self.apikey = (self.config or {}).get("apikey", "")
 
-        self.client = RideWithGPS(apikey=self.apikey, cache=True)
+        self._client: RideWithGPS | None = None
+        self._userid = None
+        self._user_info = None
 
-        user_info = self.client.authenticate(self.username, self.password)
-        self.userid = getattr(user_info, "id", None)
-        self.user_info = user_info
+    def _ensure_authenticated(self):
+        """Authenticate lazily — only when a live API call is actually needed."""
+        if self._client is None:
+            self._client = RideWithGPS(apikey=self.apikey, cache=True)
+            user_info = self._client.authenticate(self.username, self.password)
+            self._userid = getattr(user_info, "id", None)
+            self._user_info = user_info
+
+    @property
+    def client(self) -> RideWithGPS:
+        self._ensure_authenticated()
+        return self._client  # type: ignore[return-value]
+
+    @property
+    def userid(self):
+        self._ensure_authenticated()
+        return self._userid
+
+    @property
+    def user_info(self):
+        self._ensure_authenticated()
+        return self._user_info
 
     @property
     def provider_name(self) -> str:
