@@ -17,13 +17,18 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
     from sentry_sdk.integrations.celery import CeleryIntegration
 
-    sentry_sdk.init(
-        dsn=_sentry_dsn,
-        environment=os.getenv("SENTRY_ENV", "production"),
-        send_default_pii=True,
-        traces_sample_rate=1.0,
-        integrations=[CeleryIntegration(monitor_beat_tasks=True)],
-    )
+    # Only initialize when running as a Celery worker. When this module is
+    # imported by the Flask web process (to dispatch tasks), Sentry is already
+    # initialized by main.py — re-initializing here would clobber settings like
+    # enable_logs=True and traces_sampler that are set there.
+    if not sentry_sdk.get_client().is_active():
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            environment=os.getenv("SENTRY_ENV", "production"),
+            send_default_pii=True,
+            traces_sample_rate=1.0,
+            integrations=[CeleryIntegration(monitor_beat_tasks=True)],
+        )
 
 from celery import Celery
 from celery.schedules import crontab
