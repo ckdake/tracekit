@@ -1,37 +1,56 @@
+"""
+Gunicorn configuration for Tracekit — production-safe Sentry + structured JSON logging.
+
+Key points:
+1. post_fork ensures each worker has a fresh Sentry SDK background thread.
+2. Clears root handlers so our JSON logs are clean and not prefixed by Gunicorn.
+3. Adds user_id to Sentry breadcrumbs.
+4. Skips /health endpoints for traces, transactions, and profiling.
+"""
+
 import logging
 import os
 
-from flask import has_request_context
-
+# -------------------------
+# Gunicorn access log
+# -------------------------
+# We emit our own JSON logs in main.py's _log_request, so disable Gunicorn's default.
 accesslog = None
-errorlog = "-"
 
 
+# -------------------------
+# Worker post-fork hook
+# -------------------------
 def post_fork(server, worker):
     """
-    Re-initialize Sentry in each Gunicorn worker.
-    Adds structured logging, user_id in breadcrumbs, and filters health checks.
+    Called after each Gunicorn worker is forked.
+    Sets up Sentry and logging correctly in the worker.
     """
-    import sentry_sdk
-    from sentry_sdk.integrations.logging import LoggingIntegration
-
-    from tracekit.user_context import get_user_id  # your ContextVar accessor
-
-    # Fix root logger to emit bare JSON lines
+    # 1. Clean and configure root logger for JSON logs
     root = logging.getLogger()
-    for handler in root.handlers:
-        handler.setFormatter(logging.Formatter("%(message)s"))
+    root.handlers.clear()
+    root.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))  # bare JSON lines
+    root.addHandler(handler)
 
+    # 2. Initialize Sentry in the worker
     if _sentry_dsn := os.environ.get("SENTRY_DSN"):
+        import sentry_sdk
+        from flask import has_request_context
+        from sentry_sdk.integrations.logging import LoggingIntegration
+
+        from tracekit.user_context import get_user_id
+
+        # Logging integration: breadcrumbs for INFO, errors as events
         sentry_logging = LoggingIntegration(
-            level=logging.INFO,  # breadcrumbs for INFO+
-            event_level=logging.ERROR,  # only errors as events
+            level=logging.INFO,  # capture log breadcrumbs
+            event_level=logging.ERROR,  # errors are sent as events
         )
 
-        # Add user_id to every breadcrumb
+        # Attach user_id to all breadcrumbs
         def before_breadcrumb(breadcrumb, hint):
             try:
-                # Only attach user_id if in request context
                 if has_request_context():
                     breadcrumb["data"] = breadcrumb.get("data", {})
                     breadcrumb["data"]["user_id"] = get_user_id()
@@ -39,7 +58,7 @@ def post_fork(server, worker):
                 pass
             return breadcrumb
 
-        # Filter /health from traces
+        # Skip traces/profiling for /health
         def traces_sampler(sampling_context):
             wsgi_environ = sampling_context.get("wsgi_environ") or {}
             path = wsgi_environ.get("PATH_INFO", "")
@@ -53,7 +72,11 @@ def post_fork(server, worker):
             integrations=[sentry_logging],
             traces_sampler=traces_sampler,
             before_breadcrumb=before_breadcrumb,
-            profile_lifecycle="trace",
-            profile_session_sample_rate=1.0,
+            enable_logs=True,
             send_default_pii=True,
+            profile_session_sample_rate=1.0,
+            profile_lifecycle="trace",
+            debug=True,  # optional, remove in high-volume production
         )
+
+    logging.info("Worker post_fork: Sentry initialized and logging configured")
