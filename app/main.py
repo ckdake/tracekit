@@ -39,20 +39,18 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
     import sentry_sdk
 
     def _traces_sampler(sampling_context: dict) -> float:
-        if sampling_context.get("wsgi_environ", {}).get("PATH_INFO") == "/health":
-            return 0.0
-        return 1.0
+        request = sampling_context.get("request") or {}
+        url = request.get("url", "")
 
-    def _before_send_transaction(event, hint):
-        if event.get("transaction") == "api.health":
-            return None
-        return event
+        if url.endswith("/health"):
+            return 0.0
+
+        return 1.0
 
     sentry_sdk.init(
         dsn=_sentry_dsn,
         send_default_pii=True,
         traces_sampler=_traces_sampler,
-        before_send_transaction=_before_send_transaction,
         enable_logs=True,
         profile_session_sample_rate=1.0,
         profile_lifecycle="trace",
