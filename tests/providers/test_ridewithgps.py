@@ -24,10 +24,10 @@ def patch_rwgps_activities(monkeypatch, mock_user_info):
     """Patch RideWithGPSProvider.__init__ to not require env vars and set mock client."""
 
     def fake_init(self, config=None):
-        self.client = MagicMock()
-        self.client.authenticate.return_value = mock_user_info
-        self.userid = 3052056
-        self.user_info = mock_user_info
+        self._client = MagicMock()
+        self._client.authenticate.return_value = mock_user_info
+        self._userid = 3052056
+        self._user_info = mock_user_info
 
     monkeypatch.setattr(RideWithGPSProvider, "__init__", fake_init)
 
