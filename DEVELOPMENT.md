@@ -101,13 +101,13 @@ pre-commit run --all-files
 
 ## Web Dashboard
 
-tracekit includes a local Flask web dashboard for inspecting configuration and database status:
+tracekit includes a Flask web dashboard for configuration and data management:
 
 ```bash
 ./scripts/run-dev.sh
 ```
 
-Visit http://localhost:5000 to see:
+On first boot, visit http://localhost:5000/signup to create the admin account (the first user to register is automatically the admin and active; subsequent users start as blocked until the admin activates them). Then visit http://localhost:5000 to see:
 - Configuration status (loaded from the database; visit `/settings` to edit)
 - Provider settings (enabled/disabled, priorities)
 - Database information (size, tables, row counts)
@@ -124,6 +124,7 @@ A pre-built image is available at `ghcr.io/ckdake/tracekit:latest`.
 docker pull ghcr.io/ckdake/tracekit:latest
 
 # Run the web dashboard (config stored in DB; no config file needed)
+# On first boot, visit http://localhost:5000/signup to create the admin account.
 docker run --rm -p 5000:5000 \
   ghcr.io/ckdake/tracekit:latest
 

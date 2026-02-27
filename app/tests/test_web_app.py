@@ -51,13 +51,27 @@ def reset_db_state():
 
 
 @pytest.fixture
-def client():
-    """Create a test client for the Flask app (single-user mode, no auth required)."""
-    os.environ["SINGLE_USER_MODE"] = "true"
+def client(temp_database):
+    """Create an authenticated test client with a seeded admin user."""
+    from models.user import User
+    from werkzeug.security import generate_password_hash
+
+    from tracekit.db import get_db
+
+    db = get_db()
+    db.create_tables([User])
+    user = User.create(
+        email="testadmin@example.com",
+        password_hash=generate_password_hash("testpass"),
+        status="active",
+    )
+
     app.config["TESTING"] = True
-    with app.test_client() as client:
-        yield client
-    os.environ.pop("SINGLE_USER_MODE", None)
+    with app.test_client() as c:
+        with c.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+            sess["_fresh"] = True
+        yield c
 
 
 @pytest.fixture

@@ -1,8 +1,10 @@
 """Tests for the month sync-review web routes."""
 
+import contextlib
 import json
 import os
 import sys
+import tempfile
 from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
@@ -29,12 +31,57 @@ def reset_db_state():
 
 
 @pytest.fixture
-def client():
-    os.environ["SINGLE_USER_MODE"] = "true"
+def temp_database(monkeypatch):
+    """Minimal temporary SQLite database for auth support."""
+    import tracekit.appconfig as tcfg
+    import tracekit.db as tdb
+    from tracekit.appconfig import save_config
+    from tracekit.database import get_all_models, migrate_tables
+    from tracekit.db import configure_db
+
+    monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
+
+    with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
+        db_path = f.name
+
+    tdb._configured = False
+    configure_db(db_path)
+    db = tdb.get_db()
+    db.connect(reuse_if_open=True)
+    migrate_tables(get_all_models())
+    save_config(_CONFIG)
+
+    yield db_path
+
+    with contextlib.suppress(Exception):
+        db.close()
+    tdb._configured = False
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+
+@pytest.fixture
+def client(temp_database):
+    """Create an authenticated test client with a seeded admin user."""
+    from models.user import User
+    from werkzeug.security import generate_password_hash
+
+    from tracekit.db import get_db
+
+    db = get_db()
+    db.create_tables([User])
+    user = User.create(
+        email="testadmin@example.com",
+        password_hash=generate_password_hash("testpass"),
+        status="active",
+    )
+
     app.config["TESTING"] = True
-    with app.test_client() as client:
-        yield client
-    os.environ.pop("SINGLE_USER_MODE", None)
+    with app.test_client() as c:
+        with c.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+            sess["_fresh"] = True
+        yield c
 
 
 _CONFIG = {

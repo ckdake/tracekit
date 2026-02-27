@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 from db_init import _ensure_db_connected, load_tracekit_config
-from flask import Flask, abort, g, has_request_context, redirect, request, session, url_for
+from flask import Flask, abort, redirect, request, url_for
+from flask_login import LoginManager, current_user
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,70 +52,19 @@ app = Flask(
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 900  # 15 minutes
 app.secret_key = os.environ["SESSION_KEY"]
 
+login_manager = LoginManager()
+login_manager.login_view = "auth.login"
+login_manager.init_app(app)
 
-@app.before_request
-def _set_user_context():
-    from auth_mode import is_single_user_mode
 
-    from tracekit.user_context import set_user_id
-
-    if is_single_user_mode():
-        from types import SimpleNamespace
-
-        set_user_id(0)
-        g.current_user = SimpleNamespace(id=0, is_admin=True)
-        return
+@login_manager.user_loader
+def _load_user(user_id: str):
+    from models.user import User
 
     try:
-        _ensure_db_connected()
+        return User.get_by_id(int(user_id))
     except Exception:
-        abort(503)
-
-    uid = session.get("user_id")
-    if not uid:
-        set_user_id(0)
-        return
-
-    try:
-        import peewee
-        from models.user import User
-
-        user = User.get_by_id(uid)
-        set_user_id(user.id)
-        g.current_user = user
-        if _sentry_dsn:
-            import sentry_sdk
-
-            sentry_sdk.set_user({"id": str(user.id), "email": user.email})
-    except Exception as exc:
-        import peewee
-
-        if isinstance(exc, peewee.DoesNotExist):
-            session.pop("user_id", None)
-        else:
-            abort(503)
-
-
-@app.context_processor
-def inject_sentry():
-    return {
-        "sentry_dsn": _sentry_dsn,
-        "sentry_release": os.getenv("SENTRY_RELEASE"),
-        "sentry_env": os.getenv("SENTRY_ENV", "production"),
-    }
-
-
-@app.context_processor
-def inject_current_user():
-    from auth_mode import is_single_user_mode
-
-    if is_single_user_mode():
-        return {"current_user": g.get("current_user"), "single_user_mode": True}
-
-    return {
-        "current_user": g.get("current_user"),
-        "single_user_mode": False,
-    }
+        return None
 
 
 _PUBLIC_ENDPOINTS = frozenset(
@@ -130,17 +80,38 @@ _PUBLIC_ENDPOINTS = frozenset(
 
 
 @app.before_request
-def _require_auth():
-    from auth_mode import is_single_user_mode
+def _setup_request():
+    """Connect DB, set tracekit user context, enforce authentication."""
+    from tracekit.user_context import set_user_id
 
-    if is_single_user_mode():
-        return
-    if request.endpoint in _PUBLIC_ENDPOINTS:
-        return
-    if g.get("current_user"):
-        return
+    # Connect DB for all endpoints that may need it (skip health + static)
+    if request.endpoint not in {"api.health", "static"}:
+        try:
+            _ensure_db_connected()
+        except Exception:
+            abort(503)
 
-    return redirect(url_for("auth.login"))
+    # Set tracekit user context (accessing current_user triggers user_loader)
+    uid = current_user.id if current_user.is_authenticated else 0
+    set_user_id(uid)
+
+    if uid and _sentry_dsn:
+        import sentry_sdk
+
+        sentry_sdk.set_user({"id": str(uid), "email": current_user.email})
+
+    # Enforce authentication for protected endpoints
+    if request.endpoint not in _PUBLIC_ENDPOINTS and (not current_user.is_authenticated or not current_user.is_active):
+        return redirect(url_for("auth.login"))
+
+
+@app.context_processor
+def inject_sentry():
+    return {
+        "sentry_dsn": _sentry_dsn,
+        "sentry_release": os.getenv("SENTRY_RELEASE"),
+        "sentry_env": os.getenv("SENTRY_ENV", "production"),
+    }
 
 
 @app.after_request
@@ -152,7 +123,7 @@ def _log_request(response):
             "method": request.method,
             "path": request.path,
             "status": response.status_code,
-            "user_id": get_user_id() if has_request_context() else 0,
+            "user_id": get_user_id(),
             "remote_addr": request.remote_addr,
             "user_agent": request.headers.get("User-Agent"),
         }

@@ -2,15 +2,15 @@
 
 import json
 
-from flask import Blueprint, abort, g, jsonify, render_template
+from flask import Blueprint, abort, jsonify, render_template
+from flask_login import current_user
 
 admin_bp = Blueprint("admin", __name__)
 
 
 def _require_admin():
     """Abort with 403 if the current user is not the admin."""
-    user = g.get("current_user")
-    if not user or not user.is_admin:
+    if not current_user.is_authenticated or not current_user.is_admin:
         abort(403)
 
 

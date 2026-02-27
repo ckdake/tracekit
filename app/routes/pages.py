@@ -5,7 +5,8 @@ from datetime import UTC, datetime
 
 import pytz
 from db_init import load_tracekit_config
-from flask import Blueprint, g, redirect, render_template
+from flask import Blueprint, redirect, render_template
+from flask_login import current_user
 from helpers import get_current_date_in_timezone
 
 pages_bp = Blueprint("pages", __name__)
@@ -21,12 +22,10 @@ def settings():
     subscription_status = None
     subscription_end = None
 
-    if stripe_enabled:
-        user = g.get("current_user")
-        if user:
-            subscription_status = user.stripe_subscription_status
-            if user.stripe_subscription_end:
-                subscription_end = datetime.fromtimestamp(user.stripe_subscription_end, tz=UTC).strftime("%Y-%m-%d")
+    if stripe_enabled and current_user.is_authenticated:
+        subscription_status = current_user.stripe_subscription_status
+        if current_user.stripe_subscription_end:
+            subscription_end = datetime.fromtimestamp(current_user.stripe_subscription_end, tz=UTC).strftime("%Y-%m-%d")
 
     return render_template(
         "settings.html",

@@ -1,6 +1,7 @@
 """Authentication routes — signup, login, logout."""
 
-from flask import Blueprint, redirect, render_template, request, session, url_for
+from flask import Blueprint, redirect, render_template, request, url_for
+from flask_login import login_user, logout_user
 from models.user import User
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -34,14 +35,7 @@ def signup():
                 # The first user (admin) is active immediately; all others are blocked.
                 status="active" if is_first_user else "blocked",
             )
-            session["user_id"] = user.id
-            if is_first_user:
-                from data_claim import claim_unscoped_data
-
-                from tracekit.user_context import set_user_id
-
-                set_user_id(user.id)
-                claim_unscoped_data(user.id)
+            login_user(user)
             return redirect(url_for("pages.index"))
 
         return render_template("signup.html", error=error, email=email)
@@ -72,7 +66,7 @@ def login():
                 error = "Invalid email or password."
 
         if error is None and user is not None:
-            session["user_id"] = user.id
+            login_user(user)
             return redirect(url_for("pages.index"))
 
         return render_template("login.html", error=error, email=email)
@@ -83,5 +77,5 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     """Log the current user out."""
-    session.pop("user_id", None)
+    logout_user()
     return redirect(url_for("pages.index"))

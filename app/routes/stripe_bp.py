@@ -4,7 +4,8 @@ import logging
 import os
 
 import stripe
-from flask import Blueprint, abort, g, jsonify, request
+from flask import Blueprint, abort, jsonify, request
+from flask_login import current_user
 
 log = logging.getLogger(__name__)
 
@@ -45,19 +46,15 @@ def create_checkout_session():
     if not price_id:
         return jsonify({"error": f"Price ID for plan '{plan}' is not configured."}), 500
 
-    user = g.get("current_user")
-    if not user:
-        abort(401)
-
     s = _get_stripe()
     app_url = _app_url()
 
     # Reuse an existing Stripe customer if we have one
     customer_kwargs = {}
-    if user.stripe_customer_id:
-        customer_kwargs["customer"] = user.stripe_customer_id
+    if current_user.stripe_customer_id:
+        customer_kwargs["customer"] = current_user.stripe_customer_id
     else:
-        customer_kwargs["customer_email"] = user.email
+        customer_kwargs["customer_email"] = current_user.email
 
     try:
         session = s.checkout.Session.create(
@@ -84,11 +81,7 @@ def customer_portal():
     if not _stripe_enabled():
         abort(404)
 
-    user = g.get("current_user")
-    if not user:
-        abort(401)
-
-    if not user.stripe_customer_id:
+    if not current_user.stripe_customer_id:
         return jsonify({"error": "No Stripe customer found for your account."}), 400
 
     s = _get_stripe()
@@ -96,7 +89,7 @@ def customer_portal():
 
     try:
         session = s.billing_portal.Session.create(
-            customer=user.stripe_customer_id,
+            customer=current_user.stripe_customer_id,
             return_url=f"{app_url}/settings",
         )
     except stripe.StripeError as exc:

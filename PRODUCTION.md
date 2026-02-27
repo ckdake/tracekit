@@ -78,10 +78,6 @@ SESSION_KEY=change_me_to_a_long_random_string
 # PostgreSQL — used by both the postgres container and the tracekit container.
 # Choose a strong random password; it never needs to leave this file.
 POSTGRES_PASSWORD=change_me_to_a_strong_random_password
-
-# If you're running personally and dont want user/password, set this to true. If this
-# is not set to true, you'll be required to create account, login, etc.
-SINGLE_USER_MODE=true
 ```
 
 Docker Compose picks this up automatically from the working directory. All provider credentials (Strava, RideWithGPS, Garmin) are stored in the database and configured through the Settings UI — no credentials belong in this file.
@@ -179,7 +175,7 @@ cd /opt/tracekit
 docker compose up -d
 ```
 
-On first boot, visit `http://your-domain/settings` to configure your timezone, enabled providers, and credentials. Configuration is stored in PostgreSQL and persists across restarts.
+On first boot, visit `http://your-domain/signup` to create the admin account (the first user to register is automatically the admin). Then visit `/settings` to configure your timezone, enabled providers, and credentials. Configuration is stored in PostgreSQL and persists across restarts.
 
 The compose file binds to `127.0.0.1:5000` only, so the port is **not** publicly exposed. Your reverse proxy connects to it internally.
 

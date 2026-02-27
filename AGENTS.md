@@ -184,6 +184,12 @@ The Flask app runs differently in the two environments. Changes that affect obse
 
 ---
 
+## Authentication
+
+Auth is enforced globally in `app/main.py::_setup_request()` — **do not add `@login_required` to individual routes**. In route handlers and templates, access the current user via `current_user` from `flask_login` (not `g.current_user`). The `User` model lives in `app/models/user.py` and is intentionally absent from `tracekit/database.py::get_all_models()`.
+
+---
+
 ## API design conventions
 
 - **Collection vs item**: follow the REST pattern — `/api/calendar` is the collection, `/api/calendar/YYYY-MM` is the item. New bulk endpoints go on the collection URL with query params, not a separate path.
