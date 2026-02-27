@@ -92,6 +92,15 @@ class Tracekit:
             if token:
                 enhanced_config = provider_config.copy()
                 enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
+                # When not using personal credentials, overlay system-level client credentials
+                # from environment variables so token refresh uses the operator's Strava app.
+                if not provider_config.get("use_personal_credentials"):
+                    sys_client_id = os.environ.get("STRAVA_CLIENT_ID", "").strip()
+                    sys_client_secret = os.environ.get("STRAVA_CLIENT_SECRET", "").strip()
+                    if sys_client_id:
+                        enhanced_config["client_id"] = sys_client_id
+                    if sys_client_secret:
+                        enhanced_config["client_secret"] = sys_client_secret
                 self._strava = StravaProvider(
                     token,
                     refresh_token=provider_config.get("refresh_token") or None,
@@ -110,10 +119,17 @@ class Tracekit:
             and provider_config.get("enabled", False)
             and provider_config.get("email", "").strip()
             and provider_config.get("password", "").strip()
-            and provider_config.get("apikey", "").strip()
         ):
+            # Resolve apikey: personal credential if opted in, otherwise system env var.
+            if provider_config.get("use_personal_credentials"):
+                apikey = provider_config.get("apikey", "").strip()
+            else:
+                apikey = os.environ.get("RIDEWITHGPS_KEY", "").strip() or provider_config.get("apikey", "").strip()
+            if not apikey:
+                return None
             enhanced_config = provider_config.copy()
             enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
+            enhanced_config["apikey"] = apikey
             self._ridewithgps = RideWithGPSProvider(config=enhanced_config)
         return self._ridewithgps
 

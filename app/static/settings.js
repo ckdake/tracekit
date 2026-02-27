@@ -15,19 +15,23 @@ function showStatus(text, type = 'ok') {
 const PROVIDER_META = {
     strava: {
         label: 'Strava', sync_equipment: true, sync_name: true,
-        instructions: 'Enter your Strava API client id and secret, save, then click <strong>Connect with Strava</strong> to authorize access.',
-        text_fields: [
+        // No text_fields by default — client_id/secret come from system credentials.
+        // They are revealed in personal_credential_fields when the toggle is on.
+        text_fields: [],
+        personal_credential_fields: [
             { key: 'client_id',     label: 'client id' },
             { key: 'client_secret', label: 'client secret', field_type: 'password' },
         ],
     },
     ridewithgps: {
         label: 'RideWithGPS', sync_equipment: true, sync_name: true,
-        instructions: 'Enter your RideWithGPS email, password, and API key. All credentials are stored in the database — no CLI step required.',
+        instructions: 'Enter your RideWithGPS email and password.',
         text_fields: [
             { key: 'email',    label: 'email' },
             { key: 'password', label: 'password', field_type: 'password' },
-            { key: 'apikey',   label: 'api key',  field_type: 'password' },
+        ],
+        personal_credential_fields: [
+            { key: 'apikey', label: 'api key', field_type: 'password' },
         ],
     },
     garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,
@@ -191,24 +195,100 @@ function makeProviderCard(name, data) {
         card.appendChild(note);
     }
 
+    // Strava: auth button appears before the personal-credentials section so the
+    // card looks like Garmin's by default (just a connect button + a toggle below).
     if (name === 'strava') {
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
         authBtn.className = 'strava-auth-btn';
         authBtn.textContent = data.access_token ? 'Re-authenticate with Strava' : 'Connect with Strava';
-        authBtn.addEventListener('click', () => {
-            window.location.href = '/api/auth/strava/authorize';
-        });
+        authBtn.addEventListener('click', () => { window.location.href = '/api/auth/strava/authorize'; });
         card.appendChild(authBtn);
+    }
 
-        const callbackUrl = `${window.location.origin}/api/auth/strava/callback`;
-        const redirectNote = document.createElement('p');
-        redirectNote.className = 'strava-redirect-note';
-        redirectNote.innerHTML =
-            `<strong>Before authenticating:</strong> in your <a href="https://www.strava.com/settings/api" target="_blank" rel="noopener">Strava API app settings</a>, ` +
-            `set the <strong>Authorization Callback Domain</strong> to <code>${window.location.hostname}</code>. ` +
-            `The full callback URL tracekit uses is <code>${callbackUrl}</code>.`;
-        card.appendChild(redirectNote);
+    // Always-visible text fields (e.g. email/password for RideWithGPS).
+    for (const f of meta.text_fields) {
+        const field = makeEditableField(f, data[f.key] ?? '');
+        const inp = field.querySelector('input');
+        inp.addEventListener('change', () => autoSave(inp));
+        card.appendChild(field);
+    }
+
+    // ── Personal-credentials toggle (Strava, RideWithGPS) ─────────────────────
+    if (meta.personal_credential_fields && meta.personal_credential_fields.length > 0) {
+        // Smart default: if use_personal_credentials not yet set but the user
+        // already has personal creds stored, initialize the toggle to ON so
+        // existing setups aren't silently broken.
+        let usePersonal = data.use_personal_credentials;
+        if (usePersonal === undefined || usePersonal === null) {
+            if (name === 'strava') {
+                usePersonal = Boolean(data.client_id && data.client_secret);
+            } else if (name === 'ridewithgps') {
+                usePersonal = Boolean(data.apikey);
+            } else {
+                usePersonal = false;
+            }
+        }
+
+        const pcToggle = makeToggle(`pc-${name}`, usePersonal, 'Use personal API credentials');
+        const pcSection = document.createElement('div');
+        pcSection.className = 'personal-cred-section';
+        pcSection.style.display = usePersonal ? '' : 'none';
+
+        // Build personal-cred fields inside the section
+        for (const f of meta.personal_credential_fields) {
+            const field = makeEditableField(f, data[f.key] ?? '');
+            const inp = field.querySelector('input');
+            inp.addEventListener('change', () => autoSave(inp));
+            pcSection.appendChild(field);
+        }
+
+        // For Strava: the "Before authenticating" note lives inside the section
+        if (name === 'strava') {
+            const callbackUrl = `${window.location.origin}/api/auth/strava/callback`;
+            const redirectNote = document.createElement('p');
+            redirectNote.className = 'strava-redirect-note';
+            redirectNote.innerHTML =
+                `<strong>Before authenticating:</strong> in your <a href="https://www.strava.com/settings/api" target="_blank" rel="noopener">Strava API app settings</a>, ` +
+                `set the <strong>Authorization Callback Domain</strong> to <code>${window.location.hostname}</code>. ` +
+                `The full callback URL tracekit uses is <code>${callbackUrl}</code>.`;
+            pcSection.appendChild(redirectNote);
+        }
+
+        // System-credentials status note (shown when toggle is OFF)
+        const sysCreds = (typeof SYSTEM_CREDENTIALS !== 'undefined') ? SYSTEM_CREDENTIALS : {};
+        const sysNote = document.createElement('p');
+        sysNote.className = 'provider-note provider-sys-creds-note';
+        sysNote.style.display = usePersonal ? 'none' : '';
+        if (sysCreds[name]) {
+            sysNote.textContent = 'Using system API credentials.';
+        } else {
+            sysNote.innerHTML = '<strong>Warning:</strong> No system API credentials configured. Turn on personal credentials or ask the operator to add them.';
+        }
+
+        pcToggle.querySelector('input').addEventListener('change', e => {
+            const isPersonal = e.target.checked;
+            pcSection.style.display = isPersonal ? '' : 'none';
+            sysNote.style.display = isPersonal ? 'none' : '';
+
+            // Strava: clear stored OAuth tokens — they were issued for the previous
+            // client_id, so they are invalid after switching credential source.
+            if (name === 'strava') {
+                if (INITIAL_CONFIG.providers && INITIAL_CONFIG.providers.strava) {
+                    INITIAL_CONFIG.providers.strava.access_token = '';
+                    INITIAL_CONFIG.providers.strava.refresh_token = '';
+                    INITIAL_CONFIG.providers.strava.token_expires = '0';
+                }
+                const authBtn = card.querySelector('.strava-auth-btn');
+                if (authBtn) authBtn.textContent = 'Connect with Strava';
+            }
+
+            autoSave();
+        });
+
+        card.appendChild(pcToggle);
+        card.appendChild(sysNote);
+        card.appendChild(pcSection);
     }
 
     if (name === 'garmin') {
@@ -231,13 +311,6 @@ function makeProviderCard(name, data) {
         const statusEl = document.createElement('div');
         statusEl.className = 'file-pull-status';
         card.appendChild(statusEl);
-    }
-
-    for (const f of meta.text_fields) {
-        const field = makeEditableField(f, data[f.key] ?? '');
-        const inp = field.querySelector('input');
-        inp.addEventListener('change', () => autoSave(inp));
-        card.appendChild(field);
     }
 
     addDragListeners(card);
@@ -292,9 +365,30 @@ async function autoSave(triggerEl) {
         if (syncEquip !== undefined) newData.sync_equipment = syncEquip;
         if (syncName  !== undefined) newData.sync_name = syncName;
 
+        // Capture personal-credentials toggle
+        const pcToggle = card.querySelector(`#pc-${name}`);
+        if (pcToggle) newData.use_personal_credentials = pcToggle.checked;
+
         for (const f of (meta.text_fields || [])) {
             const input = card.querySelector(`.field-${f.key}`);
             if (input) newData[f.key] = input.value;
+        }
+
+        // Personal-credential fields are always persisted (even when toggle is OFF)
+        // so the values aren't lost if the user flips back.
+        // Exception: Strava tokens are zeroed when use_personal_credentials changes
+        // (handled in the toggle change listener above via INITIAL_CONFIG mutation).
+        for (const f of (meta.personal_credential_fields || [])) {
+            const input = card.querySelector(`.field-${f.key}`);
+            if (input) newData[f.key] = input.value;
+        }
+
+        // Pick up any token fields that were zeroed via INITIAL_CONFIG mutation
+        if (name === 'strava' && INITIAL_CONFIG.providers?.strava) {
+            const src = INITIAL_CONFIG.providers.strava;
+            newData.access_token   = src.access_token   ?? newData.access_token;
+            newData.refresh_token  = src.refresh_token  ?? newData.refresh_token;
+            newData.token_expires  = src.token_expires  ?? newData.token_expires;
         }
 
         newProviders[name] = newData;

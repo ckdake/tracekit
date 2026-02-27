@@ -178,6 +178,148 @@ class TesttracekitCore:
             # Should have called cleanup
             mock_db.close.assert_called_once()
 
+    # ── System credential fallback ────────────────────────────────────────────
+
+    def test_strava_uses_system_client_creds_when_personal_off(self, monkeypatch):
+        """When use_personal_credentials is False, env vars override config creds."""
+        monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
+        monkeypatch.setenv("STRAVA_CLIENT_ID", "sys_id")
+        monkeypatch.setenv("STRAVA_CLIENT_SECRET", "sys_secret")
+        AppConfig.delete().execute()
+        save_config(
+            {
+                "home_timezone": "UTC",
+                "debug": False,
+                "providers": {
+                    "strava": {
+                        "enabled": True,
+                        "use_personal_credentials": False,
+                        "client_id": "personal_id",
+                        "client_secret": "personal_secret",
+                        "access_token": "tok",
+                        "refresh_token": "ref",
+                        "token_expires": "9999999999",
+                    },
+                },
+            }
+        )
+
+        tk = tracekit_class()
+        provider = tk.strava
+
+        assert provider is not None
+        assert provider.config["client_id"] == "sys_id"
+        assert provider.config["client_secret"] == "sys_secret"
+
+    def test_strava_uses_personal_creds_when_flag_on(self, monkeypatch):
+        """When use_personal_credentials is True, config values are kept as-is."""
+        monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
+        monkeypatch.setenv("STRAVA_CLIENT_ID", "sys_id")
+        monkeypatch.setenv("STRAVA_CLIENT_SECRET", "sys_secret")
+        AppConfig.delete().execute()
+        save_config(
+            {
+                "home_timezone": "UTC",
+                "debug": False,
+                "providers": {
+                    "strava": {
+                        "enabled": True,
+                        "use_personal_credentials": True,
+                        "client_id": "personal_id",
+                        "client_secret": "personal_secret",
+                        "access_token": "tok",
+                        "refresh_token": "ref",
+                        "token_expires": "9999999999",
+                    },
+                },
+            }
+        )
+
+        tk = tracekit_class()
+        provider = tk.strava
+
+        assert provider is not None
+        assert provider.config["client_id"] == "personal_id"
+        assert provider.config["client_secret"] == "personal_secret"
+
+    def test_ridewithgps_uses_system_apikey_when_personal_off(self, monkeypatch):
+        """When use_personal_credentials is False, RIDEWITHGPS_KEY env var is used."""
+        monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
+        monkeypatch.setenv("RIDEWITHGPS_KEY", "sys_apikey")
+        AppConfig.delete().execute()
+        save_config(
+            {
+                "home_timezone": "UTC",
+                "debug": False,
+                "providers": {
+                    "ridewithgps": {
+                        "enabled": True,
+                        "use_personal_credentials": False,
+                        "email": "user@example.com",
+                        "password": "pass",
+                        "apikey": "",
+                    },
+                },
+            }
+        )
+
+        tk = tracekit_class()
+        provider = tk.ridewithgps
+
+        assert provider is not None
+        assert provider.apikey == "sys_apikey"
+
+    def test_ridewithgps_uses_personal_apikey_when_flag_on(self, monkeypatch):
+        """When use_personal_credentials is True, the user's apikey is used."""
+        monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
+        monkeypatch.setenv("RIDEWITHGPS_KEY", "sys_apikey")
+        AppConfig.delete().execute()
+        save_config(
+            {
+                "home_timezone": "UTC",
+                "debug": False,
+                "providers": {
+                    "ridewithgps": {
+                        "enabled": True,
+                        "use_personal_credentials": True,
+                        "email": "user@example.com",
+                        "password": "pass",
+                        "apikey": "personal_key",
+                    },
+                },
+            }
+        )
+
+        tk = tracekit_class()
+        provider = tk.ridewithgps
+
+        assert provider is not None
+        assert provider.apikey == "personal_key"
+
+    def test_ridewithgps_returns_none_without_any_apikey(self, monkeypatch):
+        """RideWithGPS returns None when no apikey is available from any source."""
+        monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
+        monkeypatch.delenv("RIDEWITHGPS_KEY", raising=False)
+        AppConfig.delete().execute()
+        save_config(
+            {
+                "home_timezone": "UTC",
+                "debug": False,
+                "providers": {
+                    "ridewithgps": {
+                        "enabled": True,
+                        "use_personal_credentials": False,
+                        "email": "user@example.com",
+                        "password": "pass",
+                        "apikey": "",
+                    },
+                },
+            }
+        )
+
+        tk = tracekit_class()
+        assert tk.ridewithgps is None
+
     def test_pull_activities_error_handling(self, monkeypatch):
         """Test that pull_activities handles provider errors gracefully."""
         monkeypatch.setattr(tcfg, "_FILE_PATHS", [])

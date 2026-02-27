@@ -27,6 +27,14 @@ def settings():
         if current_user.stripe_subscription_end:
             subscription_end = datetime.fromtimestamp(current_user.stripe_subscription_end, tz=UTC).strftime("%Y-%m-%d")
 
+    # Indicate which providers have system-level credentials configured in env.
+    # These booleans are passed to the settings UI so it can show/hide helpful
+    # messages — the actual credential values are never sent to the browser.
+    system_credentials = {
+        "strava": bool(os.environ.get("STRAVA_CLIENT_ID") and os.environ.get("STRAVA_CLIENT_SECRET")),
+        "ridewithgps": bool(os.environ.get("RIDEWITHGPS_KEY")),
+    }
+
     return render_template(
         "settings.html",
         config=config,
@@ -36,6 +44,7 @@ def settings():
         subscription_status=subscription_status,
         subscription_end=subscription_end,
         allow_impersonation=current_user.allow_impersonation,
+        system_credentials=system_credentials,
     )
 
 

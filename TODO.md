@@ -5,6 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 later:
+- [ ] convert ridewithgps to use OAuth
 - [ ] metrics to Sentry for providers/syncing
 - [ ] longer caching of static pages, so cloudflare can cache. rotate filenames on build
 - [ ] refactor auth to make it harder to write SQL that bypasses.
@@ -18,6 +19,8 @@ later:
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)
 - [ ] download file from providers if file is missing. see https://raw.githubusercontent.com/cyberjunky/python-garminconnect/master/demo.py in download_activities_by_date for garmin
 - [ ] allow exporting all files
+- [ ] add inbound webhooks from ridewithgps on trips
+- [ ] add inbound webhooks from strava
 
 ## Providers & Sync
 

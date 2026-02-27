@@ -1,9 +1,25 @@
 """Strava OAuth routes for the tracekit web app."""
 
+import os
+
 from db_init import _init_db
 from flask import Blueprint, redirect, request
 
 strava_bp = Blueprint("auth_strava", __name__)
+
+
+def _get_strava_client_credentials(strava_cfg: dict) -> tuple[str, str]:
+    """Return the effective (client_id, client_secret) for the Strava OAuth flow.
+
+    When the user has opted into personal credentials, their saved values are
+    used directly.  Otherwise the operator's system-level env vars take
+    precedence, falling back to any value the user has stored.
+    """
+    if strava_cfg.get("use_personal_credentials"):
+        return strava_cfg.get("client_id", "").strip(), strava_cfg.get("client_secret", "").strip()
+    client_id = os.environ.get("STRAVA_CLIENT_ID", "").strip() or strava_cfg.get("client_id", "").strip()
+    client_secret = os.environ.get("STRAVA_CLIENT_SECRET", "").strip() or strava_cfg.get("client_secret", "").strip()
+    return client_id, client_secret
 
 
 def _strava_callback_page(success: bool, message: str) -> str:
@@ -51,14 +67,14 @@ def api_auth_strava_authorize():
 
     config = load_config()
     strava_cfg = config.get("providers", {}).get("strava", {})
-    client_id = strava_cfg.get("client_id", "").strip()
-    client_secret = strava_cfg.get("client_secret", "").strip()
+    client_id, client_secret = _get_strava_client_credentials(strava_cfg)
 
     if not client_id or not client_secret:
         return (
             "<h3>Configuration error</h3>"
             "<p>Strava <strong>client id</strong> and <strong>client secret</strong> "
-            "must be saved in Settings before authenticating.</p>",
+            "are not configured. Enable personal credentials in Settings or ask the "
+            "operator to set STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET.</p>",
             400,
         )
 
@@ -99,8 +115,7 @@ def api_auth_strava_callback():
 
         config = load_config()
         strava_cfg = config.get("providers", {}).get("strava", {})
-        client_id = strava_cfg.get("client_id", "").strip()
-        client_secret = strava_cfg.get("client_secret", "").strip()
+        client_id, client_secret = _get_strava_client_credentials(strava_cfg)
 
         if not client_id or not client_secret:
             return _strava_callback_page(False, "Strava client_id and client_secret not configured.")
