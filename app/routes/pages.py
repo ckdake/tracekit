@@ -35,6 +35,7 @@ def settings():
         stripe_enabled=stripe_enabled,
         subscription_status=subscription_status,
         subscription_end=subscription_end,
+        allow_impersonation=current_user.allow_impersonation,
     )
 
 

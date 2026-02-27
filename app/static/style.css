@@ -270,6 +270,21 @@ h2 { color: #34495e; margin-top: 30px; }
     margin: 0;
     padding: 0;
 }
+.impersonation-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 /* ── Card (settings) ─────────────────────────────────────────────────────────── */
 .card {

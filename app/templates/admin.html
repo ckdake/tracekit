@@ -13,6 +13,7 @@
                     <th>Status</th>
                     <th>Subscription</th>
                     <th>Providers &amp; Activities</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,6 +56,13 @@
                         {% endfor %}
                         {% if not has_any.val %}
                         <span class="field-help" style="margin:0">none</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.allow_impersonation and not u.is_admin %}
+                        <button class="btn btn-sm btn-secondary" onclick="impersonateUser({{ u.id }})">Impersonate</button>
+                        {% else %}
+                        <span class="field-help" style="margin:0">—</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -152,6 +160,11 @@
 </style>
 
 <script>
+function impersonateUser(userId) {
+    fetch('/admin/users/' + userId + '/impersonate', { method: 'POST' })
+        .then(r => { if (r.redirected) window.location.href = r.url; });
+}
+
 function toggleUser(userId, checkbox) {
     const label = document.getElementById('status-label-' + userId);
     checkbox.disabled = true;

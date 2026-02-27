@@ -21,6 +21,14 @@
             </label>
             <span class="field-help" style="margin: 0; flex: 1;">Enables verbose logging and detailed error output in the web app and CLI. Useful for troubleshooting sync issues.</span>
         </div>
+        <div class="field-row">
+            <label class="toggle">
+                <input type="checkbox" id="allow-impersonation-toggle" {% if allow_impersonation %}checked{% endif %}>
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-label">Allow admin impersonation</span>
+            </label>
+            <span class="field-help" style="margin: 0; flex: 1;">When enabled, the site admin can browse the app as you for support purposes.</span>
+        </div>
     </div>
 
     {% if stripe_enabled %}
@@ -109,6 +117,15 @@
 
 <script>const INITIAL_CONFIG = {{ config | tojson }};</script>
 <script src="{{ url_for('static', filename='settings.js') }}"></script>
+<script>
+document.getElementById('allow-impersonation-toggle').addEventListener('change', function() {
+    fetch('/api/user/allow-impersonation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: this.checked }),
+    });
+});
+</script>
 {% if stripe_enabled %}
 <script>
 async function stripeAction(plan) {

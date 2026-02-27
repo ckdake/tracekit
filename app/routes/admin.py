@@ -2,8 +2,8 @@
 
 import json
 
-from flask import Blueprint, abort, jsonify, render_template
-from flask_login import current_user
+from flask import Blueprint, abort, jsonify, redirect, render_template, session, url_for
+from flask_login import current_user, login_user
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -75,6 +75,7 @@ def index():
                 "email": u.email,
                 "status": u.status,
                 "is_admin": u.is_admin,
+                "allow_impersonation": u.allow_impersonation,
                 "providers": provider_info,
                 "subscription_status": u.stripe_subscription_status,
             }
@@ -108,3 +109,45 @@ def toggle_user(user_id: int):
     user.status = "blocked" if user.status == "active" else "active"
     user.save()
     return jsonify({"status": user.status})
+
+
+@admin_bp.route("/admin/users/<int:user_id>/impersonate", methods=["POST"])
+def impersonate_user(user_id: int):
+    """Begin impersonating a user. Stores admin's ID in session and switches login."""
+    _require_admin()
+
+    from models.user import User
+
+    try:
+        target = User.get_by_id(user_id)
+    except User.DoesNotExist:
+        abort(404)
+
+    if not target.allow_impersonation:
+        abort(403)
+
+    session["original_user_id"] = current_user.id
+    session["is_impersonating"] = True
+    login_user(target)
+    return redirect(url_for("pages.index"))
+
+
+@admin_bp.route("/admin/impersonation/end", methods=["POST"])
+def end_impersonation():
+    """End an active impersonation session and return to the admin account."""
+    if not session.get("is_impersonating"):
+        abort(400)
+
+    from models.user import User
+
+    original_id = session.pop("original_user_id", None)
+    session.pop("is_impersonating", None)
+
+    if original_id:
+        try:
+            admin = User.get_by_id(original_id)
+            login_user(admin)
+        except User.DoesNotExist:
+            pass
+
+    return redirect(url_for("admin.index"))

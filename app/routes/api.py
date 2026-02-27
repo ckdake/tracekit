@@ -2,6 +2,7 @@
 
 from db_init import _init_db, load_tracekit_config
 from flask import Blueprint, jsonify, request
+from flask_login import current_user
 from helpers import get_database_info, get_most_recent_activity, get_provider_activity_counts
 
 api_bp = Blueprint("api", __name__)
@@ -59,6 +60,18 @@ def api_provider_status():
         return jsonify(merged)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+@api_bp.route("/api/user/allow-impersonation", methods=["POST"])
+def set_allow_impersonation():
+    """Toggle whether admins may impersonate the current user."""
+    data = request.get_json(silent=True)
+    if data is None or "enabled" not in data:
+        return jsonify({"error": 'Expected {"enabled": bool}'}), 400
+    from models.user import User
+
+    User.update(allow_impersonation=bool(data["enabled"])).where(User.id == current_user.id).execute()
+    return jsonify({"enabled": bool(data["enabled"])})
 
 
 @api_bp.route("/health")

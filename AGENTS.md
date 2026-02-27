@@ -188,6 +188,8 @@ The Flask app runs differently in the two environments. Changes that affect obse
 
 Auth is enforced globally in `app/main.py::_setup_request()` — **do not add `@login_required` to individual routes**. In route handlers and templates, access the current user via `current_user` from `flask_login` (not `g.current_user`). The `User` model lives in `app/models/user.py` and is intentionally absent from `tracekit/database.py::get_all_models()`.
 
+Per-user **account-level flags** (e.g. `allow_impersonation`) belong as columns on the `User` model. The `AppConfig` key-value store is for user-controlled application preferences (providers, timezone, debug). When in doubt: if the field is about *who the user is or what they're allowed to do*, it goes on `User`; if it's about *how they've configured the app*, it goes in `AppConfig`.
+
 ---
 
 ## API design conventions

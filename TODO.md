@@ -5,7 +5,6 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 later:
-- [ ] user impersonation (with opt in)
 - [ ] metrics to Sentry for providers/syncing
 - [ ] longer caching of static pages, so cloudflare can cache. rotate filenames on build
 - [ ] refactor auth to make it harder to write SQL that bypasses.

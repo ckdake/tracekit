@@ -1,7 +1,7 @@
 """User model for email/password authentication."""
 
 from flask_login import UserMixin
-from peewee import CharField, IntegerField, Model
+from peewee import BooleanField, CharField, IntegerField, Model
 from werkzeug.security import generate_password_hash
 
 from tracekit.db import db
@@ -20,6 +20,8 @@ class User(UserMixin, Model):
     stripe_subscription_status = CharField(null=True)
     # Unix timestamp of current period end (or cancellation date)
     stripe_subscription_end = IntegerField(null=True)
+    # Whether admins are allowed to impersonate this user
+    allow_impersonation = BooleanField(default=False)
 
     class Meta:
         database = db
