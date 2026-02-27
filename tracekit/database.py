@@ -219,6 +219,7 @@ def _run_schema_upgrades() -> None:
             ("user", "stripe_customer_id", "VARCHAR(255)"),
             ("user", "stripe_subscription_status", "VARCHAR(64)"),
             ("user", "stripe_subscription_end", "INTEGER"),
+            ("user", "allow_impersonation", "BOOLEAN NOT NULL DEFAULT FALSE"),
         ],
     )
 
