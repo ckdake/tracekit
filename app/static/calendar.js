@@ -369,11 +369,24 @@ async function confirmResetMonth(month, confirmed) {
     });
 }
 
-// ── On page load: fetch all cards in parallel ─────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.month-card[id^="card-"]').forEach(card => {
-        loadCard(card.id.replace('card-', ''));
-    });
+// ── On page load: fetch all initial cards in one request ─────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    const cards = Array.from(document.querySelectorAll('.month-card[id^="card-"]'));
+    if (cards.length === 0) return;
+    const months = cards.map(c => c.id.replace('card-', ''));
+    // Cards are newest-first in the DOM, so last = oldest, first = newest
+    const from = months[months.length - 1];
+    const to   = months[0];
+    try {
+        const res  = await fetch('/api/calendar?from=' + from + '&to=' + to);
+        const data = await res.json();
+        months.forEach(ym => renderGrid(ym, data[ym] || { error: 'No data' }));
+    } catch (e) {
+        months.forEach(ym => {
+            const grid = document.getElementById('grid-' + ym);
+            if (grid) grid.innerHTML = '<div class="card-loading" style="color:#dc3545">Load error</div>';
+        });
+    }
 });
 // ── Append a month card to the grid ────────────────────────────────────────────────
 function appendMonthCard(ym, year, month) {
@@ -401,15 +414,29 @@ function appendMonthCard(ym, year, month) {
 }
 
 // ── Load 12 more months going back in time ────────────────────────────────────────
-function loadMoreMonths() {
+async function loadMoreMonths() {
     if (!oldestLoaded) return;
     let [y, m] = oldestLoaded.split('-').map(Number);
+    const newMonths = [];
     for (let i = 0; i < 12; i++) {
         m--;
         if (m === 0) { m = 12; y--; }
         const ym = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`;
         appendMonthCard(ym, y, m);
-        loadCard(ym);
+        newMonths.push(ym);
         oldestLoaded = ym;
+    }
+    // newMonths is newest-first, so last = oldest, first = newest
+    const from = newMonths[newMonths.length - 1];
+    const to   = newMonths[0];
+    try {
+        const res  = await fetch('/api/calendar?from=' + from + '&to=' + to);
+        const data = await res.json();
+        newMonths.forEach(ym => renderGrid(ym, data[ym] || { error: 'No data' }));
+    } catch (e) {
+        newMonths.forEach(ym => {
+            const grid = document.getElementById('grid-' + ym);
+            if (grid) grid.innerHTML = '<div class="card-loading" style="color:#dc3545">Load error</div>';
+        });
     }
 }

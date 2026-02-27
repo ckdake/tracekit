@@ -184,9 +184,25 @@ The Flask app runs differently in the two environments. Changes that affect obse
 
 ---
 
+## API design conventions
+
+- **Collection vs item**: follow the REST pattern — `/api/calendar` is the collection, `/api/calendar/YYYY-MM` is the item. New bulk endpoints go on the collection URL with query params, not a separate path.
+- **Multi-resource responses**: return a **dict keyed by the resource identifier** (e.g. `{"2024-01": {...}, "2024-02": {...}}`), not an array. Dicts are easier to look up by key and more flexible for callers.
+- **Query param naming**: use `from` / `to` for inclusive date/month ranges.
+- **Don't allow open ended**: recommend pagination, or a hard limit in the query depending on the scenario.
+
+---
+
 ## Code style
 
 - **Formatter / linter**: Ruff (configured in `ruff.toml`). Pre-commit runs it automatically.
 - **Type hints**: used throughout; run `mypy tracekit/` to check.
 - **Imports**: lazy imports inside functions for heavy optional dependencies (keeps startup fast and allows test mocking).
 - **No backwards-compat shims**: if something is unused, delete it.
+
+---
+
+## Key Rules For Agents
+
+- **Kaizen**: After every interaction wrapps up and you see your change being the last change, include a recommendation for a single thing to add, remove, or change in this AGENTS.md file The goal of AGENTS.md is not completeness, it is correctness. Improvements to this file should
+ensure the agent acts in the correct way in this project, which is usually the simpler approach.

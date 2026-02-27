@@ -4,9 +4,43 @@ import re
 
 from calendar_data import get_single_month_data
 from db_init import load_tracekit_config
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 calendar_bp = Blueprint("calendar", __name__)
+
+
+@calendar_bp.route("/api/calendar")
+def api_calendar_months():
+    """Return sync status and activity counts for a range of months (max 12).
+
+    Query params:
+      from- start month, inclusive, YYYY-MM
+      to- end month,   inclusive, YYYY-MM
+    """
+    from_month = request.args.get("from")
+    to_month = request.args.get("to")
+    if not from_month or not to_month:
+        return jsonify({"error": "Required query params: from, to (YYYY-MM)"}), 400
+    if not re.fullmatch(r"\d{4}-\d{2}", from_month) or not re.fullmatch(r"\d{4}-\d{2}", to_month):
+        return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
+    if from_month > to_month:
+        return jsonify({"error": "'from' must be <= 'to'"}), 400
+
+    months = []
+    y, m = map(int, from_month.split("-"))
+    end_y, end_m = map(int, to_month.split("-"))
+    while (y, m) <= (end_y, end_m):
+        months.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+
+    if len(months) > 12:
+        return jsonify({"error": "Range exceeds 12-month limit"}), 400
+
+    config = load_tracekit_config()
+    return jsonify({ym: get_single_month_data(config, ym) for ym in months})
 
 
 @calendar_bp.route("/api/calendar/<year_month>")

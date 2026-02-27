@@ -272,6 +272,81 @@ class TestTimezone:
             assert "total_activities" in month
 
 
+class TestCalendarBulkAPI:
+    """Tests for GET /api/calendar?from=YYYY-MM&to=YYYY-MM."""
+
+    def test_returns_dict_keyed_by_month(self, client, temp_database):
+        """Response is a dict with YYYY-MM keys."""
+        response = client.get("/api/calendar?from=2024-01&to=2024-03")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert isinstance(data, dict)
+        assert set(data.keys()) == {"2024-01", "2024-02", "2024-03"}
+
+    def test_each_entry_has_expected_fields(self, client, temp_database):
+        """Each month entry contains the same fields as the single-month endpoint."""
+        response = client.get("/api/calendar?from=2024-01&to=2024-01")
+        assert response.status_code == 200
+        month = response.get_json()["2024-01"]
+        for field in (
+            "year_month",
+            "year",
+            "month",
+            "month_name",
+            "providers",
+            "provider_status",
+            "activity_counts",
+            "total_activities",
+            "activity_days",
+        ):
+            assert field in month, f"Missing field: {field}"
+
+    def test_single_month_range(self, client, temp_database):
+        """A one-month range (from == to) returns exactly one entry."""
+        response = client.get("/api/calendar?from=2024-02&to=2024-02")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert list(data.keys()) == ["2024-02"]
+
+    def test_exactly_12_months_allowed(self, client, temp_database):
+        """A 12-month range is within the limit and succeeds."""
+        response = client.get("/api/calendar?from=2024-01&to=2024-12")
+        assert response.status_code == 200
+        assert len(response.get_json()) == 12
+
+    def test_more_than_12_months_rejected(self, client, temp_database):
+        """A range spanning 13+ months returns 400."""
+        response = client.get("/api/calendar?from=2024-01&to=2025-01")
+        assert response.status_code == 400
+        assert "12" in response.get_json()["error"]
+
+    def test_missing_from_param(self, client, temp_database):
+        """Omitting 'from' returns 400."""
+        response = client.get("/api/calendar?to=2024-03")
+        assert response.status_code == 400
+
+    def test_missing_to_param(self, client, temp_database):
+        """Omitting 'to' returns 400."""
+        response = client.get("/api/calendar?from=2024-01")
+        assert response.status_code == 400
+
+    def test_inverted_range_rejected(self, client, temp_database):
+        """from > to returns 400."""
+        response = client.get("/api/calendar?from=2024-06&to=2024-01")
+        assert response.status_code == 400
+
+    def test_invalid_month_format_rejected(self, client, temp_database):
+        """Malformed month values return 400."""
+        response = client.get("/api/calendar?from=2024-1&to=2024-03")
+        assert response.status_code == 400
+
+    def test_data_matches_single_month_endpoint(self, client, temp_database):
+        """Bulk response for a month is identical to the single-month endpoint."""
+        bulk = client.get("/api/calendar?from=2024-01&to=2024-01").get_json()
+        single = client.get("/api/calendar/2024-01").get_json()
+        assert bulk["2024-01"] == single
+
+
 class TestCalendarIntegration:
     """Integration tests for calendar page."""
 
