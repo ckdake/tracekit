@@ -19,6 +19,7 @@
                 {% for u in user_data %}
                 <tr id="user-row-{{ u.id }}">
                     <td class="admin-user-cell">
+                        <span class="admin-user-id">#{{ u.id }}</span>
                         <span class="admin-user-email">{{ u.email }}</span>
                         {% if u.is_admin %}<span class="badge badge-auth" style="margin-left:6px">admin</span>{% endif %}
                     </td>
@@ -91,6 +92,7 @@
     vertical-align: middle;
 }
 .admin-table tr:last-child td { border-bottom: none; }
+.admin-user-id { font-size: 0.78rem; color: #999; margin-right: 6px; }
 .admin-user-email { font-weight: 500; }
 .admin-status-cell { white-space: nowrap; display: flex; align-items: center; gap: 8px; padding-top: 14px; }
 .admin-status-label { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
