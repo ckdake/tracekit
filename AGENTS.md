@@ -175,6 +175,7 @@ The Flask app runs differently in the two environments. Changes that affect obse
 
 ### Key rules for this gap
 
+- **DB migrations run exactly once per boot**, in the gunicorn master process via the `on_starting` hook in `app/gunicorn.conf.py`, before any worker is forked. `preload_app = True` ensures workers inherit `_db_initialized = True` via fork and never re-run migrations. In request handlers, use `_ensure_db_connected()` (opens a connection) — never `_init_db()` (migrates).
 - **Sentry tracing only works in production if `sentry_sdk.init()` is called inside `post_fork`** in `app/gunicorn.conf.py`. Without it, transactions are enqueued but never flushed (dead transport thread). Errors may still surface via a sync fallback, so error-only Sentry in prod with no traces is a symptom of this bug.
 - **`traces_sampler` in `gunicorn.conf.py` must filter by `transaction_context["name"]`**, not `wsgi_environ["PATH_INFO"]`. Under gunicorn, `wsgi_environ` is not populated in the sampling context, so the `PATH_INFO` check silently falls through and health checks get sampled. The Flask dev server does populate `wsgi_environ`, so `main.py`'s sampler can use `PATH_INFO` and works correctly there.
 - **Never rely on `logging.basicConfig()` taking effect under gunicorn.** Configure log formatting in `post_fork` instead.

@@ -6,7 +6,10 @@ _db_initialized = False
 
 
 def _init_db() -> bool:
-    """Configure the DB and ensure all tables exist.
+    """Configure the DB and run all migrations.
+
+    Called once at boot time — gunicorn's on_starting hook (production) or
+    directly before app.run() (development). Never called per-request.
 
     Resolution order (no config file needed):
       1. DATABASE_URL env var  → PostgreSQL
@@ -14,23 +17,43 @@ def _init_db() -> bool:
       3. Default               → metadata.sqlite3 in cwd
     """
     global _db_initialized
+    if _db_initialized:
+        return True
+    try:
+        from tracekit.appconfig import get_db_path_from_env
+        from tracekit.database import get_all_models, migrate_tables
+        from tracekit.db import configure_db
+
+        configure_db(get_db_path_from_env())
+        migrate_tables(get_all_models())
+
+        from models.user import User
+
+        migrate_tables([User])
+
+        _db_initialized = True
+    except Exception as e:
+        print(f"DB init failed: {e}")
+        return False
+    return True
+
+
+def _ensure_db_connected() -> bool:
+    """Open a DB connection for the current request.
+
+    Migrations must have already run via _init_db() at boot time.
+    If somehow called before _init_db() (e.g. tests), falls back to
+    running it now.
+    """
     if not _db_initialized:
-        try:
-            from tracekit.appconfig import get_db_path_from_env
-            from tracekit.database import get_all_models, migrate_tables
-            from tracekit.db import configure_db
+        return _init_db()
+    try:
+        from tracekit.db import get_db
 
-            configure_db(get_db_path_from_env())
-            migrate_tables(get_all_models())
-
-            from models.user import User
-
-            migrate_tables([User])
-
-            _db_initialized = True
-        except Exception as e:
-            print(f"DB init failed: {e}")
-            return False
+        get_db().connect(reuse_if_open=True)
+    except Exception as e:
+        print(f"DB connect failed: {e}")
+        return False
     return True
 
 

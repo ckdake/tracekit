@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-from db_init import _init_db, load_tracekit_config
+from db_init import _ensure_db_connected, load_tracekit_config
 from flask import Flask, abort, g, has_request_context, redirect, request, session, url_for
 
 logging.basicConfig(
@@ -66,10 +66,7 @@ def _set_user_context():
         return
 
     try:
-        from tracekit.db import get_db
-
-        _init_db()
-        get_db().connect(reuse_if_open=True)
+        _ensure_db_connected()
     except Exception:
         abort(503)
 

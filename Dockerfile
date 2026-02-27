@@ -36,5 +36,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD curl -f http://12
 ARG GIT_SHA
 ENV SENTRY_RELEASE=${GIT_SHA}
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "--chdir", "/app/app", "main:app"]
+CMD ["gunicorn", "--config", "/app/app/gunicorn.conf.py", "--chdir", "/app/app", "main:app"]
