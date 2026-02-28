@@ -31,7 +31,7 @@ const PROVIDER_META = {
             { key: 'client_secret', label: 'client secret', field_type: 'password' },
         ],
     },
-    garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,
+    garmin:      { label: 'Garmin',       sync_equipment: true,  sync_equipment_disabled: true, sync_name: true,
         instructions: 'Garmin authentication tokens are valid for approximately one year. Re-authenticate before they expire to avoid interruption.',
         text_fields: [] },
     spreadsheet: {
@@ -160,7 +160,9 @@ function makeProviderCard(name, data) {
         const enabled = e.target.checked;
         card.classList.toggle('disabled-card', !enabled);
         card.querySelectorAll('.provider-controls input[type="checkbox"]').forEach(cb => {
-            cb.disabled = !enabled;
+            // Never re-enable a toggle that is permanently disabled by the provider meta.
+            const isPermDisabled = cb.id === `se-${name}` && meta.sync_equipment_disabled;
+            cb.disabled = !enabled || isPermDisabled;
         });
         autoSave();
     });
@@ -172,8 +174,10 @@ function makeProviderCard(name, data) {
 
     if (meta.sync_equipment) {
         const t = makeToggle(`se-${name}`, data.sync_equipment ?? false, 'Sync equipment');
-        t.querySelector('input').disabled = !data.enabled;
-        t.querySelector('input').addEventListener('change', autoSave);
+        const seInput = t.querySelector('input');
+        seInput.disabled = !data.enabled || !!meta.sync_equipment_disabled;
+        if (!meta.sync_equipment_disabled) seInput.addEventListener('change', autoSave);
+        if (meta.sync_equipment_disabled) t.title = 'Not supported by this provider';
         controls.appendChild(t);
     }
     if (meta.sync_name) {
@@ -235,8 +239,10 @@ function makeProviderCard(name, data) {
             }
         }
 
+        const pcToggleRow = document.createElement('div');
+        pcToggleRow.className = 'personal-creds-toggle-row';
         const pcToggle = makeToggle(`pc-${name}`, usePersonal, 'Use personal API credentials');
-        pcToggle.classList.add('personal-creds-toggle-row');
+        pcToggleRow.appendChild(pcToggle);
         const pcSection = document.createElement('div');
         pcSection.className = 'personal-cred-section';
         pcSection.style.display = usePersonal ? '' : 'none';
@@ -299,7 +305,7 @@ function makeProviderCard(name, data) {
             autoSave();
         });
 
-        card.appendChild(pcToggle);
+        card.appendChild(pcToggleRow);
         card.appendChild(sysNote);
         card.appendChild(pcSection);
     }

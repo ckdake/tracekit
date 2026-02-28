@@ -1071,9 +1071,8 @@ select#timezone:focus {
 
 /* RideWithGPS-branded auth button */
 .ridewithgps-auth-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    display: block;
+    width: fit-content;
     margin-top: 14px;
     font-size: 1rem;
     padding: 11px 22px;
@@ -1090,7 +1089,6 @@ select#timezone:focus {
 
 /* Personal-credentials toggle — displayed subtly below the auth button */
 .personal-creds-toggle-row {
-    display: block;
     margin-top: 14px;
     padding-top: 10px;
     border-top: 1px solid #eee;

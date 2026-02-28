@@ -5,7 +5,6 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
-- [ ] further hide the "use personal api keys" bit
 - [ ] user docs -> tracekit will not modify unless you click individual button
 - [ ] discord?
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side). if its a zip, extrct safely
