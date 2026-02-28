@@ -82,7 +82,8 @@ def api_auth_strava_authorize():
         from stravalib.client import Client
 
         client = Client()
-        redirect_uri = f"{request.scheme}://{request.host}/api/auth/strava/callback"
+        scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+        redirect_uri = f"{scheme}://{request.host}/api/auth/strava/callback"
         authorize_url = client.authorization_url(
             client_id=int(client_id),
             redirect_uri=redirect_uri,

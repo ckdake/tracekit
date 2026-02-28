@@ -84,7 +84,8 @@ def api_auth_ridewithgps_authorize():
         from pyrwgps import RideWithGPS
 
         client = RideWithGPS(client_id=client_id, client_secret=client_secret)
-        redirect_uri = f"{request.scheme}://{request.host}/api/auth/ridewithgps/callback"
+        scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+        redirect_uri = f"{scheme}://{request.host}/api/auth/ridewithgps/callback"
         authorize_url = client.authorization_url(redirect_uri=redirect_uri)
         return redirect(str(authorize_url))
     except Exception as e:
@@ -116,7 +117,8 @@ def api_auth_ridewithgps_callback():
         from pyrwgps import RideWithGPS
 
         client = RideWithGPS(client_id=client_id, client_secret=client_secret)
-        redirect_uri = f"{request.scheme}://{request.host}/api/auth/ridewithgps/callback"
+        scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+        redirect_uri = f"{scheme}://{request.host}/api/auth/ridewithgps/callback"
         token_response = client.exchange_code(code=code, redirect_uri=redirect_uri)
 
         access_token = getattr(token_response, "access_token", None) or client.access_token
