@@ -4,21 +4,23 @@ Tracked here for visibility. PRs and issues welcome.
 
 ## Overall capabilitites
 
-later:
-- [ ] convert ridewithgps to use OAuth
+next:
+- [ ] convert ridewithgps to use OAuth, further hide the "use personal api keys" bit
+- [ ] disable visibility of spreadsheet and StravaJSON providers
+- [ ] user docs -> tracekit will not modify unless you click individual button
+- [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side). if its a zip, extrct safely
+
+later
+- [ ] better top/right nav UI
+- [ ] allow exporting all files
 - [ ] metrics to Sentry for providers/syncing
 - [ ] longer caching of static pages, so cloudflare can cache. rotate filenames on build
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] user limits and rate limiting. TBD!
-- [ ] move app api keys from per-user to admin thing
-- [ ] user docs -> tracekit will not modify unless you click individual button
-- [ ] better top/right nav UI
 - [ ] outbound email sending for email verificaiton on login, and password reset
 - [ ] add new source data files to file data when found in other places
 - [ ] i think we need a websocket or something for realtime updates
-- [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side)
 - [ ] download file from providers if file is missing. see https://raw.githubusercontent.com/cyberjunky/python-garminconnect/master/demo.py in download_activities_by_date for garmin
-- [ ] allow exporting all files
 - [ ] add inbound webhooks from ridewithgps on trips
 - [ ] add inbound webhooks from strava
 
