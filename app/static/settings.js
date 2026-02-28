@@ -25,13 +25,10 @@ const PROVIDER_META = {
     },
     ridewithgps: {
         label: 'RideWithGPS', sync_equipment: true, sync_name: true,
-        instructions: 'Enter your RideWithGPS email and password.',
-        text_fields: [
-            { key: 'email',    label: 'email' },
-            { key: 'password', label: 'password', field_type: 'password' },
-        ],
+        text_fields: [],
         personal_credential_fields: [
-            { key: 'apikey', label: 'api key', field_type: 'password' },
+            { key: 'client_id',     label: 'client id' },
+            { key: 'client_secret', label: 'client secret', field_type: 'password' },
         ],
     },
     garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,
@@ -206,6 +203,16 @@ function makeProviderCard(name, data) {
         card.appendChild(authBtn);
     }
 
+    // RideWithGPS: OAuth button, same pattern as Strava.
+    if (name === 'ridewithgps') {
+        const authBtn = document.createElement('button');
+        authBtn.type = 'button';
+        authBtn.className = 'ridewithgps-auth-btn';
+        authBtn.textContent = data.access_token ? 'Re-authenticate with RideWithGPS' : 'Connect with RideWithGPS';
+        authBtn.addEventListener('click', () => { window.location.href = '/api/auth/ridewithgps/authorize'; });
+        card.appendChild(authBtn);
+    }
+
     // Always-visible text fields (e.g. email/password for RideWithGPS).
     for (const f of meta.text_fields) {
         const field = makeEditableField(f, data[f.key] ?? '');
@@ -221,10 +228,8 @@ function makeProviderCard(name, data) {
         // existing setups aren't silently broken.
         let usePersonal = data.use_personal_credentials;
         if (usePersonal === undefined || usePersonal === null) {
-            if (name === 'strava') {
+            if (name === 'strava' || name === 'ridewithgps') {
                 usePersonal = Boolean(data.client_id && data.client_secret);
-            } else if (name === 'ridewithgps') {
-                usePersonal = Boolean(data.apikey);
             } else {
                 usePersonal = false;
             }
@@ -271,8 +276,8 @@ function makeProviderCard(name, data) {
             pcSection.style.display = isPersonal ? '' : 'none';
             sysNote.style.display = isPersonal ? 'none' : '';
 
-            // Strava: clear stored OAuth tokens — they were issued for the previous
-            // client_id, so they are invalid after switching credential source.
+            // Strava/RideWithGPS: clear stored OAuth tokens — they were issued for the
+            // previous client_id, so they are invalid after switching credential source.
             if (name === 'strava') {
                 if (INITIAL_CONFIG.providers && INITIAL_CONFIG.providers.strava) {
                     INITIAL_CONFIG.providers.strava.access_token = '';
@@ -281,6 +286,13 @@ function makeProviderCard(name, data) {
                 }
                 const authBtn = card.querySelector('.strava-auth-btn');
                 if (authBtn) authBtn.textContent = 'Connect with Strava';
+            }
+            if (name === 'ridewithgps') {
+                if (INITIAL_CONFIG.providers && INITIAL_CONFIG.providers.ridewithgps) {
+                    INITIAL_CONFIG.providers.ridewithgps.access_token = '';
+                }
+                const authBtn = card.querySelector('.ridewithgps-auth-btn');
+                if (authBtn) authBtn.textContent = 'Connect with RideWithGPS';
             }
 
             autoSave();
@@ -392,6 +404,10 @@ async function autoSave(triggerEl) {
             newData.access_token   = src.access_token   ?? newData.access_token;
             newData.refresh_token  = src.refresh_token  ?? newData.refresh_token;
             newData.token_expires  = src.token_expires  ?? newData.token_expires;
+        }
+        if (name === 'ridewithgps' && INITIAL_CONFIG.providers?.ridewithgps) {
+            const src = INITIAL_CONFIG.providers.ridewithgps;
+            newData.access_token = src.access_token ?? newData.access_token;
         }
 
         newProviders[name] = newData;

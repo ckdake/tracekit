@@ -6,6 +6,7 @@ updating activities, and managing gear.
 """
 
 import datetime
+import os
 from decimal import Decimal
 from typing import Any
 
@@ -21,19 +22,31 @@ from tracekit.user_context import get_user_id
 class RideWithGPSProvider(FitnessProvider):
     def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self.username = (self.config or {}).get("email", "")
-        self.password = (self.config or {}).get("password", "")
-        self.apikey = (self.config or {}).get("apikey", "")
+        cfg = self.config or {}
+        if cfg.get("use_personal_credentials"):
+            self.client_id = cfg.get("client_id", "").strip()
+            self.client_secret = cfg.get("client_secret", "").strip()
+        else:
+            self.client_id = os.environ.get("RIDEWITHGPS_CLIENT_ID", "").strip() or cfg.get("client_id", "").strip()
+            self.client_secret = (
+                os.environ.get("RIDEWITHGPS_CLIENT_SECRET", "").strip() or cfg.get("client_secret", "").strip()
+            )
+        self.access_token = cfg.get("access_token", "").strip()
 
         self._client: RideWithGPS | None = None
         self._userid = None
         self._user_info = None
 
     def _ensure_authenticated(self):
-        """Authenticate lazily — only when a live API call is actually needed."""
+        """Initialise the OAuth client lazily — only when a live API call is needed."""
         if self._client is None:
-            self._client = RideWithGPS(apikey=self.apikey, cache=True)
-            user_info = self._client.authenticate(self.username, self.password)
+            self._client = RideWithGPS(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                access_token=self.access_token,
+            )
+            user_response = self._client.get(path="/users/current.json")
+            user_info = getattr(user_response, "user", None)
             self._userid = getattr(user_info, "id", None)
             self._user_info = user_info
 

@@ -117,19 +117,10 @@ class Tracekit:
         if (
             not self._ridewithgps
             and provider_config.get("enabled", False)
-            and provider_config.get("email", "").strip()
-            and provider_config.get("password", "").strip()
+            and provider_config.get("access_token", "").strip()
         ):
-            # Resolve apikey: personal credential if opted in, otherwise system env var.
-            if provider_config.get("use_personal_credentials"):
-                apikey = provider_config.get("apikey", "").strip()
-            else:
-                apikey = os.environ.get("RIDEWITHGPS_KEY", "").strip() or provider_config.get("apikey", "").strip()
-            if not apikey:
-                return None
             enhanced_config = provider_config.copy()
             enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
-            enhanced_config["apikey"] = apikey
             self._ridewithgps = RideWithGPSProvider(config=enhanced_config)
         return self._ridewithgps
 

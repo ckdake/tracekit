@@ -32,7 +32,7 @@ def settings():
     # messages — the actual credential values are never sent to the browser.
     system_credentials = {
         "strava": bool(os.environ.get("STRAVA_CLIENT_ID") and os.environ.get("STRAVA_CLIENT_SECRET")),
-        "ridewithgps": bool(os.environ.get("RIDEWITHGPS_KEY")),
+        "ridewithgps": bool(os.environ.get("RIDEWITHGPS_CLIENT_ID") and os.environ.get("RIDEWITHGPS_CLIENT_SECRET")),
     }
 
     from tracekit.appconfig import get_system_providers

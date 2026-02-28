@@ -135,6 +135,7 @@ from routes.admin import admin_bp
 from routes.api import api_bp
 from routes.auth import auth_bp
 from routes.auth_garmin import garmin_bp
+from routes.auth_ridewithgps import ridewithgps_bp
 from routes.auth_strava import strava_bp
 from routes.calendar import calendar_bp
 from routes.month import month_bp
@@ -150,6 +151,7 @@ app.register_blueprint(calendar_bp)
 app.register_blueprint(month_bp)
 app.register_blueprint(notifications_bp)
 app.register_blueprint(garmin_bp)
+app.register_blueprint(ridewithgps_bp)
 app.register_blueprint(strava_bp)
 app.register_blueprint(stripe_bp)
 

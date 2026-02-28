@@ -25,7 +25,6 @@ def patch_rwgps_activities(monkeypatch, mock_user_info):
 
     def fake_init(self, config=None):
         self._client = MagicMock()
-        self._client.authenticate.return_value = mock_user_info
         self._userid = 3052056
         self._user_info = mock_user_info
 

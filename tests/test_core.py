@@ -242,10 +242,11 @@ class TesttracekitCore:
         assert provider.config["client_id"] == "personal_id"
         assert provider.config["client_secret"] == "personal_secret"
 
-    def test_ridewithgps_uses_system_apikey_when_personal_off(self, monkeypatch):
-        """When use_personal_credentials is False, RIDEWITHGPS_KEY env var is used."""
+    def test_ridewithgps_uses_system_client_id_when_personal_off(self, monkeypatch):
+        """When use_personal_credentials is False, RIDEWITHGPS_CLIENT_ID/SECRET env vars are used."""
         monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
-        monkeypatch.setenv("RIDEWITHGPS_KEY", "sys_apikey")
+        monkeypatch.setenv("RIDEWITHGPS_CLIENT_ID", "sys_client_id")
+        monkeypatch.setenv("RIDEWITHGPS_CLIENT_SECRET", "sys_client_secret")
         AppConfig.delete().execute()
         save_config(
             {
@@ -255,9 +256,9 @@ class TesttracekitCore:
                     "ridewithgps": {
                         "enabled": True,
                         "use_personal_credentials": False,
-                        "email": "user@example.com",
-                        "password": "pass",
-                        "apikey": "",
+                        "access_token": "tok123",
+                        "client_id": "",
+                        "client_secret": "",
                     },
                 },
             }
@@ -267,12 +268,14 @@ class TesttracekitCore:
         provider = tk.ridewithgps
 
         assert provider is not None
-        assert provider.apikey == "sys_apikey"
+        assert provider.client_id == "sys_client_id"
+        assert provider.client_secret == "sys_client_secret"
 
-    def test_ridewithgps_uses_personal_apikey_when_flag_on(self, monkeypatch):
-        """When use_personal_credentials is True, the user's apikey is used."""
+    def test_ridewithgps_uses_personal_client_creds_when_flag_on(self, monkeypatch):
+        """When use_personal_credentials is True, the user's client_id/secret are used."""
         monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
-        monkeypatch.setenv("RIDEWITHGPS_KEY", "sys_apikey")
+        monkeypatch.setenv("RIDEWITHGPS_CLIENT_ID", "sys_client_id")
+        monkeypatch.setenv("RIDEWITHGPS_CLIENT_SECRET", "sys_client_secret")
         AppConfig.delete().execute()
         save_config(
             {
@@ -282,9 +285,9 @@ class TesttracekitCore:
                     "ridewithgps": {
                         "enabled": True,
                         "use_personal_credentials": True,
-                        "email": "user@example.com",
-                        "password": "pass",
-                        "apikey": "personal_key",
+                        "access_token": "tok123",
+                        "client_id": "personal_id",
+                        "client_secret": "personal_secret",
                     },
                 },
             }
@@ -294,12 +297,14 @@ class TesttracekitCore:
         provider = tk.ridewithgps
 
         assert provider is not None
-        assert provider.apikey == "personal_key"
+        assert provider.client_id == "personal_id"
+        assert provider.client_secret == "personal_secret"
 
-    def test_ridewithgps_returns_none_without_any_apikey(self, monkeypatch):
-        """RideWithGPS returns None when no apikey is available from any source."""
+    def test_ridewithgps_returns_none_without_access_token(self, monkeypatch):
+        """RideWithGPS returns None when no access_token is present."""
         monkeypatch.setattr(tcfg, "_FILE_PATHS", [])
-        monkeypatch.delenv("RIDEWITHGPS_KEY", raising=False)
+        monkeypatch.delenv("RIDEWITHGPS_CLIENT_ID", raising=False)
+        monkeypatch.delenv("RIDEWITHGPS_CLIENT_SECRET", raising=False)
         AppConfig.delete().execute()
         save_config(
             {
@@ -309,9 +314,9 @@ class TesttracekitCore:
                     "ridewithgps": {
                         "enabled": True,
                         "use_personal_credentials": False,
-                        "email": "user@example.com",
-                        "password": "pass",
-                        "apikey": "",
+                        "access_token": "",
+                        "client_id": "",
+                        "client_secret": "",
                     },
                 },
             }

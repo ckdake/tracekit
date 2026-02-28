@@ -267,7 +267,8 @@ class TestSettingsSystemCredentialsContext:
         """SYSTEM_CREDENTIALS is {strava: true, ...} when env vars are set."""
         monkeypatch.setenv("STRAVA_CLIENT_ID", "123")
         monkeypatch.setenv("STRAVA_CLIENT_SECRET", "abc")
-        monkeypatch.setenv("RIDEWITHGPS_KEY", "rwgps_key")
+        monkeypatch.setenv("RIDEWITHGPS_CLIENT_ID", "rwgps_client_id")
+        monkeypatch.setenv("RIDEWITHGPS_CLIENT_SECRET", "rwgps_client_secret")
 
         resp = client.get("/settings")
         assert resp.status_code == 200

@@ -53,9 +53,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "sync_equipment": True,
             "sync_name": True,
             "use_personal_credentials": False,
-            "email": "",
-            "password": "",
-            "apikey": "",
+            "client_id": "",
+            "client_secret": "",
+            "access_token": "",
         },
         "garmin": {
             "enabled": False,
@@ -217,6 +217,20 @@ def save_strava_tokens(token_dict: dict[str, Any]) -> None:
     strava_updated["refresh_token"] = str(token_dict.get("refresh_token", ""))
     strava_updated["token_expires"] = str(token_dict.get("expires_at", "0"))
     providers["strava"] = strava_updated
+    save_config({**config, "providers": providers})
+
+
+def save_ridewithgps_tokens(access_token: str) -> None:
+    """Persist RideWithGPS OAuth access token into the config store.
+
+    Args:
+        access_token: OAuth access token returned by ``exchange_code()``.
+    """
+    config = load_config()
+    providers = config.get("providers", {})
+    rwgps_updated = providers.get("ridewithgps", {}).copy()
+    rwgps_updated["access_token"] = str(access_token)
+    providers["ridewithgps"] = rwgps_updated
     save_config({**config, "providers": providers})
 
 
