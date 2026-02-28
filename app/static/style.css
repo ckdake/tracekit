@@ -1069,6 +1069,37 @@ select#timezone:focus {
 }
 .strava-auth-btn:hover { background: #e04300; }
 
+/* RideWithGPS-branded auth button */
+.ridewithgps-auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 1rem;
+    padding: 11px 22px;
+    border-radius: 4px;
+    background: #52AF4A;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: .015em;
+    transition: background .15s;
+}
+.ridewithgps-auth-btn:hover { background: #429b3b; }
+
+/* Personal-credentials toggle — displayed subtly below the auth button */
+.personal-creds-toggle-row {
+    display: block;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+.personal-creds-toggle-row .toggle-label {
+    font-size: 0.8rem;
+    color: #888;
+}
+
 .strava-redirect-note {
     margin-top: 10px;
     font-size: 0.8rem;

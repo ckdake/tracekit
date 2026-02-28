@@ -236,6 +236,7 @@ function makeProviderCard(name, data) {
         }
 
         const pcToggle = makeToggle(`pc-${name}`, usePersonal, 'Use personal API credentials');
+        pcToggle.classList.add('personal-creds-toggle-row');
         const pcSection = document.createElement('div');
         pcSection.className = 'personal-cred-section';
         pcSection.style.display = usePersonal ? '' : 'none';
