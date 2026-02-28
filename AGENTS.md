@@ -97,7 +97,7 @@ def run(args=None) -> None:
 3. Add the provider to `tracekit/providers/__init__.py` exports.
 4. Wire it into `tracekit/core.py` (`Tracekit` class) so it is lazily instantiated from config.
 5. Add it to the provider maps in `tracekit/calendar.py` and `tracekit/stats.py`.
-6. Add default config keys to `DEFAULT_CONFIG` in `tracekit/appconfig.py`.
+6. Add default config keys to `DEFAULT_CONFIG` in `tracekit/appconfig.py`, and add the provider name to `ALL_PROVIDERS` in the same file (required for admin visibility toggles).
 
 ---
 
@@ -212,5 +212,4 @@ Per-user **account-level flags** (e.g. `allow_impersonation`) belong as columns 
 
 ## Key Rules For Agents
 
-- **Kaizen**: After every interaction wrapps up and you see your change being the last change, include a recommendation for a single thing to add, remove, or change in this AGENTS.md file The goal of AGENTS.md is not completeness, it is correctness. Improvements to this file should
-ensure the agent acts in the correct way in this project, which is usually the simpler approach.
+- **Kaizen**: After every interaction wrapps up and you see your change being the last change: Pick a single thing to add, remove, or change in this AGENTS.md file. The goal of AGENTS.md is not completeness, it is correctness. Improvements to this file should ensure the agent acts in the correct way in this project, which is usually the simpler approach.

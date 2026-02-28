@@ -320,11 +320,14 @@ function makeProviderCard(name, data) {
 // ── Render providers ──────────────────────────────────────────────────────────
 function renderProviders(config) {
     const pconf = config.providers || {};
-    const entries = Object.entries(pconf).sort((a, b) => {
-        const pa = a[1].priority ?? 999;
-        const pb = b[1].priority ?? 999;
-        return pa !== pb ? pa - pb : a[0].localeCompare(b[0]);
-    });
+    const enabledSet = typeof ENABLED_PROVIDERS !== 'undefined' ? new Set(ENABLED_PROVIDERS) : null;
+    const entries = Object.entries(pconf)
+        .filter(([name]) => !enabledSet || enabledSet.has(name))
+        .sort((a, b) => {
+            const pa = a[1].priority ?? 999;
+            const pb = b[1].priority ?? 999;
+            return pa !== pb ? pa - pb : a[0].localeCompare(b[0]);
+        });
 
     const list = document.getElementById('provider-list');
     list.innerHTML = '';
@@ -810,9 +813,11 @@ function renderProviderResetButtons(config) {
     if (!list) return;
     list.innerHTML = '';
     const pconf = config.providers || {};
+    const enabledSet = typeof ENABLED_PROVIDERS !== 'undefined' ? new Set(ENABLED_PROVIDERS) : null;
     let shown = 0;
     for (const [name, data] of Object.entries(pconf)) {
         if (!data.enabled) continue;
+        if (enabledSet && !enabledSet.has(name)) continue;
         const meta = PROVIDER_META[name] || {};
         const label = meta.label || (name.charAt(0).toUpperCase() + name.slice(1));
         const btn = document.createElement('button');

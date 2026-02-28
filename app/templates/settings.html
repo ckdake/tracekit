@@ -116,7 +116,8 @@
 </div>
 
 <script>const INITIAL_CONFIG = {{ config | tojson }};
-const SYSTEM_CREDENTIALS = {{ system_credentials | tojson }};</script>
+const SYSTEM_CREDENTIALS = {{ system_credentials | tojson }};
+const ENABLED_PROVIDERS = {{ enabled_providers | tojson }};</script>
 <script src="{{ url_for('static', filename='settings.js') }}"></script>
 <script>
 document.getElementById('allow-impersonation-toggle').addEventListener('change', function() {

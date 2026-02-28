@@ -6,7 +6,6 @@ Tracked here for visibility. PRs and issues welcome.
 
 next:
 - [ ] convert ridewithgps to use OAuth, further hide the "use personal api keys" bit
-- [ ] disable visibility of spreadsheet and StravaJSON providers
 - [ ] user docs -> tracekit will not modify unless you click individual button
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side). if its a zip, extrct safely
 

@@ -35,6 +35,10 @@ def settings():
         "ridewithgps": bool(os.environ.get("RIDEWITHGPS_KEY")),
     }
 
+    from tracekit.appconfig import get_system_providers
+
+    enabled_providers = [name for name, visible in get_system_providers().items() if visible]
+
     return render_template(
         "settings.html",
         config=config,
@@ -45,6 +49,7 @@ def settings():
         subscription_end=subscription_end,
         allow_impersonation=current_user.allow_impersonation,
         system_credentials=system_credentials,
+        enabled_providers=enabled_providers,
     )
 
 

@@ -236,6 +236,43 @@ def save_garmin_tokens(email: str, garth_tokens: str) -> None:
     save_config({**config, "providers": providers})
 
 
+ALL_PROVIDERS: list[str] = ["strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"]
+
+_SYSTEM_USER_ID = 0
+_SYSTEM_PROVIDERS_KEY = "system_providers"
+
+
+def get_system_providers() -> dict[str, bool]:
+    """Return {provider_name: visible} for system-level provider visibility.
+
+    Stored in AppConfig with user_id=0 and key='system_providers'.
+    Providers absent from the stored value default to True (visible).
+    """
+    try:
+        row = AppConfig.get_or_none((AppConfig.key == _SYSTEM_PROVIDERS_KEY) & (AppConfig.user_id == _SYSTEM_USER_ID))
+        if row:
+            stored = json.loads(row.value)
+            return {p: stored.get(p, True) for p in ALL_PROVIDERS}
+    except Exception:
+        pass
+    return {p: True for p in ALL_PROVIDERS}
+
+
+def save_system_providers(providers: dict[str, bool]) -> None:
+    """Persist system-level provider visibility settings."""
+    try:
+        (
+            AppConfig.insert(key=_SYSTEM_PROVIDERS_KEY, value=json.dumps(providers), user_id=_SYSTEM_USER_ID)
+            .on_conflict(
+                conflict_target=[AppConfig.key, AppConfig.user_id],
+                update={AppConfig.value: json.dumps(providers)},
+            )
+            .execute()
+        )
+    except Exception as e:
+        print(f"Warning: could not save system providers: {e}")
+
+
 def get_db_path_from_env() -> str:
     """Return the SQLite path to use when no DATABASE_URL is set.
 

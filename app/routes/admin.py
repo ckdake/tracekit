@@ -81,7 +81,26 @@ def index():
             }
         )
 
-    return render_template("admin.html", page_name="Admin", user_data=user_data)
+    from tracekit.appconfig import get_system_providers
+
+    system_providers = get_system_providers()
+    return render_template("admin.html", page_name="Admin", user_data=user_data, system_providers=system_providers)
+
+
+@admin_bp.route("/admin/providers/<provider>/toggle", methods=["POST"])
+def toggle_provider(provider: str):
+    """Toggle global visibility of a provider. Returns JSON."""
+    _require_admin()
+
+    from tracekit.appconfig import ALL_PROVIDERS, get_system_providers, save_system_providers
+
+    if provider not in ALL_PROVIDERS:
+        return jsonify({"error": "Unknown provider"}), 400
+
+    providers = get_system_providers()
+    providers[provider] = not providers.get(provider, True)
+    save_system_providers(providers)
+    return jsonify({"provider": provider, "enabled": providers[provider]})
 
 
 @admin_bp.route("/admin/sentry-test")

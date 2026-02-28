@@ -71,6 +71,27 @@
         </table>
     </div>
 
+    <div class="card">
+        <h2>Providers</h2>
+        <p class="field-help">Enable or disable providers system-wide. Disabled providers are hidden from all users.</p>
+        <div class="admin-providers-config">
+            {% for name, enabled in system_providers.items() %}
+            <div class="admin-provider-config-row">
+                <label class="toggle" title="Toggle {{ name }} visibility">
+                    <input type="checkbox"
+                           id="provider-toggle-{{ name }}"
+                           {% if enabled %}checked{% endif %}
+                           onchange="toggleProvider('{{ name }}', this)">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+                <span class="admin-provider-config-name">{{ name }}</span>
+                <span class="admin-provider-config-label {{ 'enabled' if enabled else 'disabled' }}"
+                      id="provider-config-label-{{ name }}">{{ 'enabled' if enabled else 'disabled' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
     <div class="card card-danger">
         <h2>Sentry</h2>
         <p class="field-help">Trigger a test error to verify Sentry is receiving events.</p>
@@ -157,12 +178,38 @@
     color: #c0392b;
     border-color: #f5c6c6;
 }
+.admin-providers-config { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.admin-provider-config-row { display: flex; align-items: center; gap: 10px; }
+.admin-provider-config-name { font-weight: 500; min-width: 100px; }
+.admin-provider-config-label { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.admin-provider-config-label.enabled { color: #27ae60; }
+.admin-provider-config-label.disabled { color: #999; }
 </style>
 
 <script>
 function impersonateUser(userId) {
     fetch('/admin/users/' + userId + '/impersonate', { method: 'POST' })
         .then(r => { if (r.redirected) window.location.href = r.url; });
+}
+
+function toggleProvider(provider, checkbox) {
+    checkbox.disabled = true;
+    fetch('/admin/providers/' + provider + '/toggle', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            const label = document.getElementById('provider-config-label-' + provider);
+            if (data.enabled !== undefined) {
+                checkbox.checked = data.enabled;
+                if (label) {
+                    label.textContent = data.enabled ? 'enabled' : 'disabled';
+                    label.className = 'admin-provider-config-label ' + (data.enabled ? 'enabled' : 'disabled');
+                }
+            } else {
+                checkbox.checked = !checkbox.checked;
+            }
+        })
+        .catch(() => { checkbox.checked = !checkbox.checked; })
+        .finally(() => { checkbox.disabled = false; });
 }
 
 function toggleUser(userId, checkbox) {
