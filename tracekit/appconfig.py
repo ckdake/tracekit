@@ -236,7 +236,7 @@ def save_garmin_tokens(email: str, garth_tokens: str) -> None:
     save_config({**config, "providers": providers})
 
 
-ALL_PROVIDERS: list[str] = ["strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"]
+ALL_PROVIDERS: list[str] = list(DEFAULT_CONFIG["providers"].keys())
 
 _SYSTEM_USER_ID = 0
 _SYSTEM_PROVIDERS_KEY = "system_providers"

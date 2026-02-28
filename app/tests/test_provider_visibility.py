@@ -20,6 +20,9 @@ from main import app
 @pytest.fixture(autouse=True)
 def reset_db_state():
     """Reset DB initialisation state between tests to prevent leakage."""
+    from tracekit.user_context import set_user_id
+
+    set_user_id(0)
     yield
     import db_init as db_init_module
 
@@ -27,6 +30,7 @@ def reset_db_state():
 
     db_init_module._db_initialized = False
     tdb._configured = False
+    set_user_id(0)
 
 
 @pytest.fixture
@@ -166,9 +170,9 @@ class TestSaveSystemProviders:
     """save_system_providers() persists values and is idempotent."""
 
     def test_save_and_reload(self, db):
-        from tracekit.appconfig import get_system_providers, save_system_providers
+        from tracekit.appconfig import ALL_PROVIDERS, get_system_providers, save_system_providers
 
-        payload = {p: False for p in ["strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"]}
+        payload = {p: False for p in ALL_PROVIDERS}
         save_system_providers(payload)
         result = get_system_providers()
         for p in payload:
@@ -235,11 +239,9 @@ class TestToggleProviderEndpoint:
         assert get_system_providers()["strava"] is False
 
     def test_toggle_enables_disabled_provider(self, admin_client, db):
-        from tracekit.appconfig import get_system_providers, save_system_providers
+        from tracekit.appconfig import ALL_PROVIDERS, get_system_providers, save_system_providers
 
-        save_system_providers(
-            {p: (p != "strava") for p in ["strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"]}
-        )
+        save_system_providers({p: (p != "strava") for p in ALL_PROVIDERS})
         resp = admin_client.post("/admin/providers/strava/toggle")
         assert resp.status_code == 200
         data = json.loads(resp.data)
@@ -286,11 +288,9 @@ class TestAdminPageProviderCard:
         assert "checked" in snippet
 
     def test_disabled_provider_lacks_checked_attribute(self, admin_client, db):
-        from tracekit.appconfig import save_system_providers
+        from tracekit.appconfig import ALL_PROVIDERS, save_system_providers
 
-        save_system_providers(
-            {p: (p != "strava") for p in ["strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"]}
-        )
+        save_system_providers({p: (p != "strava") for p in ALL_PROVIDERS})
         resp = admin_client.get("/admin")
         html = resp.data.decode()
         idx = html.index("provider-toggle-strava")
@@ -308,33 +308,57 @@ class TestAdminPageProviderCard:
 
 
 class TestSettingsPageEnabledProviders:
-    """Settings page receives the correct ENABLED_PROVIDERS list."""
+    """Settings page receives the correct ENABLED_PROVIDERS list and filters INITIAL_CONFIG."""
 
     def test_enabled_providers_var_present(self, user_client):
         resp = user_client.get("/settings")
         assert b"ENABLED_PROVIDERS" in resp.data
 
-    def test_all_providers_visible_by_default(self, user_client):
+    def test_hidden_provider_configs_var_present(self, user_client):
+        resp = user_client.get("/settings")
+        assert b"HIDDEN_PROVIDER_CONFIGS" in resp.data
+
+    def test_all_providers_in_initial_config_by_default(self, user_client):
         from tracekit.appconfig import ALL_PROVIDERS
 
         resp = user_client.get("/settings")
         html = resp.data.decode()
-        # Find the ENABLED_PROVIDERS JS array
-        start = html.index("ENABLED_PROVIDERS")
-        snippet = html[start : start + 300]
+        start = html.index("INITIAL_CONFIG")
+        end = html.index("SYSTEM_CREDENTIALS", start)
+        snippet = html[start:end]
         for provider in ALL_PROVIDERS:
             assert provider in snippet
 
-    def test_disabled_provider_excluded_from_enabled_providers(self, user_client, db):
-        from tracekit.appconfig import save_system_providers
+    def test_disabled_provider_absent_from_initial_config(self, user_client, db):
+        from tracekit.appconfig import ALL_PROVIDERS, save_system_providers
 
-        save_system_providers(
-            {p: (p != "spreadsheet") for p in ["strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"]}
-        )
+        save_system_providers({p: (p != "spreadsheet") for p in ALL_PROVIDERS})
+        resp = user_client.get("/settings")
+        html = resp.data.decode()
+        # INITIAL_CONFIG sits between its declaration and SYSTEM_CREDENTIALS
+        start = html.index("INITIAL_CONFIG")
+        end = html.index("SYSTEM_CREDENTIALS", start)
+        initial_config_snippet = html[start:end]
+        assert "spreadsheet" not in initial_config_snippet
+
+    def test_disabled_provider_in_hidden_configs(self, user_client, db):
+        from tracekit.appconfig import ALL_PROVIDERS, save_system_providers
+
+        save_system_providers({p: (p != "spreadsheet") for p in ALL_PROVIDERS})
+        resp = user_client.get("/settings")
+        html = resp.data.decode()
+        start = html.index("HIDDEN_PROVIDER_CONFIGS")
+        end = html.index(";", start)
+        snippet = html[start:end]
+        assert "spreadsheet" in snippet
+
+    def test_disabled_provider_excluded_from_enabled_providers(self, user_client, db):
+        from tracekit.appconfig import ALL_PROVIDERS, save_system_providers
+
+        save_system_providers({p: (p != "spreadsheet") for p in ALL_PROVIDERS})
         resp = user_client.get("/settings")
         html = resp.data.decode()
         start = html.index("ENABLED_PROVIDERS")
-        # The JS array ends at the first semicolon after the variable declaration
         end = html.index(";", start)
         snippet = html[start:end]
         assert "spreadsheet" not in snippet

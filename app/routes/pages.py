@@ -37,11 +37,21 @@ def settings():
 
     from tracekit.appconfig import get_system_providers
 
-    enabled_providers = [name for name, visible in get_system_providers().items() if visible]
+    enabled_set = {name for name, visible in get_system_providers().items() if visible}
+    all_providers = config.get("providers", {})
+
+    # Strip disabled providers from config before it becomes INITIAL_CONFIG in the
+    # browser. This is the authoritative gate — the client-side ENABLED_PROVIDERS
+    # filter is defence-in-depth only.
+    visible_config = {**config, "providers": {k: v for k, v in all_providers.items() if k in enabled_set}}
+
+    # Pass hidden provider configs separately so autoSave can round-trip them back
+    # to the server unchanged, preserving credentials if a provider is re-enabled.
+    hidden_provider_configs = {k: v for k, v in all_providers.items() if k not in enabled_set}
 
     return render_template(
         "settings.html",
-        config=config,
+        config=visible_config,
         timezones=timezones,
         page_name="Settings",
         stripe_enabled=stripe_enabled,
@@ -49,7 +59,8 @@ def settings():
         subscription_end=subscription_end,
         allow_impersonation=current_user.allow_impersonation,
         system_credentials=system_credentials,
-        enabled_providers=enabled_providers,
+        enabled_providers=sorted(enabled_set),
+        hidden_provider_configs=hidden_provider_configs,
     )
 
 

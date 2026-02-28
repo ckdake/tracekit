@@ -398,7 +398,10 @@ async function autoSave(triggerEl) {
         priority++;
     });
 
-    const newConfig = { ...INITIAL_CONFIG, home_timezone: tz, debug, providers: newProviders };
+    // Re-attach hidden (system-disabled) provider configs so their credentials
+    // are preserved on the server even while those providers aren't rendered.
+    const hiddenConfigs = typeof HIDDEN_PROVIDER_CONFIGS !== 'undefined' ? HIDDEN_PROVIDER_CONFIGS : {};
+    const newConfig = { ...INITIAL_CONFIG, home_timezone: tz, debug, providers: { ...hiddenConfigs, ...newProviders } };
 
     try {
         const resp = await fetch('/api/config', {

@@ -6,6 +6,8 @@ from calendar_data import get_single_month_data
 from db_init import load_tracekit_config
 from flask import Blueprint, jsonify, request
 
+from tracekit.appconfig import ALL_PROVIDERS
+
 calendar_bp = Blueprint("calendar", __name__)
 
 
@@ -72,7 +74,7 @@ def sync_provider_month(year_month: str, provider_name: str):
     """Enqueue a pull job for a single provider and YYYY-MM month."""
     if not re.fullmatch(r"\d{4}-\d{2}", year_month):
         return jsonify({"error": "Invalid month format, expected YYYY-MM"}), 400
-    valid_providers = {"strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"}
+    valid_providers = set(ALL_PROVIDERS)
     if provider_name not in valid_providers:
         return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
     try:
@@ -107,7 +109,7 @@ def sync_file():
 @calendar_bp.route("/api/reset/provider/<provider_name>", methods=["POST"])
 def reset_provider_data(provider_name: str):
     """Enqueue a reset job for all activities from a single named provider."""
-    valid_providers = {"strava", "garmin", "ridewithgps", "spreadsheet", "file", "stravajson"}
+    valid_providers = set(ALL_PROVIDERS)
     if provider_name not in valid_providers:
         return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
     try:
