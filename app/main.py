@@ -74,6 +74,8 @@ _PUBLIC_ENDPOINTS = frozenset(
         "auth.logout",
         "api.health",
         "stripe.webhook",
+        "strava_webhook.webhook_verify",
+        "strava_webhook.webhook_event",
         "static",
     }
 )
@@ -141,6 +143,7 @@ from routes.calendar import calendar_bp
 from routes.month import month_bp
 from routes.notifications import notifications_bp
 from routes.pages import pages_bp
+from routes.strava_webhook import strava_webhook_bp
 from routes.stripe_bp import stripe_bp
 
 app.register_blueprint(pages_bp)
@@ -153,6 +156,7 @@ app.register_blueprint(notifications_bp)
 app.register_blueprint(garmin_bp)
 app.register_blueprint(ridewithgps_bp)
 app.register_blueprint(strava_bp)
+app.register_blueprint(strava_webhook_bp)
 app.register_blueprint(stripe_bp)
 
 # ---------------------------------------------------------------------------

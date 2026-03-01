@@ -131,6 +131,16 @@ def api_auth_strava_callback():
         )
         save_strava_tokens(token_dict)
 
+        # Save the athlete ID so webhook events can be routed to this user.
+        try:
+            from tracekit.appconfig import save_strava_athlete_id
+
+            athlete = client.get_athlete()
+            if athlete and getattr(athlete, "id", None):
+                save_strava_athlete_id(str(athlete.id))
+        except Exception as e:
+            print(f"Could not save Strava athlete ID: {e}")
+
         return _strava_callback_page(True, "Strava authentication successful!")
     except Exception as e:
         return _strava_callback_page(False, f"Token exchange failed: {e}")

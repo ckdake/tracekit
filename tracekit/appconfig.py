@@ -19,6 +19,7 @@ created automatically by ``migrate_tables()`` on every boot.
 import copy
 import json
 import os
+import secrets
 from pathlib import Path
 from typing import Any
 
@@ -301,6 +302,83 @@ def save_system_providers(providers: dict[str, bool]) -> None:
         )
     except Exception as e:
         print(f"Warning: could not save system providers: {e}")
+
+
+_STRAVA_WEBHOOK_KEY = "strava_webhook"
+
+
+def get_strava_webhook_config() -> dict:
+    """Return Strava webhook config (system-level, user_id=0)."""
+    try:
+        row = AppConfig.get_or_none((AppConfig.key == _STRAVA_WEBHOOK_KEY) & (AppConfig.user_id == _SYSTEM_USER_ID))
+        if row:
+            return json.loads(row.value)
+    except Exception:
+        pass
+    return {}
+
+
+def save_strava_webhook_config(config: dict) -> None:
+    """Persist Strava webhook config (system-level, user_id=0)."""
+    try:
+        (
+            AppConfig.insert(key=_STRAVA_WEBHOOK_KEY, value=json.dumps(config), user_id=_SYSTEM_USER_ID)
+            .on_conflict(
+                conflict_target=[AppConfig.key, AppConfig.user_id],
+                update={AppConfig.value: json.dumps(config)},
+            )
+            .execute()
+        )
+    except Exception as e:
+        print(f"Warning: could not save strava webhook config: {e}")
+
+
+def get_or_create_strava_webhook_verify_token() -> str:
+    """Return the webhook verify_token, generating and saving one if absent."""
+    cfg = get_strava_webhook_config()
+    if "verify_token" not in cfg:
+        cfg["verify_token"] = secrets.token_urlsafe(32)
+        save_strava_webhook_config(cfg)
+    return cfg["verify_token"]
+
+
+def save_strava_webhook_subscription_id(sub_id: int | None) -> None:
+    """Save (or clear) the Strava webhook subscription ID."""
+    cfg = get_strava_webhook_config()
+    if sub_id is None:
+        cfg.pop("subscription_id", None)
+    else:
+        cfg["subscription_id"] = sub_id
+    save_strava_webhook_config(cfg)
+
+
+def save_strava_athlete_id(athlete_id: str) -> None:
+    """Save the Strava athlete_id to the current user's strava config."""
+    config = load_config()
+    providers = config.get("providers", {})
+    strava_updated = providers.get("strava", {}).copy()
+    strava_updated["athlete_id"] = str(athlete_id)
+    providers["strava"] = strava_updated
+    save_config({**config, "providers": providers})
+
+
+def find_user_id_by_strava_athlete_id(athlete_id: str) -> int | None:
+    """Scan AppConfig rows to find which user owns the given Strava athlete_id."""
+    try:
+        rows = AppConfig.select().where(AppConfig.key == "providers")
+        for row in rows:
+            if row.user_id == 0:
+                continue
+            try:
+                providers = json.loads(row.value)
+                strava = providers.get("strava", {})
+                if str(strava.get("athlete_id", "")) == str(athlete_id):
+                    return row.user_id
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return None
 
 
 def get_db_path_from_env() -> str:

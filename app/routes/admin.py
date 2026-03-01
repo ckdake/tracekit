@@ -81,10 +81,18 @@ def index():
             }
         )
 
-    from tracekit.appconfig import get_system_providers
+    from tracekit.appconfig import get_strava_webhook_config, get_system_providers
 
     system_providers = get_system_providers()
-    return render_template("admin.html", page_name="Admin", user_data=user_data, system_providers=system_providers)
+    strava_webhook_cfg = get_strava_webhook_config()
+
+    return render_template(
+        "admin.html",
+        page_name="Admin",
+        user_data=user_data,
+        system_providers=system_providers,
+        strava_webhook_subscription_id=strava_webhook_cfg.get("subscription_id"),
+    )
 
 
 @admin_bp.route("/admin/providers/<provider>/toggle", methods=["POST"])

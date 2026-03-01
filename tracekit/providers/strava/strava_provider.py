@@ -302,10 +302,53 @@ class StravaProvider(FitnessProvider):
         except (RateLimitExceeded, RateLimitTimeout) as exc:
             self._raise_rate_limit(exc, "fetch_activities")
 
-    def _convert_to_strava_activity(self, strava_lib_activity) -> StravaActivity:
-        """Convert a stravalib activity to our StravaActivity object"""
+    def _activity_to_model(self, full_activity) -> StravaActivity:
+        """Map a stravalib DetailedActivity to a StravaActivity model (no API calls)."""
         strava_activity = StravaActivity()
 
+        strava_activity.strava_id = str(getattr(full_activity, "id", ""))
+        strava_activity.name = str(getattr(full_activity, "name", "") or "")
+        strava_activity.activity_type = str(getattr(full_activity, "type", "") or "")
+
+        distance_m = getattr(full_activity, "distance", None)
+        if distance_m:
+            strava_activity.distance = Decimal(str(float(distance_m) * 0.000621371))
+
+        start_date = getattr(full_activity, "start_date", None)
+        if start_date:
+            strava_activity.start_time = int(start_date.timestamp())
+
+        elapsed_time = getattr(full_activity, "elapsed_time", None)
+        if elapsed_time:
+            if hasattr(elapsed_time, "total_seconds"):
+                total_seconds = int(elapsed_time.total_seconds())
+            elif hasattr(elapsed_time, "seconds"):
+                total_seconds = int(elapsed_time.seconds)
+            else:
+                total_seconds = int(elapsed_time)
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            strava_activity.duration_hms = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+        gear = getattr(full_activity, "gear", None)
+        if gear and hasattr(gear, "name"):
+            gear_name = getattr(gear, "name", None)
+            if gear_name:
+                strava_activity.equipment = self._normalize_strava_gear_name(str(gear_name))
+
+        if hasattr(full_activity, "model_dump"):
+            raw_data = full_activity.model_dump()
+        elif hasattr(full_activity, "dict"):
+            raw_data = full_activity.dict()
+        else:
+            raw_data = dict(full_activity)
+        strava_activity.raw_data = json.dumps(raw_data, default=str)
+
+        return strava_activity
+
+    def _convert_to_strava_activity(self, strava_lib_activity) -> StravaActivity:
+        """Convert a stravalib activity (summary) to our StravaActivity object."""
         activity_id = getattr(strava_lib_activity, "id", None)
         full_activity = strava_lib_activity
 
@@ -318,53 +361,46 @@ class StravaProvider(FitnessProvider):
             except (RateLimitExceeded, RateLimitTimeout) as exc:
                 self._raise_rate_limit(exc, "get_activity")
 
-        # Basic fields
-        strava_activity.strava_id = str(getattr(full_activity, "id", ""))
-        strava_activity.name = str(getattr(full_activity, "name", "") or "")
-        strava_activity.activity_type = str(getattr(full_activity, "type", "") or "")
+        return self._activity_to_model(full_activity)
 
-        # Distance - convert from meters to miles
-        distance_m = getattr(full_activity, "distance", None)
-        if distance_m:
-            strava_activity.distance = Decimal(str(float(distance_m) * 0.000621371))
+    def sync_single_activity(self, strava_id: str) -> StravaActivity | None:
+        """Fetch a single activity from Strava by ID and upsert it locally.
 
-        # Start time as timestamp string
-        start_date = getattr(full_activity, "start_date", None)
-        if start_date:
-            strava_activity.start_time = int(start_date.timestamp())
+        Used by the webhook handler for create/update events.
+        """
+        self._ensure_fresh_token()
+        try:
+            full_activity = self.client.get_activity(int(strava_id))
+        except AccessUnauthorized as exc:
+            self._handle_unauthorized(exc, "sync_single_activity")
+            return None
+        except (RateLimitExceeded, RateLimitTimeout) as exc:
+            self._raise_rate_limit(exc, "sync_single_activity")
+            return None
+        except Exception as e:
+            print(f"Error fetching Strava activity {strava_id}: {e}")
+            return None
 
-        # Duration
-        elapsed_time = getattr(full_activity, "elapsed_time", None)
-        if elapsed_time:
-            if hasattr(elapsed_time, "total_seconds"):
-                total_seconds = int(elapsed_time.total_seconds())
-            elif hasattr(elapsed_time, "seconds"):
-                total_seconds = int(elapsed_time.seconds)
-            else:
-                total_seconds = int(elapsed_time)
+        if full_activity is None:
+            return None
 
-            hours = total_seconds // 3600
-            minutes = (total_seconds % 3600) // 60
-            seconds = total_seconds % 60
-            strava_activity.duration_hms = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        local = self._activity_to_model(full_activity)
+        uid = get_user_id()
 
-        # Equipment/gear information
-        gear = getattr(full_activity, "gear", None)
-        if gear and hasattr(gear, "name"):
-            gear_name = getattr(gear, "name", None)
-            if gear_name:
-                strava_activity.equipment = self._normalize_strava_gear_name(str(gear_name))
-
-        # Store raw data as full activity JSON
-        if hasattr(full_activity, "model_dump"):
-            raw_data = full_activity.model_dump()
-        elif hasattr(full_activity, "dict"):
-            raw_data = full_activity.dict()
+        existing = StravaActivity.get_or_none(
+            (StravaActivity.strava_id == str(strava_id)) & (StravaActivity.user_id == uid)
+        )
+        if existing:
+            for field in ("name", "activity_type", "distance", "start_time", "duration_hms", "equipment", "raw_data"):
+                setattr(existing, field, getattr(local, field))
+            existing.save()
+            print(f"Strava webhook: updated local activity {strava_id}")
+            return existing
         else:
-            raw_data = dict(full_activity)
-        strava_activity.raw_data = json.dumps(raw_data, default=str)
-
-        return strava_activity
+            local.user_id = uid
+            local.save()
+            print(f"Strava webhook: created local activity {strava_id}")
+            return local
 
     # Abstract method implementations
     def create_activity(self, activity_data: dict[str, Any]) -> StravaActivity:

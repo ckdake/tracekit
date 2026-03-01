@@ -90,6 +90,38 @@
             </div>
             {% endfor %}
         </div>
+
+        <div class="admin-webhook-section">
+            <h3>Strava Webhook Subscription</h3>
+            <p class="field-help">
+                Strava webhooks deliver real-time activity events (create, update, delete, deauthorize) to this
+                application. Only one subscription exists per Strava app.
+            </p>
+            <div class="admin-webhook-row">
+                <span class="admin-webhook-label">Status</span>
+                <span id="webhook-status-badge"
+                      class="admin-webhook-badge {% if strava_webhook_subscription_id %}active{% else %}inactive{% endif %}">
+                    {% if strava_webhook_subscription_id %}
+                        Active &mdash; ID {{ strava_webhook_subscription_id }}
+                    {% else %}
+                        No subscription
+                    {% endif %}
+                </span>
+            </div>
+            <div class="admin-webhook-actions">
+                <button class="btn btn-sm btn-secondary" onclick="stravaWebhookSubscribe()"
+                        {% if strava_webhook_subscription_id %}disabled{% endif %}
+                        id="btn-webhook-subscribe">
+                    Create Subscription
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="stravaWebhookUnsubscribe()"
+                        {% if not strava_webhook_subscription_id %}disabled{% endif %}
+                        id="btn-webhook-unsubscribe">
+                    Destroy Subscription
+                </button>
+            </div>
+            <p id="webhook-error" class="field-help" style="color:#c0392b;display:none"></p>
+        </div>
     </div>
 
     <div class="card card-danger">
@@ -184,6 +216,14 @@
 .admin-provider-config-label { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .admin-provider-config-label.enabled { color: #27ae60; }
 .admin-provider-config-label.disabled { color: #999; }
+.admin-webhook-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e0e0e0; }
+.admin-webhook-section h3 { font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+.admin-webhook-row { display: flex; align-items: center; gap: 10px; margin: 12px 0 10px; }
+.admin-webhook-label { font-size: 0.85rem; color: #666; min-width: 50px; }
+.admin-webhook-badge { font-size: 0.82rem; font-weight: 600; padding: 2px 10px; border-radius: 12px; }
+.admin-webhook-badge.active { background: #eaf6ef; color: #1e8449; border: 1px solid #a9dfbf; }
+.admin-webhook-badge.inactive { background: #f5f5f5; color: #999; border: 1px solid #ddd; }
+.admin-webhook-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 </style>
 
 <script>
@@ -210,6 +250,61 @@ function toggleProvider(provider, checkbox) {
         })
         .catch(() => { checkbox.checked = !checkbox.checked; })
         .finally(() => { checkbox.disabled = false; });
+}
+
+function stravaWebhookSubscribe() {
+    const btn = document.getElementById('btn-webhook-subscribe');
+    const errEl = document.getElementById('webhook-error');
+    btn.disabled = true;
+    errEl.style.display = 'none';
+    fetch('/admin/strava/webhook/subscribe', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                _setWebhookStatus(data.subscription_id);
+            } else {
+                errEl.textContent = data.error || 'Unknown error';
+                errEl.style.display = '';
+                btn.disabled = false;
+            }
+        })
+        .catch(e => { errEl.textContent = String(e); errEl.style.display = ''; btn.disabled = false; });
+}
+
+function stravaWebhookUnsubscribe() {
+    const btn = document.getElementById('btn-webhook-unsubscribe');
+    const errEl = document.getElementById('webhook-error');
+    btn.disabled = true;
+    errEl.style.display = 'none';
+    fetch('/admin/strava/webhook/unsubscribe', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                _setWebhookStatus(null);
+            } else {
+                errEl.textContent = data.error || 'Unknown error';
+                errEl.style.display = '';
+                btn.disabled = false;
+            }
+        })
+        .catch(e => { errEl.textContent = String(e); errEl.style.display = ''; btn.disabled = false; });
+}
+
+function _setWebhookStatus(subId) {
+    const badge = document.getElementById('webhook-status-badge');
+    const subBtn = document.getElementById('btn-webhook-subscribe');
+    const unsubBtn = document.getElementById('btn-webhook-unsubscribe');
+    if (subId) {
+        badge.textContent = 'Active \u2014 ID ' + subId;
+        badge.className = 'admin-webhook-badge active';
+        subBtn.disabled = true;
+        unsubBtn.disabled = false;
+    } else {
+        badge.textContent = 'No subscription';
+        badge.className = 'admin-webhook-badge inactive';
+        subBtn.disabled = false;
+        unsubBtn.disabled = true;
+    }
 }
 
 function toggleUser(userId, checkbox) {
