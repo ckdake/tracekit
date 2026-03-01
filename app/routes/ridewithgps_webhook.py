@@ -112,6 +112,7 @@ def webhook_event():
             _handle_notification(notification)
         except Exception as e:
             log.error("RideWithGPS webhook: unhandled error for notification %s: %s", notification, e)
+            _notify_admin(f"RideWithGPS webhook: unhandled error processing notification: {e}", "error")
 
     # Always return 200 quickly — RWGPS has no retry mechanism.
     return "", 200
@@ -187,12 +188,14 @@ def _sync_local_trip(trip_id, user_id: int) -> None:
     row = AppConfig.get_or_none((AppConfig.key == "providers") & (AppConfig.user_id == user_id))
     if row is None:
         log.warning("RideWithGPS webhook: no config for user_id=%d", user_id)
+        _notify_admin(f"RideWithGPS webhook: no provider config for user {user_id} (trip {trip_id})", "error")
         return
 
     rwgps_cfg = json.loads(row.value).get("ridewithgps", {})
     access_token = rwgps_cfg.get("access_token", "")
     if not access_token:
         log.warning("RideWithGPS webhook: no access token for user_id=%d", user_id)
+        _notify_admin(f"RideWithGPS webhook: no access token for user {user_id} (trip {trip_id})", "error")
         return
 
     provider = RideWithGPSProvider(config=rwgps_cfg)
