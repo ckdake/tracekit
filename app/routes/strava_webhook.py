@@ -19,6 +19,31 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+def _notify_admin(message: str, category: str = "info") -> None:
+    """Write a notification row for the admin user (user_id=1).
+
+    Uses a direct Notification.create rather than create_notification so that
+    the webhook's own user_id context doesn't interfere.
+    """
+    try:
+        from datetime import UTC, datetime
+
+        from db_init import _init_db
+
+        from tracekit.notification import Notification
+
+        _init_db()
+        Notification.create(
+            message=message,
+            category=category,
+            created=int(datetime.now(UTC).timestamp()),
+            expires=None,
+            user_id=1,
+        )
+    except Exception as e:
+        log.warning("_notify_admin failed: %s", e)
+
+
 def _require_admin():
     if not current_user.is_authenticated or not current_user.is_admin:
         abort(403)
@@ -133,6 +158,9 @@ def _handle_activity_event(aspect_type: str, activity_id, owner_id):
     user_id = _find_user(owner_id)
     if user_id is None:
         log.warning("Strava webhook: no user found for athlete_id=%s — ignoring", owner_id)
+        _notify_admin(
+            f"Strava webhook: {aspect_type} event for unknown athlete {owner_id} (activity {activity_id})", "error"
+        )
         return
 
     set_user_id(user_id)
@@ -142,8 +170,10 @@ def _handle_activity_event(aspect_type: str, activity_id, owner_id):
             _delete_local_activity(activity_id, user_id)
         elif aspect_type in ("create", "update"):
             _sync_local_activity(activity_id, user_id)
+        _notify_admin(f"Strava webhook: activity {aspect_type} — id={activity_id} user={user_id}")
     except Exception as e:
         log.error("Strava webhook: error handling %s event for activity %s: %s", aspect_type, activity_id, e)
+        _notify_admin(f"Strava webhook: error on activity {aspect_type} (id={activity_id}): {e}", "error")
 
 
 def _delete_local_activity(activity_id, user_id: int):
@@ -217,8 +247,10 @@ def _handle_deauthorize(owner_id):
             .execute()
         )
         log.info("Strava deauth: disabled provider for user_id=%d", user_id)
+        _notify_admin(f"Strava webhook: user {user_id} (athlete {owner_id}) deauthorized — provider disabled", "error")
     except Exception as e:
         log.error("Strava deauth: error disabling provider for user_id=%d: %s", user_id, e)
+        _notify_admin(f"Strava webhook: deauth error for user {user_id}: {e}", "error")
 
 
 # ---------------------------------------------------------------------------

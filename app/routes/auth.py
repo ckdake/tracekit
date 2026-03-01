@@ -35,6 +35,21 @@ def signup():
                 # The first user (admin) is active immediately; all others are blocked.
                 status="active" if is_first_user else "blocked",
             )
+            if not is_first_user:
+                try:
+                    from datetime import UTC, datetime
+
+                    from tracekit.notification import Notification
+
+                    Notification.create(
+                        message=f"New user signed up: {email} (pending approval)",
+                        category="info",
+                        created=int(datetime.now(UTC).timestamp()),
+                        expires=None,
+                        user_id=1,
+                    )
+                except Exception:
+                    pass
             login_user(user)
             return redirect(url_for("pages.index"))
 
