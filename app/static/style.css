@@ -1050,6 +1050,19 @@ select#timezone:focus {
 }
 .garmin-auth-btn:hover { background: #155bb0; }
 
+/* Auth status chip — shown above OAuth connect buttons */
+.auth-status-line { margin: 12px 0 0; }
+.auth-status-chip {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.03em;
+}
+.auth-status-chip.connected { background: #eaf6ef; color: #1e8449; border: 1px solid #a9dfbf; }
+.auth-status-chip.not-connected { background: #f5f5f5; color: #888; border: 1px solid #ddd; }
+
 /* Strava-branded auth button — uses official connect_with_strava.svg */
 .strava-auth-btn {
     display: inline-block;

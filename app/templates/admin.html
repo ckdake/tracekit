@@ -108,6 +108,11 @@
                     {% endif %}
                 </span>
             </div>
+            <div class="admin-webhook-row">
+                <span class="admin-webhook-label">Callback URL</span>
+                <code class="admin-webhook-url">{{ strava_webhook_url }}</code>
+                <button class="btn btn-xs btn-secondary" onclick="copyUrl('{{ strava_webhook_url }}', this)">Copy</button>
+            </div>
             <div class="admin-webhook-actions">
                 <button class="btn btn-sm btn-secondary" onclick="stravaWebhookSubscribe()"
                         {% if strava_webhook_subscription_id %}disabled{% endif %}
@@ -121,6 +126,19 @@
                 </button>
             </div>
             <p id="webhook-error" class="field-help" style="color:#c0392b;display:none"></p>
+        </div>
+
+        <div class="admin-webhook-section">
+            <h3>RideWithGPS Webhook</h3>
+            <p class="field-help">
+                Configure this URL in the RideWithGPS developer settings to receive real-time trip events
+                (created, updated, deleted). Events are verified via HMAC-SHA256 signature.
+            </p>
+            <div class="admin-webhook-row">
+                <span class="admin-webhook-label">Callback URL</span>
+                <code class="admin-webhook-url">{{ rwgps_webhook_url }}</code>
+                <button class="btn btn-xs btn-secondary" onclick="copyUrl('{{ rwgps_webhook_url }}', this)">Copy</button>
+            </div>
         </div>
     </div>
 
@@ -224,6 +242,8 @@
 .admin-webhook-badge.active { background: #eaf6ef; color: #1e8449; border: 1px solid #a9dfbf; }
 .admin-webhook-badge.inactive { background: #f5f5f5; color: #999; border: 1px solid #ddd; }
 .admin-webhook-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-webhook-url { font-size: 0.82rem; color: #2c3e50; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+.btn-xs { font-size: 0.75rem; padding: 2px 8px; }
 </style>
 
 <script>
@@ -305,6 +325,14 @@ function _setWebhookStatus(subId) {
         subBtn.disabled = false;
         unsubBtn.disabled = true;
     }
+}
+
+function copyUrl(url, btn) {
+    navigator.clipboard.writeText(url).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    });
 }
 
 function toggleUser(userId, checkbox) {

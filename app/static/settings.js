@@ -199,6 +199,13 @@ function makeProviderCard(name, data) {
     // Strava: auth button appears before the personal-credentials section so the
     // card looks like Garmin's by default (just a connect button + a toggle below).
     if (name === 'strava') {
+        const status = document.createElement('p');
+        status.className = 'auth-status-line';
+        status.innerHTML = data.access_token
+            ? '<span class="auth-status-chip connected">Connected</span>'
+            : '<span class="auth-status-chip not-connected">Not connected</span>';
+        card.appendChild(status);
+
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
         authBtn.className = 'strava-auth-btn';
@@ -212,6 +219,13 @@ function makeProviderCard(name, data) {
 
     // RideWithGPS: OAuth button, same pattern as Strava.
     if (name === 'ridewithgps') {
+        const status = document.createElement('p');
+        status.className = 'auth-status-line';
+        status.innerHTML = data.access_token
+            ? '<span class="auth-status-chip connected">Connected</span>'
+            : '<span class="auth-status-chip not-connected">Not connected</span>';
+        card.appendChild(status);
+
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
         authBtn.className = 'ridewithgps-auth-btn';

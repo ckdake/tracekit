@@ -81,10 +81,15 @@ def index():
             }
         )
 
+    from flask import request
+
     from tracekit.appconfig import get_strava_webhook_config, get_system_providers
 
     system_providers = get_system_providers()
     strava_webhook_cfg = get_strava_webhook_config()
+
+    scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+    base_url = f"{scheme}://{request.host}"
 
     return render_template(
         "admin.html",
@@ -92,6 +97,8 @@ def index():
         user_data=user_data,
         system_providers=system_providers,
         strava_webhook_subscription_id=strava_webhook_cfg.get("subscription_id"),
+        strava_webhook_url=f"{base_url}/api/strava/webhook",
+        rwgps_webhook_url=f"{base_url}/api/ridewithgps/webhook",
     )
 
 
