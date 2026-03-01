@@ -126,6 +126,24 @@ def api_auth_ridewithgps_callback():
             return _rwgps_callback_page(False, "No access token received from RideWithGPS.")
 
         save_ridewithgps_tokens(access_token)
+
+        # Fetch and persist the RideWithGPS user_id so webhook events can be routed.
+        try:
+            from tracekit.appconfig import save_ridewithgps_user_id
+
+            authed_client = RideWithGPS(
+                client_id=client_id,
+                client_secret=client_secret,
+                access_token=access_token,
+            )
+            user_response = authed_client.get(path="/users/current.json")
+            user_info = getattr(user_response, "user", None)
+            rwgps_user_id = getattr(user_info, "id", None)
+            if rwgps_user_id:
+                save_ridewithgps_user_id(str(rwgps_user_id))
+        except Exception:
+            pass  # Non-fatal; webhook routing just won't work until next re-auth
+
         return _rwgps_callback_page(True, "RideWithGPS authentication successful!")
     except Exception as e:
         return _rwgps_callback_page(False, f"Token exchange failed: {e}")

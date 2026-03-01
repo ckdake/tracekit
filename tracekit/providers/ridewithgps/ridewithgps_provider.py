@@ -265,6 +265,55 @@ class RideWithGPSProvider(FitnessProvider):
             print(f"Error setting gear for RideWithGPS trip {activity_id}: {e}")
             return False
 
+    def sync_single_activity(self, trip_id: str) -> RideWithGPSActivity | None:
+        """Fetch a single trip from RideWithGPS by ID and upsert it locally.
+
+        Used by the webhook handler for created/updated events.
+        """
+        try:
+            trip = self.client.get(path=f"/trips/{trip_id}.json").trip
+        except Exception as e:
+            print(f"RideWithGPS webhook: error fetching trip {trip_id}: {e}")
+            return None
+
+        if trip is None:
+            return None
+
+        uid = get_user_id()
+
+        local = RideWithGPSActivity()
+        local.ridewithgps_id = str(trip.id)
+        local.name = str(trip.name) if hasattr(trip, "name") and trip.name else ""
+        if hasattr(trip, "distance") and trip.distance is not None:
+            local.distance = Decimal(str(float(trip.distance) / 1609.34))
+        if hasattr(trip, "departed_at") and trip.departed_at:
+            dt = self._parse_iso8601(trip.departed_at)
+            if dt:
+                local.start_time = int(dt.astimezone(datetime.UTC).timestamp())
+        if hasattr(trip, "locality") and trip.locality:
+            local.city = str(trip.locality)
+        if hasattr(trip, "administrative_area") and trip.administrative_area:
+            local.state = str(trip.administrative_area)
+        if hasattr(trip, "gear") and trip.gear and hasattr(trip.gear, "name"):
+            local.equipment = str(trip.gear.name)
+
+        existing = RideWithGPSActivity.get_or_none(
+            (RideWithGPSActivity.ridewithgps_id == str(trip_id)) & (RideWithGPSActivity.user_id == uid)
+        )
+        if existing:
+            for field in ("name", "distance", "start_time", "city", "state", "equipment"):
+                val = getattr(local, field, None)
+                if val is not None:
+                    setattr(existing, field, val)
+            existing.save()
+            print(f"RideWithGPS webhook: updated local trip {trip_id}")
+            return existing
+        else:
+            local.user_id = uid
+            local.save()
+            print(f"RideWithGPS webhook: created local trip {trip_id}")
+            return local
+
     def reset_activities(self, date_filter: str | None = None) -> int:
         """Reset (delete) RideWithGPS activities from local database."""
         from tracekit.providers.ridewithgps.ridewithgps_activity import (

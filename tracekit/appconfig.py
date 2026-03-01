@@ -381,6 +381,35 @@ def find_user_id_by_strava_athlete_id(athlete_id: str) -> int | None:
     return None
 
 
+def save_ridewithgps_user_id(rwgps_user_id: str) -> None:
+    """Save the RideWithGPS user_id to the current user's ridewithgps config."""
+    config = load_config()
+    providers = config.get("providers", {})
+    rwgps_updated = providers.get("ridewithgps", {}).copy()
+    rwgps_updated["user_id"] = str(rwgps_user_id)
+    providers["ridewithgps"] = rwgps_updated
+    save_config({**config, "providers": providers})
+
+
+def find_user_id_by_rwgps_user_id(rwgps_user_id: str) -> int | None:
+    """Scan AppConfig rows to find which local user owns the given RideWithGPS user_id."""
+    try:
+        rows = AppConfig.select().where(AppConfig.key == "providers")
+        for row in rows:
+            if row.user_id == 0:
+                continue
+            try:
+                providers = json.loads(row.value)
+                rwgps = providers.get("ridewithgps", {})
+                if str(rwgps.get("user_id", "")) == str(rwgps_user_id):
+                    return row.user_id
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return None
+
+
 def get_db_path_from_env() -> str:
     """Return the SQLite path to use when no DATABASE_URL is set.
 

@@ -21,7 +21,6 @@ later
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] download file from providers if file is missing. see https://raw.githubusercontent.com/cyberjunky/python-garminconnect/master/demo.py in download_activities_by_date for garmin
 - [ ] add inbound webhooks from ridewithgps on trips
-- [ ] add inbound webhooks from strava
 
 ## Providers & Sync
 
