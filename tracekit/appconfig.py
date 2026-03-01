@@ -220,6 +220,22 @@ def save_strava_tokens(token_dict: dict[str, Any]) -> None:
     save_config({**config, "providers": providers})
 
 
+def clear_strava_tokens() -> None:
+    """Blank out Strava access and refresh tokens in the config store.
+
+    Called when the API returns 401 so that the provider is effectively
+    disconnected and the user is prompted to re-authorize.
+    """
+    config = load_config()
+    providers = config.get("providers", {})
+    strava_updated = providers.get("strava", {}).copy()
+    strava_updated["access_token"] = ""
+    strava_updated["refresh_token"] = ""
+    strava_updated["token_expires"] = "0"
+    providers["strava"] = strava_updated
+    save_config({**config, "providers": providers})
+
+
 def save_ridewithgps_tokens(access_token: str) -> None:
     """Persist RideWithGPS OAuth access token into the config store.
 

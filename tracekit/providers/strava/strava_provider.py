@@ -12,7 +12,7 @@ from typing import Any
 import pytz
 from dateutil.relativedelta import relativedelta
 from stravalib import Client
-from stravalib.exc import RateLimitExceeded, RateLimitTimeout
+from stravalib.exc import AccessUnauthorized, RateLimitExceeded, RateLimitTimeout
 
 from tracekit.provider_status import (
     RATE_LIMIT_LONG_TERM,
@@ -120,6 +120,17 @@ class StravaProvider(FitnessProvider):
             retry_after=None,
         ) from exc
 
+    def _handle_unauthorized(self, exc: AccessUnauthorized, operation: str) -> None:
+        """Clear stored tokens and raise so callers know auth is gone."""
+        print(f"Strava 401 Unauthorized during {operation} — clearing tokens.")
+        try:
+            from tracekit.appconfig import clear_strava_tokens
+
+            clear_strava_tokens()
+        except Exception as clear_err:
+            print(f"Could not clear Strava tokens: {clear_err}")
+        raise AccessUnauthorized(f"Strava token revoked or expired ({operation}). Please re-authorize.") from exc
+
     def _ensure_fresh_token(self) -> None:
         """Silently refresh the access token if it is expired or about to expire.
 
@@ -180,6 +191,8 @@ class StravaProvider(FitnessProvider):
             save_config({**saved_config, "providers": providers})
 
             print("Strava token refreshed and saved.")
+        except AccessUnauthorized as e:
+            self._handle_unauthorized(e, "token_refresh")
         except Exception as e:
             print(f"Strava token refresh failed: {e}. Proceeding with existing token.")
 
@@ -284,6 +297,8 @@ class StravaProvider(FitnessProvider):
             for activity in self.client.get_activities(after=start_date, before=end_date, limit=None):
                 activities.append(activity)
             return activities
+        except AccessUnauthorized as exc:
+            self._handle_unauthorized(exc, "fetch_activities")
         except (RateLimitExceeded, RateLimitTimeout) as exc:
             self._raise_rate_limit(exc, "fetch_activities")
 
@@ -298,6 +313,8 @@ class StravaProvider(FitnessProvider):
             time.sleep(1)  # Throttle API calls to avoid rate limit
             try:
                 full_activity = self.client.get_activity(int(activity_id))
+            except AccessUnauthorized as exc:
+                self._handle_unauthorized(exc, "get_activity")
             except (RateLimitExceeded, RateLimitTimeout) as exc:
                 self._raise_rate_limit(exc, "get_activity")
 
@@ -387,6 +404,8 @@ class StravaProvider(FitnessProvider):
 
             return True
 
+        except AccessUnauthorized as exc:
+            self._handle_unauthorized(exc, "update_activity")
         except (RateLimitExceeded, RateLimitTimeout) as exc:
             self._raise_rate_limit(exc, "update_activity")
         except Exception as e:
@@ -418,6 +437,8 @@ class StravaProvider(FitnessProvider):
 
             return gear_dict
 
+        except AccessUnauthorized as exc:
+            self._handle_unauthorized(exc, "get_athlete")
         except Exception as e:
             print(f"Error getting Strava gear: {e}")
             return {}
