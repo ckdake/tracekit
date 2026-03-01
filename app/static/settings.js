@@ -202,7 +202,10 @@ function makeProviderCard(name, data) {
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
         authBtn.className = 'strava-auth-btn';
-        authBtn.textContent = data.access_token ? 'Re-authenticate with Strava' : 'Connect with Strava';
+        const stravaImg = document.createElement('img');
+        stravaImg.src = '/static/connect_with_strava.svg';
+        stravaImg.alt = data.access_token ? 'Re-authenticate with Strava' : 'Connect with Strava';
+        authBtn.appendChild(stravaImg);
         authBtn.addEventListener('click', () => { window.location.href = '/api/auth/strava/authorize'; });
         card.appendChild(authBtn);
     }

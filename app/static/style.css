@@ -1050,24 +1050,21 @@ select#timezone:focus {
 }
 .garmin-auth-btn:hover { background: #155bb0; }
 
-/* Strava-branded auth button */
+/* Strava-branded auth button — uses official connect_with_strava.svg */
 .strava-auth-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    display: inline-block;
     margin-top: 14px;
-    font-size: 1rem;
-    padding: 11px 22px;
-    border-radius: 4px;
-    background: #FC4C02;
-    color: #ffffff;
+    padding: 0;
+    background: none;
     border: none;
     cursor: pointer;
-    font-weight: 700;
-    letter-spacing: .015em;
-    transition: background .15s;
 }
-.strava-auth-btn:hover { background: #e04300; }
+.strava-auth-btn img {
+    display: block;
+    height: 48px;
+    width: auto;
+}
+.strava-auth-btn:hover { opacity: 0.85; }
 
 /* RideWithGPS-branded auth button */
 .ridewithgps-auth-btn {
