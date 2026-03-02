@@ -280,6 +280,90 @@ class GarminProvider(FitnessProvider):
             print(f"Error getting gear from Garmin Connect: {e}")
             return {}
 
+    def download_activity_file(self, garmin_id: str, dest_dir: str) -> str:
+        """Download an activity source file from Garmin Connect.
+
+        Tries formats in preference order: ORIGINAL (FIT extracted from ZIP),
+        TCX, GPX.  Saves the file under *dest_dir* with a name derived from
+        *garmin_id* so it is stable and user-scoped.
+
+        Returns the full path of the saved file.
+
+        Raises:
+            FileExistsError: if the destination file already exists (never overwrites).
+            RuntimeError: if the activity cannot be downloaded in any format.
+        """
+        import io
+        import os
+        import zipfile
+
+        client = self._get_client()
+        os.makedirs(dest_dir, exist_ok=True)
+
+        # 1. ORIGINAL format — Garmin returns a ZIP containing a .fit file
+        try:
+            content = client.download_activity(
+                garmin_id,
+                dl_fmt=garminconnect.Garmin.ActivityDownloadFormat.ORIGINAL,
+            )
+            if content:
+                with zipfile.ZipFile(io.BytesIO(content)) as zf:
+                    fit_names = [n for n in zf.namelist() if n.lower().endswith(".fit")]
+                    if fit_names:
+                        dest_path = os.path.join(dest_dir, f"garmin_{garmin_id}.fit")
+                        if os.path.exists(dest_path):
+                            raise FileExistsError(f"File already exists: {dest_path}")
+                        with open(dest_path, "wb") as f:
+                            f.write(zf.read(fit_names[0]))
+                        print(f"Downloaded ORIGINAL (FIT) for Garmin activity {garmin_id}: {dest_path}")
+                        return dest_path
+        except FileExistsError:
+            raise
+        except Exception as e:
+            print(f"Could not download ORIGINAL format for Garmin activity {garmin_id}: {e}")
+
+        # 2. TCX fallback
+        try:
+            content = client.download_activity(
+                garmin_id,
+                dl_fmt=garminconnect.Garmin.ActivityDownloadFormat.TCX,
+            )
+            if content:
+                dest_path = os.path.join(dest_dir, f"garmin_{garmin_id}.tcx")
+                if os.path.exists(dest_path):
+                    raise FileExistsError(f"File already exists: {dest_path}")
+                with open(dest_path, "wb") as f:
+                    f.write(content)
+                print(f"Downloaded TCX for Garmin activity {garmin_id}: {dest_path}")
+                return dest_path
+        except FileExistsError:
+            raise
+        except Exception as e:
+            print(f"Could not download TCX format for Garmin activity {garmin_id}: {e}")
+
+        # 3. GPX fallback
+        try:
+            content = client.download_activity(
+                garmin_id,
+                dl_fmt=garminconnect.Garmin.ActivityDownloadFormat.GPX,
+            )
+            if content:
+                dest_path = os.path.join(dest_dir, f"garmin_{garmin_id}.gpx")
+                if os.path.exists(dest_path):
+                    raise FileExistsError(f"File already exists: {dest_path}")
+                with open(dest_path, "wb") as f:
+                    f.write(content)
+                print(f"Downloaded GPX for Garmin activity {garmin_id}: {dest_path}")
+                return dest_path
+        except FileExistsError:
+            raise
+        except Exception as e:
+            print(f"Could not download GPX format for Garmin activity {garmin_id}: {e}")
+
+        raise RuntimeError(
+            f"Could not download Garmin activity {garmin_id} in any supported format (tried ORIGINAL/FIT, TCX, GPX)"
+        )
+
     def create_activity(self, activity_data: dict) -> GarminActivity:
         """Create a new GarminActivity from activity data."""
         raise NotImplementedError("GarminActivity does not support creating activities. yet")

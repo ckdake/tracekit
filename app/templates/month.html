@@ -78,6 +78,9 @@ function changeLabel(c) {
     case 'Link Activity':
       return `Link <strong>${c.provider}</strong> activity ${c.activity_id} `
            + `with ${c.source_provider} activity ${c.new_value}`;
+    case 'Download Source File':
+      return `Download source file from Garmin for activity ${c.activity_id} `
+           + `(<em>${c.new_value || ''}</em>) to file provider`;
     default:
       return JSON.stringify(c);
   }
