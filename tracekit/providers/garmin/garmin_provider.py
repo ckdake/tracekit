@@ -293,6 +293,7 @@ class GarminProvider(FitnessProvider):
             FileExistsError: if the destination file already exists (never overwrites).
             RuntimeError: if the activity cannot be downloaded in any format.
         """
+        import gzip
         import io
         import os
         import zipfile
@@ -310,10 +311,12 @@ class GarminProvider(FitnessProvider):
                 with zipfile.ZipFile(io.BytesIO(content)) as zf:
                     fit_names = [n for n in zf.namelist() if n.lower().endswith(".fit")]
                     if fit_names:
-                        dest_path = os.path.join(dest_dir, f"garmin_{garmin_id}.fit")
+                        # Use the original filename from inside the ZIP, gzipped to save space
+                        original_name = os.path.basename(fit_names[0]) + ".gz"
+                        dest_path = os.path.join(dest_dir, original_name)
                         if os.path.exists(dest_path):
                             raise FileExistsError(f"File already exists: {dest_path}")
-                        with open(dest_path, "wb") as f:
+                        with gzip.open(dest_path, "wb") as f:
                             f.write(zf.read(fit_names[0]))
                         print(f"Downloaded ORIGINAL (FIT) for Garmin activity {garmin_id}: {dest_path}")
                         return dest_path
