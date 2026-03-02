@@ -314,6 +314,42 @@ class RideWithGPSProvider(FitnessProvider):
             print(f"RideWithGPS webhook: created local trip {trip_id}")
             return local
 
+    def download_activity_file(self, rwgps_id: str, dest_dir: str) -> str:
+        """Download an activity source file from RideWithGPS.
+
+        Tries formats in preference order: TCX, GPX, KML.  Saves the file
+        under *dest_dir* with a stable name derived from *rwgps_id*.
+
+        Returns the full path of the saved file.
+
+        Raises:
+            FileExistsError: if the destination file already exists (never overwrites).
+            RuntimeError: if the activity cannot be downloaded in any format.
+        """
+        import os
+
+        os.makedirs(dest_dir, exist_ok=True)
+
+        for fmt in ("tcx", "gpx", "kml"):
+            try:
+                content = self.client.download_trip_file(rwgps_id, fmt)
+                if content:
+                    dest_path = os.path.join(dest_dir, f"ridewithgps_{rwgps_id}.{fmt}")
+                    if os.path.exists(dest_path):
+                        raise FileExistsError(f"File already exists: {dest_path}")
+                    with open(dest_path, "wb") as f:
+                        f.write(content)
+                    print(f"Downloaded {fmt.upper()} for RideWithGPS trip {rwgps_id}: {dest_path}")
+                    return dest_path
+            except FileExistsError:
+                raise
+            except Exception as e:
+                print(f"Could not download {fmt.upper()} for RideWithGPS trip {rwgps_id}: {e}")
+
+        raise RuntimeError(
+            f"Could not download RideWithGPS trip {rwgps_id} in any supported format (tried TCX, GPX, KML)"
+        )
+
     def reset_activities(self, date_filter: str | None = None) -> int:
         """Reset (delete) RideWithGPS activities from local database."""
         from tracekit.providers.ridewithgps.ridewithgps_activity import (

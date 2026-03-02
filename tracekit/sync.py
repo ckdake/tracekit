@@ -33,6 +33,7 @@ class ChangeType(Enum):
     ADD_ACTIVITY = "Add Activity"
     LINK_ACTIVITY = "Link Activity"
     DOWNLOAD_FROM_GARMIN = "Download Source File"
+    DOWNLOAD_FROM_RIDEWITHGPS = "Download Source File from RideWithGPS"
 
 
 class ActivityChange(NamedTuple):
@@ -72,6 +73,11 @@ class ActivityChange(NamedTuple):
         elif self.change_type == ChangeType.DOWNLOAD_FROM_GARMIN:
             return (
                 f"Download source file from Garmin for activity {self.activity_id} "
+                f"('{self.new_value}') to file provider"
+            )
+        elif self.change_type == ChangeType.DOWNLOAD_FROM_RIDEWITHGPS:
+            return (
+                f"Download source file from RideWithGPS for activity {self.activity_id} "
                 f"('{self.new_value}') to file provider"
             )
         return "Unknown change"
@@ -407,6 +413,22 @@ def compute_month_changes(
                     )
                 )
 
+    # Same for RideWithGPS.
+    if "ridewithgps" in provider_priorities and "file" in provider_priorities:
+        for _key, group in grouped.items():
+            by_provider = {a["provider"]: a for a in group}
+            if "ridewithgps" in by_provider and "file" not in by_provider:
+                rwgps_act = by_provider["ridewithgps"]
+                all_changes.append(
+                    ActivityChange(
+                        change_type=ChangeType.DOWNLOAD_FROM_RIDEWITHGPS,
+                        provider="file",
+                        activity_id=str(rwgps_act["id"]),
+                        new_value=rwgps_act["name"],
+                        source_provider="ridewithgps",
+                    )
+                )
+
     return dict(grouped), all_changes
 
 
@@ -685,6 +707,27 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
 
             try:
                 file_path = garmin_prov.download_activity_file(garmin_id, dest_dir)
+            except FileExistsError as exc:
+                return False, f"File already exists — will not overwrite: {exc}"
+
+            result = file_prov.process_single_file(file_path)
+            if result.get("status") in ("ok", "skipped"):
+                return True, f"Downloaded and ingested {result.get('file')}"
+            return False, f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}"
+
+        elif change_type == ChangeType.DOWNLOAD_FROM_RIDEWITHGPS:
+            rwgps_prov = tracekit.get_provider("ridewithgps")
+            file_prov = tracekit.get_provider("file")
+            if not rwgps_prov:
+                return False, "RideWithGPS provider not available"
+            if not file_prov:
+                return False, "File provider not available"
+
+            rwgps_id = change.activity_id
+            dest_dir = file_prov.data_folder
+
+            try:
+                file_path = rwgps_prov.download_activity_file(rwgps_id, dest_dir)
             except FileExistsError as exc:
                 return False, f"File already exists — will not overwrite: {exc}"
 

@@ -791,7 +791,7 @@ select#timezone:focus {
 /* Per-provider synced colors */
 .provider-status.provider-strava.synced      { background: #FC4C02; }
 .provider-status.provider-garmin.synced      { background: #007CC3; }
-.provider-status.provider-ridewithgps.synced { background: #52AF4A; }
+.provider-status.provider-ridewithgps.synced { background: #F96400; }
 .provider-status.provider-spreadsheet.synced { background: #5a6b7c; }
 .provider-status.provider-file.synced        { background: #7a7f84; }
 
@@ -1087,7 +1087,7 @@ select#timezone:focus {
     font-size: 1rem;
     padding: 11px 22px;
     border-radius: 4px;
-    background: #52AF4A;
+    background: #F96400;
     color: #ffffff;
     border: none;
     cursor: pointer;
@@ -1095,7 +1095,7 @@ select#timezone:focus {
     letter-spacing: .015em;
     transition: background .15s;
 }
-.ridewithgps-auth-btn:hover { background: #429b3b; }
+.ridewithgps-auth-btn:hover { background: #D95500; }
 
 /* Personal-credentials toggle — displayed subtly below the auth button */
 .personal-creds-toggle-row {
@@ -1191,13 +1191,13 @@ select#timezone:focus {
     color: #005f99 !important;
     text-decoration: underline;
 }
-/* RideWithGPS brand green: #52AF4A */
+/* RideWithGPS brand orange: #F96400 */
 .attr-ridewithgps {
-    color: #52AF4A !important;
+    color: #F96400 !important;
     font-weight: 600;
 }
 .attr-ridewithgps:hover {
-    color: #3d8836 !important;
+    color: #D95500 !important;
     text-decoration: underline;
 }
 
@@ -1225,10 +1225,10 @@ select#timezone:focus {
 }
 .provider-attr.attr-garmin:hover { background: rgba(0,124,195,.08); }
 .provider-attr.attr-ridewithgps {
-    color: #52AF4A;
-    border: 1px solid rgba(82,175,74,.35);
+    color: #F96400;
+    border: 1px solid rgba(249,100,0,.35);
 }
-.provider-attr.attr-ridewithgps:hover { background: rgba(82,175,74,.08); }
+.provider-attr.attr-ridewithgps:hover { background: rgba(249,100,0,.08); }
 
 /* Attribution links inside synced (green) provider cards — use white */
 .provider-status.synced .provider-attr {

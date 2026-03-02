@@ -5,9 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
-- [ ] update rwgps logo assetts https://ridewithgps.com/api/v1/doc/reference/logos_and_assets
 - [ ] for web app, require subscription to be active for providers to sync
-- [ ] user docs -> tracekit will not modify unless you click individual button, FAQ, how to setup
 - [ ] discord?
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side). if its a zip, extrct safely
 
@@ -21,8 +19,7 @@ later
 - [ ] outbound email sending for email verificaiton on login, and password reset
 - [ ] add new source data files to file data when found in other places
 - [ ] i think we need a websocket or something for realtime updates
-- [ ] download file from ridewithgps, strava if file is missing (like garmin)
-- [ ] add inbound webhooks from ridewithgps on trips
+- [ ] add inbound webhooks from ridewithgps on trips -> verify
 
 ## Providers & Sync
 
