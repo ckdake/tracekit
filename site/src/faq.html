@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FAQ — tracekit</title>
+        <meta
+            name="description"
+            content="Frequently asked questions about the tracekit fitness data integration platform"
+        />
+        <link rel="stylesheet" href="/assets/css/style.css" />
+        <style>
+            .prose {
+                max-width: 720px;
+                margin: 0 auto;
+                padding: 2rem 1rem 4rem;
+            }
+            .prose h1 {
+                font-size: 2rem;
+                margin-bottom: 0.25rem;
+            }
+            .prose .lead {
+                color: var(--muted-text);
+                margin-bottom: 2rem;
+            }
+            .prose h2 {
+                font-size: 1.2rem;
+                margin-top: 2.5rem;
+                margin-bottom: 0.5rem;
+                border-bottom: 1px solid var(--borders);
+                padding-bottom: 0.25rem;
+            }
+            .prose p {
+                margin-bottom: 0.85rem;
+                line-height: 1.65;
+                color: #374151;
+            }
+            .prose ul,
+            .prose ol {
+                margin: 0.5rem 0 0.85rem 1.5rem;
+                line-height: 1.65;
+                color: #374151;
+            }
+            .prose ul li,
+            .prose ol li {
+                margin-bottom: 0.3rem;
+            }
+            .prose hr {
+                border: none;
+                border-top: 1px solid var(--borders);
+                margin: 2.5rem 0;
+            }
+            .prose a {
+                color: var(--signal-blue);
+            }
+
+            /* FAQ accordion */
+            .faq-list {
+                margin-top: 1.5rem;
+            }
+            details.faq-item {
+                border: 1px solid var(--borders);
+                border-radius: 8px;
+                margin-bottom: 0.75rem;
+                background: #fff;
+                overflow: hidden;
+            }
+            details.faq-item[open] {
+                box-shadow: 0 2px 8px rgb(17 24 39 / 6%);
+            }
+            summary.faq-q {
+                cursor: pointer;
+                padding: 1rem 1.25rem;
+                font-weight: 600;
+                font-size: 1rem;
+                color: var(--graphite);
+                list-style: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 1rem;
+                user-select: none;
+            }
+            summary.faq-q::-webkit-details-marker {
+                display: none;
+            }
+            summary.faq-q::after {
+                content: '+';
+                font-size: 1.25rem;
+                color: var(--muted-text);
+                flex-shrink: 0;
+                transition: transform 0.15s ease;
+                line-height: 1;
+            }
+            details.faq-item[open] summary.faq-q::after {
+                content: '−';
+            }
+            summary.faq-q:hover {
+                color: var(--signal-blue);
+            }
+            .faq-a {
+                padding: 0 1.25rem 1.25rem;
+                color: #374151;
+                line-height: 1.65;
+            }
+            .faq-a p {
+                margin-bottom: 0.75rem;
+            }
+            .faq-a p:last-child {
+                margin-bottom: 0;
+            }
+            .faq-a ul,
+            .faq-a ol {
+                margin: 0.5rem 0 0.75rem 1.5rem;
+            }
+            .faq-a ul li,
+            .faq-a ol li {
+                margin-bottom: 0.35rem;
+            }
+            .faq-a a {
+                color: var(--signal-blue);
+            }
+            .provider-note {
+                background: var(--subtle-fill);
+                border-left: 3px solid var(--signal-blue);
+                border-radius: 0 6px 6px 0;
+                padding: 0.6rem 0.9rem;
+                margin-bottom: 0.75rem;
+                font-size: 0.95rem;
+            }
+            .provider-note strong {
+                display: block;
+                margin-bottom: 0.25rem;
+                color: var(--graphite);
+            }
+            .provider-note.warning {
+                border-left-color: var(--drift-amber);
+            }
+        </style>
+    </head>
+    <body>
+        <header class="header">
+            <div class="container">
+                <a href="/" class="logo">
+                    <img src="/assets/img/logo.png" alt="tracekit logo" />
+                </a>
+                <nav class="nav">
+                    <a href="/faq.html">FAQ</a>
+                    <a href="https://github.com/ckdake/tracekit" target="_blank"
+                        >GitHub</a
+                    >
+                    <a href="/developer.html">Developers</a>
+                    <a href="/providers.html">Providers</a>
+                    <a href="/privacy.html">Privacy</a>
+                    <a href="https://app.tracekit.app/">Login</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="prose">
+                <h1>Frequently Asked Questions</h1>
+                <p class="lead">
+                    Everything you need to know about
+                    <a href="https://app.tracekit.app">app.tracekit.app</a>.
+                </p>
+
+                <div class="faq-list">
+                    <details class="faq-item" open>
+                        <summary class="faq-q">What is TraceKit?</summary>
+                        <div class="faq-a">
+                            <p>
+                                TraceKit is a fitness data integration platform
+                                that brings your activity data together from all
+                                the apps and devices you use — Strava, Garmin,
+                                RideWithGPS, and more — into one place you
+                                control.
+                            </p>
+                            <p>
+                                Instead of your workout history being scattered
+                                across a dozen services with no consistent
+                                record, TraceKit syncs, deduplicates, and
+                                normalizes your activities. You get a unified
+                                view of your data and a reliable backup,
+                                regardless of which platforms you use now or in
+                                the future.
+                            </p>
+                            <p>
+                                The hosted service lives at
+                                <a href="https://app.tracekit.app"
+                                    >app.tracekit.app</a
+                                >. TraceKit is also
+                                <a
+                                    href="https://github.com/ckdake/tracekit"
+                                    target="_blank"
+                                    rel="noopener"
+                                    >open source</a
+                                >
+                                if you prefer to self-host.
+                            </p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">How do I get started?</summary>
+                        <div class="faq-a">
+                            <p>
+                                TraceKit is currently in early access. Here's
+                                the full setup flow once your account is active:
+                            </p>
+                            <ol>
+                                <li>
+                                    <strong>Sign up</strong> at
+                                    <a href="https://app.tracekit.app"
+                                        >app.tracekit.app</a
+                                    >. An admin will activate your account
+                                    shortly after.
+                                </li>
+                                <li>
+                                    <strong>Link your providers.</strong> Go to
+                                    Settings and connect each service you use
+                                    (Strava, Garmin, RideWithGPS, etc.). See the
+                                    provider-specific notes below for anything
+                                    special about a particular service.
+                                </li>
+                                <li>
+                                    <strong>Set your provider order.</strong>
+                                    Drag providers into the order you want
+                                    TraceKit to prefer them when resolving
+                                    conflicts — your most trusted source goes
+                                    first.
+                                </li>
+                                <li>
+                                    <strong
+                                        >Pull your existing activities.</strong
+                                    >
+                                    Use the pull action for each provider to
+                                    import your historical activity metadata
+                                    into TraceKit.
+                                </li>
+                                <li>
+                                    <strong>Run a sync.</strong> The sync
+                                    process matches activities across providers,
+                                    identifies duplicates, and surfaces
+                                    differences for you to review. Running it
+                                    across a month of data is a good starting
+                                    point.
+                                </li>
+                                <li>
+                                    <strong>Approve individual changes.</strong>
+                                    Review the proposed updates and approve or
+                                    dismiss each one. TraceKit never writes
+                                    anything back to a provider without your
+                                    explicit confirmation.
+                                </li>
+                            </ol>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            How do I use TraceKit day-to-day?
+                        </summary>
+                        <div class="faq-a">
+                            <p>
+                                Once you're set up, ongoing use is
+                                straightforward: log in and run a
+                                <strong>sync</strong> every now and then.
+                                TraceKit will pull new activities from your
+                                connected providers, match them up, and show you
+                                anything that needs attention.
+                            </p>
+                            <p>
+                                Full automation is on the roadmap — in the
+                                future, new activities will be detected and
+                                pulled automatically so you won't need to
+                                trigger a sync manually. For now, a periodic
+                                manual sync keeps everything up to date.
+                            </p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            What happens when I link a provider?
+                        </summary>
+                        <div class="faq-a">
+                            <p>
+                                TraceKit gets authorized access to that
+                                provider's API so it can read your activity
+                                data. For most providers this happens via OAuth
+                                — you'll be redirected to the provider's login
+                                page to grant permission, and TraceKit stores
+                                the resulting access token (encrypted) on your
+                                behalf.
+                            </p>
+                            <p>
+                                Nothing is fetched immediately. You stay in
+                                control of when TraceKit pulls activities and
+                                runs syncs.
+                            </p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            What happens when I unlink a provider?
+                        </summary>
+                        <div class="faq-a">
+                            <p>
+                                TraceKit removes its stored credentials for that
+                                provider and will no longer pull new activities
+                                from it. Any activities already imported from
+                                that provider remain in your TraceKit account —
+                                unlinking does not delete historical data.
+                            </p>
+                            <p>
+                                To fully revoke TraceKit's access, also remove
+                                it from the provider's own connected-apps
+                                settings page (e.g. Strava's "My Apps" page).
+                            </p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-q">
+                            Are there any special considerations for specific
+                            providers?
+                        </summary>
+                        <div class="faq-a">
+                            <div class="provider-note warning">
+                                <strong>Strava</strong>
+                                Strava's API does not allow downloading the
+                                original source files (GPX, FIT, or TCX) for
+                                activities. Activity metadata — name, type,
+                                distance, duration, and so on — syncs normally,
+                                but the raw files are not available through the
+                                API. If Strava is your only provider and you
+                                want source files in TraceKit, export your full
+                                Strava data archive from Strava's settings page
+                                and contact us to have it imported via the Files
+                                provider.
+                            </div>
+                            <div class="provider-note warning">
+                                <strong>Garmin</strong>
+                                Garmin does not offer OAuth for third-party
+                                integrations. To link your Garmin account,
+                                TraceKit performs a one-time setup using your
+                                Garmin username, password, and MFA code to
+                                obtain a session token. Your credentials are
+                                used only during this setup step and are
+                                <strong>never stored</strong> — they are
+                                discarded immediately once the session token is
+                                established.
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <hr />
+
+                <p>
+                    Have a question that isn't answered here?
+                    <a
+                        href="https://github.com/ckdake/tracekit/issues"
+                        target="_blank"
+                        rel="noopener"
+                        >Open an issue on GitHub</a
+                    >
+                    or reach out to the maintainer directly.
+                </p>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>
+                    &copy; 2026 <a href="https://tracekit.app">tracekit</a>.
+                    <a
+                        href="https://github.com/ckdake/tracekit"
+                        target="_blank"
+                        rel="noopener"
+                        >GitHub</a
+                    >
+                    Open source fitness data integration tool.
+                </p>
+                <p><a href="/privacy.html">Privacy Policy</a></p>
+            </div>
+        </footer>
+
+        <script src="/assets/js/main.js"></script>
+    </body>
+</html>
