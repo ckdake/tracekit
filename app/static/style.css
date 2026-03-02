@@ -1576,6 +1576,20 @@ select#timezone:focus {
 .cell-dist  { font-variant-numeric: tabular-nums; font-weight: 500; }
 .empty-row  { text-align: center; color: #999; padding: 16px; font-style: italic; }
 
+/* Icon links inside sync table ID cells */
+.row-icon-link {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: #888;
+    text-decoration: none;
+    vertical-align: middle;
+    padding: 0 2px;
+    border-radius: 3px;
+    line-height: 1;
+    transition: color .15s, background .15s;
+}
+.row-icon-link:hover { color: #2c3e50; background: rgba(0,0,0,.07); }
+
 /* Changes list */
 .change-row {
     display: flex;

@@ -117,7 +117,18 @@ function renderTable(providerList, rows) {
       const pc = PROVIDER_CONFIG[p] || {};
       const cell = row.providers[p];
       if (cell && cell.present) {
-        cells.push(`<td class="cell-id cell-auth">${cell.id}</td>`);
+        let idContent = cell.id;
+        if (p === 'file') {
+          const dlUrl = '/api/file/download?name=' + encodeURIComponent(cell.id);
+          idContent += ` <a href="${dlUrl}" class="row-icon-link" title="Download file" download="${cell.id}">⬇</a>`;
+        } else if (p === 'ridewithgps') {
+          idContent += ` <a href="https://ridewithgps.com/trips/${cell.id}" class="row-icon-link" title="View on RideWithGPS" target="_blank" rel="noopener noreferrer">↗</a>`;
+        } else if (p === 'strava') {
+          idContent += ` <a href="https://www.strava.com/activities/${cell.id}" class="row-icon-link" title="View on Strava" target="_blank" rel="noopener noreferrer">↗</a>`;
+        } else if (p === 'garmin') {
+          idContent += ` <a href="https://connect.garmin.com/app/activity/${cell.id}" class="row-icon-link" title="View on Garmin Connect" target="_blank" rel="noopener noreferrer">↗</a>`;
+        }
+        cells.push(`<td class="cell-id cell-auth">${idContent}</td>`);
         if (pc.sync_name !== false) {
           cells.push(`<td class="${statusClass(cell.name_status)}">${cell.display_name || ''}</td>`);
         }

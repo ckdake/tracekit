@@ -11,6 +11,7 @@ next:
 
 later
 - [ ] better top/right nav UI
+- [ ] better "month status" UI and logic
 - [ ] allow exporting all files
 - [ ] metrics to Sentry for providers/syncing
 - [ ] longer caching of static pages, so cloudflare can cache. rotate filenames on build
