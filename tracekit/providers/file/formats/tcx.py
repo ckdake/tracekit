@@ -6,28 +6,38 @@ relevant activity data such as start time and distance for use in the tracekit a
 
 import xml.etree.ElementTree as ET
 
-# Alternatively:
-# examples at https://github.com/vkurup/python-tcxparser
-# tcx = tcxparser.TCXParser(file)
-# self.activity_metadata.set_start_time(str(tcx.started_at))
-# self.activity_metadata.distance = tcx.distance * 0.00062137
-
 
 def parse_tcx(file_path):
-    """Parse a TCX file and return relevant activity data."""
+    """Parse a TCX file and return relevant activity data.
+
+    Handles both Activity format (e.g. Garmin exports) and Course format
+    (e.g. RideWithGPS exports).  Returns a dict with at least ``start_time``
+    and ``distance`` keys on success, or ``{}`` if neither format is found.
+    """
     tree = ET.parse(file_path)
     root = tree.getroot()
-    # Example: extract start time and distance (expand as needed)
     ns = {"tcx": "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"}
+
+    # Activity format (Garmin): StartTime is an attribute on <Lap>
     activities = root.findall(".//tcx:Activity", ns)
-    if not activities:
-        return {}
-    first_activity = activities[0]
-    start_time = first_activity.find(".//tcx:Lap", ns).get("StartTime")
-    # DistanceMeters is optional and may need to be summed from Trackpoints
-    distance_elem = first_activity.find(".//tcx:DistanceMeters", ns)
-    distance = float(distance_elem.text) * 0.00062137 if distance_elem is not None else None
-    return {
-        "start_time": start_time,
-        "distance": distance,
-    }
+    if activities:
+        first_activity = activities[0]
+        lap = first_activity.find(".//tcx:Lap", ns)
+        start_time = lap.get("StartTime") if lap is not None else None
+        distance_elem = first_activity.find(".//tcx:DistanceMeters", ns)
+        distance = float(distance_elem.text) * 0.00062137 if distance_elem is not None else None
+        return {"start_time": start_time, "distance": distance}
+
+    # Course format (RideWithGPS): start time lives in the first Trackpoint
+    courses = root.findall(".//tcx:Course", ns)
+    if courses:
+        first_course = courses[0]
+        name_elem = first_course.find("tcx:Name", ns)
+        name = name_elem.text if name_elem is not None else None
+        lap_distance = first_course.find("tcx:Lap/tcx:DistanceMeters", ns)
+        distance = float(lap_distance.text) * 0.00062137 if lap_distance is not None else None
+        first_time = first_course.find(".//tcx:Trackpoint/tcx:Time", ns)
+        start_time = first_time.text if first_time is not None else None
+        return {"start_time": start_time, "distance": distance, "name": name}
+
+    return {}

@@ -6,6 +6,7 @@ updating activities, and managing gear.
 """
 
 import datetime
+import gzip
 import os
 from decimal import Decimal
 from typing import Any
@@ -334,10 +335,10 @@ class RideWithGPSProvider(FitnessProvider):
             try:
                 content = self.client.download_trip_file(rwgps_id, fmt)
                 if content:
-                    dest_path = os.path.join(dest_dir, f"ridewithgps_{rwgps_id}.{fmt}")
+                    dest_path = os.path.join(dest_dir, f"ridewithgps_{rwgps_id}.{fmt}.gz")
                     if os.path.exists(dest_path):
                         raise FileExistsError(f"File already exists: {dest_path}")
-                    with open(dest_path, "wb") as f:
+                    with gzip.open(dest_path, "wb") as f:
                         f.write(content)
                     print(f"Downloaded {fmt.upper()} for RideWithGPS trip {rwgps_id}: {dest_path}")
                     return dest_path
