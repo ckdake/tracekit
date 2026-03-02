@@ -9,7 +9,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "peewee==4.0.0",
+    "peewee==4.0.1",
     "gpxpy==1.6.2",
     "python-tcxparser==2.4.0",
     "fitparse==1.2.0",
