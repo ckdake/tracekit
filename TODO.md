@@ -11,7 +11,6 @@ next:
 - [ ] bug: intervals.icu gear update not working (make sure gear exists)
 - [ ] bug: strava gear update sometimes not workign due to running shoe naming
 - [ ] feat: as syncs are applied, update the visible table on /month/YYYY-MM to show as it updates
-- [ ] feat: tracekit support api usage for local
 - [ ] for web app, require subscription to be active for providers to sync
 - [ ] refactor all the web/sync stuff to use list of providers from code/admin, not hardcoded individually
 - [ ] discord?
@@ -36,7 +35,6 @@ later
 - [ ] Ensure no API calls are made if the month is already synced
 - [ ] Fix Strava gear matching to work for running shoes
 - [ ] Fix "create" in providers to `create_from_activity`, get all that out of `sync_month` command
-- [ ] Add intevals.icu as provider
 - [ ] Add TrainingPeaks as provider
 - [ ] Add Wandrer.earth as provider
 - [ ] What about choochoo?

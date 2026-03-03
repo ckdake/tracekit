@@ -61,6 +61,9 @@ RIDEWITHGPS_KEY=your_api_key
 # Garmin Connect
 GARMIN_EMAIL=your_email
 GARMINTOKENS=~/.garminconnect
+
+# Intervals.icu (https://intervals.icu/settings)
+INTERVALSICU_API_KEY=your_api_key
 ```
 
 ### Authenticating with Strava

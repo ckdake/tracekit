@@ -1,5 +1,6 @@
 """Intervals.icu provider for tracekit."""
 
+import base64
 import datetime
 import json
 import os
@@ -29,10 +30,14 @@ class IntervalsICUProvider(FitnessProvider):
                 os.environ.get("INTERVALSICU_CLIENT_SECRET", "").strip() or cfg.get("client_secret", "").strip()
             )
         self.access_token = cfg.get("access_token", "").strip()
+        self.api_key = os.environ.get("INTERVALSICU_API_KEY", "").strip() or cfg.get("api_key", "").strip()
         # athlete_id from config; "0" is the API shortcut for the current user
         self.athlete_id = cfg.get("athlete_id", "0").strip() or "0"
 
     def _auth_headers(self) -> dict[str, str]:
+        if self.api_key:
+            token = base64.b64encode(f"API_KEY:{self.api_key}".encode()).decode()
+            return {"Authorization": f"Basic {token}"}
         return {"Authorization": f"Bearer {self.access_token}"}
 
     def _get(self, path: str, **kwargs) -> Any:
