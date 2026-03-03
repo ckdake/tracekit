@@ -34,6 +34,7 @@ class ChangeType(Enum):
     LINK_ACTIVITY = "Link Activity"
     DOWNLOAD_FROM_GARMIN = "Download Source File"
     DOWNLOAD_FROM_RIDEWITHGPS = "Download Source File from RideWithGPS"
+    DOWNLOAD_FROM_INTERVALSICU = "Download Source File from Intervals.icu"
 
 
 class ActivityChange(NamedTuple):
@@ -78,6 +79,11 @@ class ActivityChange(NamedTuple):
         elif self.change_type == ChangeType.DOWNLOAD_FROM_RIDEWITHGPS:
             return (
                 f"Download source file from RideWithGPS for activity {self.activity_id} "
+                f"('{self.new_value}') to file provider"
+            )
+        elif self.change_type == ChangeType.DOWNLOAD_FROM_INTERVALSICU:
+            return (
+                f"Download source file from Intervals.icu for activity {self.activity_id} "
                 f"('{self.new_value}') to file provider"
             )
         return "Unknown change"
@@ -429,6 +435,27 @@ def compute_month_changes(
                     )
                 )
 
+    # Same for Intervals.icu — but skip activities that were imported from Strava
+    # because the /activity/{id}/file endpoint does not support them.
+    if "intervalsicu" in provider_priorities and "file" in provider_priorities:
+        for _key, group in grouped.items():
+            by_provider = {a["provider"]: a for a in group}
+            if "intervalsicu" in by_provider and "file" not in by_provider:
+                icu_act = by_provider["intervalsicu"]
+                act_obj = icu_act.get("obj")
+                act_source = (getattr(act_obj, "source", None) or "").upper()
+                if act_source == "STRAVA":
+                    continue
+                all_changes.append(
+                    ActivityChange(
+                        change_type=ChangeType.DOWNLOAD_FROM_INTERVALSICU,
+                        provider="file",
+                        activity_id=str(icu_act["id"]),
+                        new_value=icu_act["name"],
+                        source_provider="intervalsicu",
+                    )
+                )
+
     return dict(grouped), all_changes
 
 
@@ -730,6 +757,27 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
 
             try:
                 file_path = rwgps_prov.download_activity_file(rwgps_id, dest_dir)
+            except FileExistsError as exc:
+                return False, f"File already exists — will not overwrite: {exc}"
+
+            result = file_prov.process_single_file(file_path)
+            if result.get("status") in ("ok", "skipped"):
+                return True, f"Downloaded and ingested {result.get('file')}"
+            return False, f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}"
+
+        elif change_type == ChangeType.DOWNLOAD_FROM_INTERVALSICU:
+            icu_prov = tracekit.get_provider("intervalsicu")
+            file_prov = tracekit.get_provider("file")
+            if not icu_prov:
+                return False, "Intervals.icu provider not available"
+            if not file_prov:
+                return False, "File provider not available"
+
+            icu_id = change.activity_id
+            dest_dir = file_prov.data_folder
+
+            try:
+                file_path = icu_prov.download_activity_file(icu_id, dest_dir)
             except FileExistsError as exc:
                 return False, f"File already exists — will not overwrite: {exc}"
 

@@ -212,6 +212,8 @@ def _run_schema_upgrades() -> None:
             ("ridewithgps_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
             ("spreadsheet_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
             ("file_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
+            ("intervalsicu_activities", "user_id", "INTEGER NOT NULL DEFAULT 0"),
+            ("intervalsicu_activities", "source", "VARCHAR(64)"),
             # user account status (blocked by default; admin sets active)
             ("user", "status", "VARCHAR(16) NOT NULL DEFAULT 'blocked'"),
             # Stripe subscription fields

@@ -13,6 +13,9 @@ class IntervalsICUActivity(BaseProviderActivity):
     """
 
     intervalsicu_id = CharField(max_length=50, unique=True, index=True)
+    # Top-level "source" field from the API (e.g. "STRAVA", "GARMIN", "MANUAL").
+    # Used to skip file download offers for activities imported from Strava.
+    source = CharField(max_length=64, null=True)
 
     class Meta:
         database = db

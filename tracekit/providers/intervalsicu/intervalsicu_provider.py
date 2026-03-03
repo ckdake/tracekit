@@ -110,6 +110,7 @@ class IntervalsICUProvider(FitnessProvider):
         if isinstance(gear, dict) and gear.get("name"):
             act.equipment = str(gear["name"])
 
+        act.source = str(raw.get("source", "") or "") or None
         act.raw_data = json.dumps(raw, default=str)
         return act
 
@@ -194,6 +195,7 @@ class IntervalsICUProvider(FitnessProvider):
                 "start_time",
                 "duration_hms",
                 "equipment",
+                "source",
                 "raw_data",
                 "total_elevation_gain",
                 "avg_heart_rate",
@@ -299,6 +301,42 @@ class IntervalsICUProvider(FitnessProvider):
         except Exception as e:
             print(f"Error setting gear for Intervals.icu activity {activity_id}: {e}")
             return False
+
+    def download_activity_file(self, activity_id: str, dest_dir: str) -> str:
+        """Download the source FIT file for an Intervals.icu activity.
+
+        Uses the ``GET /api/v1/activity/{id}/file`` endpoint which returns the
+        original FIT binary.  The file is saved gzip-compressed under *dest_dir*
+        with a stable name derived from *activity_id*.
+
+        Returns the full path of the saved file.
+
+        Raises:
+            FileExistsError: if the destination file already exists (never overwrites).
+            RuntimeError: if the download fails.
+        """
+        import gzip
+        import os
+
+        os.makedirs(dest_dir, exist_ok=True)
+
+        dest_path = os.path.join(dest_dir, f"intervalsicu_{activity_id}.fit.gz")
+        if os.path.exists(dest_path):
+            raise FileExistsError(f"File already exists: {dest_path}")
+
+        url = f"{_BASE_URL}/activity/{activity_id}/file"
+        resp = requests.get(url, headers=self._auth_headers(), timeout=60)
+        resp.raise_for_status()
+
+        content = resp.content
+        if not content:
+            raise RuntimeError(f"Intervals.icu returned empty file for activity {activity_id}")
+
+        with gzip.open(dest_path, "wb") as f:
+            f.write(content)
+
+        print(f"Downloaded FIT for Intervals.icu activity {activity_id}: {dest_path}")
+        return dest_path
 
     def reset_activities(self, date_filter: str | None = None) -> int:
         """Delete activities for a specific month or all activities."""
