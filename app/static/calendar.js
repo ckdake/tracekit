@@ -77,12 +77,13 @@ function renderGrid(yearMonth, data) {
     }
 
     const PROVIDER_DISPLAY = {
-        strava:      { cls: 'provider-strava',      label: 'Strava',       logo: '/static/powered_by_strava.svg',      logoAlt: 'Powered by Strava',      logoHref: 'https://www.strava.com' },
-        garmin:      { cls: 'provider-garmin',      label: 'Garmin',       logo: '/static/garmin_logo.jpg',            logoAlt: 'Garmin',                 logoHref: 'https://www.garmin.com' },
-        ridewithgps:  { cls: 'provider-ridewithgps',  label: 'RideWithGPS',   logo: '/static/ridewithgps_logo.png',       logoAlt: 'RideWithGPS',            logoHref: 'https://ridewithgps.com' },
-        intervalsicu: { cls: 'provider-intervalsicu', label: 'Intervals.icu', logo: '/static/intervalsicu_logo.png',      logoAlt: 'Intervals.icu',          logoHref: 'https://intervals.icu' },
-        spreadsheet:  { cls: 'provider-spreadsheet',  label: 'Spreadsheet',   logo: '', logoAlt: 'Spreadsheet' },
-        file:         { cls: 'provider-file',         label: 'File',          logo: '', logoAlt: 'File' },
+        strava:       { cls: 'provider-strava',       label: 'Strava' },
+        garmin:       { cls: 'provider-garmin',       label: 'Garmin' },
+        ridewithgps:  { cls: 'provider-ridewithgps',  label: 'RideWithGPS' },
+        intervalsicu: { cls: 'provider-intervalsicu', label: 'Intervals.icu' },
+        spreadsheet:  { cls: 'provider-spreadsheet',  label: 'Spreadsheet' },
+        file:         { cls: 'provider-file',         label: 'File' },
+        stravajson:   { cls: 'provider-strava',       label: 'Strava JSON' },
     };
 
     const meta = data.provider_metadata || {};
