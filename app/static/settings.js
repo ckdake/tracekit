@@ -359,6 +359,13 @@ function makeProviderCard(name, data) {
     }
 
     if (name === 'garmin') {
+        const status = document.createElement('p');
+        status.className = 'auth-status-line';
+        status.innerHTML = data.garth_tokens
+            ? '<span class="auth-status-chip connected">Connected</span>'
+            : '<span class="auth-status-chip not-connected">Not connected</span>';
+        card.appendChild(status);
+
         const authBtn = document.createElement('button');
         authBtn.type = 'button';
         authBtn.className = 'garmin-auth-btn';

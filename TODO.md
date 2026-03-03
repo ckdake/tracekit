@@ -11,7 +11,6 @@ next:
 - [ ] bug: intervals.icu gear update not working (make sure gear exists)
 - [ ] bug: strava gear update sometimes not workign due to running shoe naming
 - [ ] feat: as syncs are applied, update the visible table on /month/YYYY-MM to show as it updates
-- [ ] bug: garmin doesn't show as "connected" bubble when connected
 - [ ] feat: tracekit support api usage for local
 - [ ] geat: pull source file from intervals.icu
 - [ ] for web app, require subscription to be active for providers to sync
