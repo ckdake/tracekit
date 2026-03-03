@@ -123,6 +123,8 @@ function renderTable(providerList, rows) {
           idContent += ` <a href="${dlUrl}" class="row-icon-link" title="Download file" download="${cell.id}">⬇</a>`;
         } else if (p === 'ridewithgps') {
           idContent += ` <a href="https://ridewithgps.com/trips/${cell.id}" class="row-icon-link" title="View on RideWithGPS" target="_blank" rel="noopener noreferrer">↗</a>`;
+        } else if (p === 'intervalsicu') {
+          idContent += ` <a href="https://intervals.icu/activities/${cell.id}" class="row-icon-link" title="View on Intervals.icu" target="_blank" rel="noopener noreferrer">↗</a>`;
         } else if (p === 'strava') {
           idContent += ` <a href="https://www.strava.com/activities/${cell.id}" class="row-icon-link" title="View on Strava" target="_blank" rel="noopener noreferrer">↗</a>`;
         } else if (p === 'garmin') {

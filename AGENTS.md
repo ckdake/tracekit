@@ -98,6 +98,7 @@ def run(args=None) -> None:
 4. Wire it into `tracekit/core.py` (`Tracekit` class) so it is lazily instantiated from config.
 5. Add it to the provider maps in `tracekit/calendar.py` and `tracekit/stats.py`.
 6. Add default config keys to `DEFAULT_CONFIG` in `tracekit/appconfig.py`, and add the provider name to `ALL_PROVIDERS` in the same file (required for admin visibility toggles).
+7. Add the provider to `PROVIDER_DISPLAY` in `app/static/calendar.js` and wire name/equipment update cases in `tracekit/sync.py::apply_change`. Add the external link case in `app/templates/month.html`.
 
 ---
 

@@ -6,6 +6,7 @@ Tracked here for visibility. PRs and issues welcome.
 
 next:
 - [ ] for web app, require subscription to be active for providers to sync
+- [ ] refactor all the web/sync stuff to use list of providers from code/admin, not hardcoded individually
 - [ ] discord?
 - [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side). if its a zip, extrct safely
 

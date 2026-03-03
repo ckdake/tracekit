@@ -614,6 +614,8 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
                 ok = prov.update_activity({"garmin_id": change.activity_id, "name": change.new_value})
             elif provider == "spreadsheet":
                 ok = prov.update_activity({"spreadsheet_id": change.activity_id, "notes": change.new_value})
+            elif provider == "intervalsicu":
+                ok = prov.update_activity({"intervalsicu_id": change.activity_id, "name": change.new_value})
             else:
                 return False, f"Name update not supported for provider '{provider}'"
             return (
@@ -627,7 +629,7 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
             if not prov:
                 return False, f"{provider} provider not available"
 
-            if provider in ("ridewithgps", "strava"):
+            if provider in ("ridewithgps", "strava", "intervalsicu"):
                 ok = prov.set_gear(change.new_value, change.activity_id)
             elif provider == "spreadsheet":
                 ok = prov.update_activity(
