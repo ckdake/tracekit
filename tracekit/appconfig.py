@@ -78,6 +78,17 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "sync_name": False,
         },
         "stravajson": {"enabled": False},
+        "intervalsicu": {
+            "enabled": False,
+            "priority": 4,
+            "sync_equipment": True,
+            "sync_name": True,
+            "use_personal_credentials": False,
+            "client_id": "",
+            "client_secret": "",
+            "access_token": "",
+            "athlete_id": "",
+        },
     },
 }
 
@@ -402,6 +413,45 @@ def find_user_id_by_rwgps_user_id(rwgps_user_id: str) -> int | None:
                 providers = json.loads(row.value)
                 rwgps = providers.get("ridewithgps", {})
                 if str(rwgps.get("user_id", "")) == str(rwgps_user_id):
+                    return row.user_id
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return None
+
+
+def save_intervalsicu_tokens(access_token: str) -> None:
+    """Persist Intervals.icu OAuth access token into the config store."""
+    config = load_config()
+    providers = config.get("providers", {})
+    icu_updated = providers.get("intervalsicu", {}).copy()
+    icu_updated["access_token"] = str(access_token)
+    providers["intervalsicu"] = icu_updated
+    save_config({**config, "providers": providers})
+
+
+def save_intervalsicu_athlete_id(athlete_id: str) -> None:
+    """Save the Intervals.icu athlete_id to the current user's intervalsicu config."""
+    config = load_config()
+    providers = config.get("providers", {})
+    icu_updated = providers.get("intervalsicu", {}).copy()
+    icu_updated["athlete_id"] = str(athlete_id)
+    providers["intervalsicu"] = icu_updated
+    save_config({**config, "providers": providers})
+
+
+def find_user_id_by_intervalsicu_athlete_id(athlete_id: str) -> int | None:
+    """Scan AppConfig rows to find which local user owns the given Intervals.icu athlete_id."""
+    try:
+        rows = AppConfig.select().where(AppConfig.key == "providers")
+        for row in rows:
+            if row.user_id == 0:
+                continue
+            try:
+                providers = json.loads(row.value)
+                icu = providers.get("intervalsicu", {})
+                if str(icu.get("athlete_id", "")) == str(athlete_id):
                     return row.user_id
             except Exception:
                 pass

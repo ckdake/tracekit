@@ -16,7 +16,7 @@ Tracekit aggregates fitness activity data from multiple providers (Strava, Garmi
 tracekit/           # Python package — all business logic lives here
   __main__.py       # CLI entry point: python -m tracekit <command>
   commands/         # One module per CLI command (thin wrappers)
-  providers/        # Six provider integrations (strava, garmin, …)
+  providers/        # Provider integrations: strava, garmin, ridewithgps, intervalsicu, spreadsheet, file, stravajson
   activity.py       # Central Activity ORM model
   appconfig.py      # Config load/save + token helpers
   calendar.py       # Month-grid data queries

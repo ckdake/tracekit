@@ -1097,6 +1097,23 @@ select#timezone:focus {
 }
 .ridewithgps-auth-btn:hover { background: #D95500; }
 
+.intervalsicu-auth-btn {
+    display: block;
+    width: fit-content;
+    margin-top: 14px;
+    font-size: 1rem;
+    padding: 11px 22px;
+    border-radius: 4px;
+    background: #dd0447;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: .015em;
+    transition: background .15s;
+}
+.intervalsicu-auth-btn:hover { background: #b80339; }
+
 /* Personal-credentials toggle — displayed subtly below the auth button */
 .personal-creds-toggle-row {
     margin-top: 14px;

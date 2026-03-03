@@ -115,6 +115,7 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
     from tracekit.provider_sync import ProviderSync
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
@@ -144,6 +145,7 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
         "strava": StravaActivity,
         "garmin": GarminActivity,
         "ridewithgps": RideWithGPSActivity,
+        "intervalsicu": IntervalsICUActivity,
         "spreadsheet": SpreadsheetActivity,
         "file": FileActivity,
         "stravajson": StravaJsonActivity,

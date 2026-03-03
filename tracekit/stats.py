@@ -15,6 +15,7 @@ def get_provider_activity_counts() -> dict[str, int]:
     """Return {provider_name: total_activity_count} for all known providers."""
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
@@ -25,6 +26,7 @@ def get_provider_activity_counts() -> dict[str, int]:
         "strava": StravaActivity,
         "garmin": GarminActivity,
         "ridewithgps": RideWithGPSActivity,
+        "intervalsicu": IntervalsICUActivity,
         "spreadsheet": SpreadsheetActivity,
         "file": FileActivity,
         "stravajson": StravaJsonActivity,
@@ -46,6 +48,7 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
 
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
@@ -55,6 +58,7 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
         StravaActivity,
         GarminActivity,
         RideWithGPSActivity,
+        IntervalsICUActivity,
         SpreadsheetActivity,
         FileActivity,
         StravaJsonActivity,

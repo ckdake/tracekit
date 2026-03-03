@@ -11,6 +11,7 @@ from .db import configure_db, get_db
 from .providers.base_provider_activity import BaseProviderActivity
 from .providers.file import FileProvider
 from .providers.garmin import GarminProvider
+from .providers.intervalsicu import IntervalsICUProvider
 from .providers.ridewithgps import RideWithGPSProvider
 from .providers.spreadsheet import SpreadsheetProvider
 from .providers.strava import StravaProvider
@@ -44,6 +45,7 @@ class Tracekit:
         self._garmin = None
         self._file = None
         self._stravajson = None
+        self._intervalsicu = None
 
     @staticmethod
     def _resolve_db_path() -> str:
@@ -125,6 +127,21 @@ class Tracekit:
         return self._ridewithgps
 
     @property
+    def intervalsicu(self) -> IntervalsICUProvider | None:
+        """Get the Intervals.icu provider, initializing it if needed."""
+        provider_config = self.config.get("providers", {}).get("intervalsicu", {})
+
+        if (
+            not self._intervalsicu
+            and provider_config.get("enabled", False)
+            and provider_config.get("access_token", "").strip()
+        ):
+            enhanced_config = provider_config.copy()
+            enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
+            self._intervalsicu = IntervalsICUProvider(config=enhanced_config)
+        return self._intervalsicu
+
+    @property
     def garmin(self) -> GarminProvider | None:
         """Get the Garmin provider, initializing it if needed."""
         provider_config = self.config.get("providers", {}).get("garmin", {})
@@ -180,6 +197,7 @@ class Tracekit:
             "spreadsheet",
             "strava",
             "ridewithgps",
+            "intervalsicu",
             "garmin",
             "file",
             "stravajson",

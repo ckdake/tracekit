@@ -72,6 +72,14 @@ Columns (A–U):
         text_fields: [],
     },
     stravajson:  { label: 'StravaJSON',   sync_equipment: false, sync_name: false, text_fields: [] },
+    intervalsicu: {
+        label: 'Intervals.icu', sync_equipment: true, sync_name: true,
+        text_fields: [],
+        personal_credential_fields: [
+            { key: 'client_id',     label: 'client id' },
+            { key: 'client_secret', label: 'client secret', field_type: 'password' },
+        ],
+    },
 };
 
 // ── Drag-and-drop ─────────────────────────────────────────────────────────────
@@ -234,6 +242,23 @@ function makeProviderCard(name, data) {
         card.appendChild(authBtn);
     }
 
+    // Intervals.icu: OAuth button, same pattern as RideWithGPS.
+    if (name === 'intervalsicu') {
+        const status = document.createElement('p');
+        status.className = 'auth-status-line';
+        status.innerHTML = data.access_token
+            ? '<span class="auth-status-chip connected">Connected</span>'
+            : '<span class="auth-status-chip not-connected">Not connected</span>';
+        card.appendChild(status);
+
+        const authBtn = document.createElement('button');
+        authBtn.type = 'button';
+        authBtn.className = 'intervalsicu-auth-btn';
+        authBtn.textContent = data.access_token ? 'Re-authenticate with Intervals.icu' : 'Connect with Intervals.icu';
+        authBtn.addEventListener('click', () => { window.location.href = '/api/auth/intervalsicu/authorize'; });
+        card.appendChild(authBtn);
+    }
+
     // Always-visible text fields (e.g. email/password for RideWithGPS).
     for (const f of meta.text_fields) {
         const field = makeEditableField(f, data[f.key] ?? '');
@@ -317,6 +342,13 @@ function makeProviderCard(name, data) {
                 }
                 const authBtn = card.querySelector('.ridewithgps-auth-btn');
                 if (authBtn) authBtn.textContent = 'Connect with RideWithGPS';
+            }
+            if (name === 'intervalsicu') {
+                if (INITIAL_CONFIG.providers && INITIAL_CONFIG.providers.intervalsicu) {
+                    INITIAL_CONFIG.providers.intervalsicu.access_token = '';
+                }
+                const authBtn = card.querySelector('.intervalsicu-auth-btn');
+                if (authBtn) authBtn.textContent = 'Connect with Intervals.icu';
             }
 
             autoSave();
@@ -431,6 +463,10 @@ async function autoSave(triggerEl) {
         }
         if (name === 'ridewithgps' && INITIAL_CONFIG.providers?.ridewithgps) {
             const src = INITIAL_CONFIG.providers.ridewithgps;
+            newData.access_token = src.access_token ?? newData.access_token;
+        }
+        if (name === 'intervalsicu' && INITIAL_CONFIG.providers?.intervalsicu) {
+            const src = INITIAL_CONFIG.providers.intervalsicu;
             newData.access_token = src.access_token ?? newData.access_token;
         }
 

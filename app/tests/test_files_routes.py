@@ -178,3 +178,150 @@ class TestFileDownload:
                 mock_fa.get_or_none.return_value = MagicMock()
                 resp = c.get("/api/file/download?name=activity.fit")
             assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# POST /api/file/upload
+# ---------------------------------------------------------------------------
+
+
+def _make_upload(c, filename, content=b"data", content_type="application/octet-stream"):
+    """POST to /api/file/upload with a fake file."""
+    from io import BytesIO
+
+    data = {"file": (BytesIO(content), filename, content_type)}
+    return c.post("/api/file/upload", data=data, content_type="multipart/form-data")
+
+
+class TestFileUpload:
+    def test_no_file_field_returns_400(self, client):
+        c, _ = client
+        resp = c.post("/api/file/upload", data={}, content_type="multipart/form-data")
+        assert resp.status_code == 400
+        assert "error" in resp.get_json()
+
+    def test_empty_filename_returns_400(self, client):
+        c, _ = client
+        from io import BytesIO
+
+        data = {"file": (BytesIO(b"x"), "", "application/octet-stream")}
+        resp = c.post("/api/file/upload", data=data, content_type="multipart/form-data")
+        assert resp.status_code == 400
+
+    def test_unsupported_extension_rejected(self, client, tmp_path):
+        c, user_id = client
+        with (
+            patch("routes.files.get_user_id", return_value=user_id),
+            patch.dict(os.environ, {"TRACEKIT_DATA_DIR": str(tmp_path)}),
+        ):
+            resp = _make_upload(c, "photo.pdf")
+        data = resp.get_json()
+        assert resp.status_code == 200
+        assert "photo.pdf" in data["rejected"]
+        assert data["saved"] == []
+
+    def test_supported_file_saved_and_queued(self, client, tmp_path):
+        c, user_id = client
+        with (
+            patch("routes.files.get_user_id", return_value=user_id),
+            patch.dict(os.environ, {"TRACEKIT_DATA_DIR": str(tmp_path)}),
+            patch("routes.files._enqueue_process_file") as mock_enqueue,
+        ):
+            resp = _make_upload(c, "activity.fit", content=b"FIT\0")
+        data = resp.get_json()
+        assert resp.status_code == 200
+        assert "activity.fit" in data["saved"]
+        assert data["skipped"] == []
+        assert data["rejected"] == []
+        mock_enqueue.assert_called_once()
+
+    def test_existing_file_skipped(self, client, tmp_path):
+        c, user_id = client
+        # Pre-create the file on disk
+        user_dir = tmp_path / "activities" / str(user_id)
+        user_dir.mkdir(parents=True)
+        (user_dir / "activity.fit").write_bytes(b"existing")
+
+        with (
+            patch("routes.files.get_user_id", return_value=user_id),
+            patch.dict(os.environ, {"TRACEKIT_DATA_DIR": str(tmp_path)}),
+            patch("routes.files._enqueue_process_file") as mock_enqueue,
+        ):
+            resp = _make_upload(c, "activity.fit", content=b"new content")
+        data = resp.get_json()
+        assert resp.status_code == 200
+        assert "activity.fit" in data["skipped"]
+        assert data["saved"] == []
+        mock_enqueue.assert_not_called()
+        # Original file must not be overwritten
+        assert (user_dir / "activity.fit").read_bytes() == b"existing"
+
+    def test_zip_extracts_supported_files(self, client, tmp_path):
+        import io
+        import zipfile as zf
+
+        c, user_id = client
+
+        buf = io.BytesIO()
+        with zf.ZipFile(buf, "w") as z:
+            z.writestr("ride.gpx", b"<gpx/>")
+            z.writestr("run.fit", b"FIT\0")
+            z.writestr("photo.jpg", b"JPEG")
+        buf.seek(0)
+
+        with (
+            patch("routes.files.get_user_id", return_value=user_id),
+            patch.dict(os.environ, {"TRACEKIT_DATA_DIR": str(tmp_path)}),
+            patch("routes.files._enqueue_process_file") as mock_enqueue,
+        ):
+            from io import BytesIO
+
+            data_payload = {"file": (BytesIO(buf.read()), "activities.zip", "application/zip")}
+            resp = c.post("/api/file/upload", data=data_payload, content_type="multipart/form-data")
+
+        data = resp.get_json()
+        assert resp.status_code == 200
+        assert sorted(data["saved"]) == ["ride.gpx", "run.fit"]
+        assert "photo.jpg" in data["rejected"]
+        assert mock_enqueue.call_count == 2
+
+    def test_zip_skips_existing_files(self, client, tmp_path):
+        import io
+        import zipfile as zf
+
+        c, user_id = client
+        user_dir = tmp_path / "activities" / str(user_id)
+        user_dir.mkdir(parents=True)
+        (user_dir / "ride.gpx").write_bytes(b"existing gpx")
+
+        buf = io.BytesIO()
+        with zf.ZipFile(buf, "w") as z:
+            z.writestr("ride.gpx", b"<gpx/>")
+            z.writestr("run.fit", b"FIT\0")
+        buf.seek(0)
+
+        with (
+            patch("routes.files.get_user_id", return_value=user_id),
+            patch.dict(os.environ, {"TRACEKIT_DATA_DIR": str(tmp_path)}),
+            patch("routes.files._enqueue_process_file"),
+        ):
+            from io import BytesIO
+
+            data_payload = {"file": (BytesIO(buf.read()), "bundle.zip", "application/zip")}
+            resp = c.post("/api/file/upload", data=data_payload, content_type="multipart/form-data")
+
+        data = resp.get_json()
+        assert "ride.gpx" in data["skipped"]
+        assert "run.fit" in data["saved"]
+        # existing file must be untouched
+        assert (user_dir / "ride.gpx").read_bytes() == b"existing gpx"
+
+    def test_bad_zip_returns_400(self, client, tmp_path):
+        c, user_id = client
+        with (
+            patch("routes.files.get_user_id", return_value=user_id),
+            patch.dict(os.environ, {"TRACEKIT_DATA_DIR": str(tmp_path)}),
+        ):
+            resp = _make_upload(c, "bad.zip", content=b"not a zip")
+        assert resp.status_code == 400
+        assert "error" in resp.get_json()

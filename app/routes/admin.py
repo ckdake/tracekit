@@ -32,6 +32,7 @@ def _get_user_activity_counts(user_id: int) -> dict:
     try:
         from tracekit.providers.file.file_activity import FileActivity
         from tracekit.providers.garmin.garmin_activity import GarminActivity
+        from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
         from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
         from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
         from tracekit.providers.strava.strava_activity import StravaActivity
@@ -41,6 +42,7 @@ def _get_user_activity_counts(user_id: int) -> dict:
             "strava": StravaActivity,
             "garmin": GarminActivity,
             "ridewithgps": RideWithGPSActivity,
+            "intervalsicu": IntervalsICUActivity,
             "spreadsheet": SpreadsheetActivity,
             "file": FileActivity,
             "stravajson": StravaJsonActivity,
@@ -99,6 +101,7 @@ def index():
         strava_webhook_subscription_id=strava_webhook_cfg.get("subscription_id"),
         strava_webhook_url=f"{base_url}/api/strava/webhook",
         rwgps_webhook_url=f"{base_url}/api/ridewithgps/webhook",
+        intervalsicu_webhook_url=f"{base_url}/api/intervalsicu/webhook",
     )
 
 

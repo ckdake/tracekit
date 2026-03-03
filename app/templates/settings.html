@@ -69,6 +69,20 @@
         </p>
         <div id="provider-list"></div>
     </div>
+    {% if 'file' in enabled_providers %}
+    <div class="card" id="file-upload-card">
+        <h2>Upload Activity Files</h2>
+        <p class="field-help">Upload <code>.gpx</code>, <code>.fit</code>, <code>.tcx</code> (or their <code>.gz</code> variants), or a <code>.zip</code> containing any of those. Existing files are never overwritten.</p>
+        <div class="field-row" style="align-items:flex-start; gap: 0.75rem; flex-wrap: wrap;">
+            <input type="file" id="file-upload-input"
+                   accept=".gpx,.fit,.tcx,.gpx.gz,.fit.gz,.tcx.gz,.zip"
+                   style="flex: 1; min-width: 0;">
+            <button class="btn btn-primary" id="file-upload-btn" onclick="uploadFile()">Upload</button>
+        </div>
+        <div id="file-upload-status" style="margin-top: 0.5rem;"></div>
+    </div>
+    {% endif %}
+
     <div class="card card-danger">
         <h2>Danger Zone</h2>
         <p class="field-help">Permanently delete this tracekit&rsquo;s copy of activities and sync records from the database. Files on disk are never touched. This cannot be undone.</p>
@@ -121,6 +135,43 @@ const ENABLED_PROVIDERS = {{ enabled_providers | tojson }};
 const HIDDEN_PROVIDER_CONFIGS = {{ hidden_provider_configs | tojson }};</script>
 <script src="{{ url_for('static', filename='settings.js') }}"></script>
 <script>
+async function uploadFile() {
+    const input = document.getElementById('file-upload-input');
+    const btn   = document.getElementById('file-upload-btn');
+    const statusEl = document.getElementById('file-upload-status');
+    if (!input || !input.files.length) {
+        statusEl.textContent = 'Please choose a file first.';
+        statusEl.className = 'field-help';
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    btn.disabled = true;
+    statusEl.textContent = 'Uploading…';
+    statusEl.className = 'field-help';
+    try {
+        const resp = await fetch('/api/file/upload', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (data.error) {
+            statusEl.textContent = 'Error: ' + data.error;
+            statusEl.className = 'page-status page-status-error';
+        } else {
+            const parts = [];
+            if (data.saved.length)    parts.push(`Queued: ${data.saved.join(', ')}`);
+            if (data.skipped.length)  parts.push(`Already exists (skipped): ${data.skipped.join(', ')}`);
+            if (data.rejected.length) parts.push(`Unsupported type (rejected): ${data.rejected.join(', ')}`);
+            statusEl.textContent = parts.length ? parts.join(' · ') : 'No files processed.';
+            statusEl.className = data.saved.length ? 'change-status change-status-done' : 'field-help';
+            if (data.saved.length) input.value = '';
+        }
+    } catch (e) {
+        statusEl.textContent = 'Network error: ' + e.message;
+        statusEl.className = 'page-status page-status-error';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 document.getElementById('allow-impersonation-toggle').addEventListener('change', function() {
     fetch('/api/user/allow-impersonation', {
         method: 'POST',

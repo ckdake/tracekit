@@ -140,6 +140,19 @@
                 <button class="btn btn-xs btn-secondary" onclick="copyUrl('{{ rwgps_webhook_url }}', this)">Copy</button>
             </div>
         </div>
+
+        <div class="admin-webhook-section">
+            <h3>Intervals.icu Webhook</h3>
+            <p class="field-help">
+                Configure this URL in your Intervals.icu OAuth app settings to receive real-time activity events
+                (created, updated, deleted).
+            </p>
+            <div class="admin-webhook-row">
+                <span class="admin-webhook-label">Callback URL</span>
+                <code class="admin-webhook-url">{{ intervalsicu_webhook_url }}</code>
+                <button class="btn btn-xs btn-secondary" onclick="copyUrl('{{ intervalsicu_webhook_url }}', this)">Copy</button>
+            </div>
+        </div>
     </div>
 
     <div class="card card-danger">

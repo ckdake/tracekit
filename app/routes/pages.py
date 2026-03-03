@@ -33,6 +33,7 @@ def settings():
     system_credentials = {
         "strava": bool(os.environ.get("STRAVA_CLIENT_ID") and os.environ.get("STRAVA_CLIENT_SECRET")),
         "ridewithgps": bool(os.environ.get("RIDEWITHGPS_CLIENT_ID") and os.environ.get("RIDEWITHGPS_CLIENT_SECRET")),
+        "intervalsicu": bool(os.environ.get("INTERVALSICU_CLIENT_ID") and os.environ.get("INTERVALSICU_CLIENT_SECRET")),
     }
 
     from tracekit.appconfig import get_system_providers
