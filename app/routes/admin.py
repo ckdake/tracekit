@@ -36,7 +36,6 @@ def _get_user_activity_counts(user_id: int) -> dict:
         from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
         from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
         from tracekit.providers.strava.strava_activity import StravaActivity
-        from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
 
         models = {
             "strava": StravaActivity,
@@ -45,7 +44,6 @@ def _get_user_activity_counts(user_id: int) -> dict:
             "intervalsicu": IntervalsICUActivity,
             "spreadsheet": SpreadsheetActivity,
             "file": FileActivity,
-            "stravajson": StravaJsonActivity,
         }
         return {name: model.select().where(model.user_id == user_id).count() for name, model in models.items()}
     except Exception:

@@ -84,9 +84,6 @@ def run():
 
     config["providers"]["garmin"] = {"enabled": enable_garmin}
 
-    # StravaJSON provider (disabled by default)
-    config["providers"]["stravajson"] = {"enabled": False}
-
     # Create provider_priority string based on provider priorities
     providers_with_priority = []
     for provider, settings in config["providers"].items():

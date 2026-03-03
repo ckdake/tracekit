@@ -6,7 +6,6 @@ from .providers.garmin import GarminProvider
 from .providers.ridewithgps import RideWithGPSProvider
 from .providers.spreadsheet import SpreadsheetProvider
 from .providers.strava import StravaProvider
-from .providers.stravajson import StravaJsonProvider
 
 __version__ = "0.0.1"
 __all__ = [
@@ -14,6 +13,5 @@ __all__ = [
     "GarminProvider",
     "RideWithGPSProvider",
     "SpreadsheetProvider",
-    "StravaJsonProvider",
     "StravaProvider",
 ]

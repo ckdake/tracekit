@@ -64,6 +64,3 @@ def test_run_creates_config_file(monkeypatch):
 
         # Check Garmin provider
         assert config["providers"]["garmin"]["enabled"]
-
-        # Check StravaJSON provider (should be disabled by default)
-        assert not config["providers"]["stravajson"]["enabled"]

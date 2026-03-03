@@ -71,7 +71,6 @@ Columns (A–U):
             '<strong>Equipment and name are not synced from files</strong> — use Strava, Garmin, RideWithGPS, or the Spreadsheet provider for those.',
         text_fields: [],
     },
-    stravajson:  { label: 'StravaJSON',   sync_equipment: false, sync_name: false, text_fields: [] },
     intervalsicu: {
         label: 'Intervals.icu', sync_equipment: true, sync_name: true,
         text_fields: [],

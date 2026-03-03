@@ -141,14 +141,12 @@ class TestGetSystemProviders:
                 "ridewithgps": True,
                 "spreadsheet": False,
                 "file": True,
-                "stravajson": False,
             }
         )
         result = get_system_providers()
         assert result["strava"] is False
         assert result["garmin"] is True
         assert result["spreadsheet"] is False
-        assert result["stravajson"] is False
 
     def test_providers_absent_from_stored_value_default_to_enabled(self, db):
         from tracekit.appconfig import get_system_providers, save_system_providers
@@ -188,7 +186,6 @@ class TestSaveSystemProviders:
                 "ridewithgps": True,
                 "spreadsheet": True,
                 "file": True,
-                "stravajson": True,
             }
         )
         save_system_providers(
@@ -198,7 +195,6 @@ class TestSaveSystemProviders:
                 "ridewithgps": True,
                 "spreadsheet": True,
                 "file": True,
-                "stravajson": True,
             }
         )
         result = get_system_providers()

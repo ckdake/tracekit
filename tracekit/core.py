@@ -15,7 +15,6 @@ from .providers.intervalsicu import IntervalsICUProvider
 from .providers.ridewithgps import RideWithGPSProvider
 from .providers.spreadsheet import SpreadsheetProvider
 from .providers.strava import StravaProvider
-from .providers.stravajson import StravaJsonProvider
 
 CONFIG_PATH = Path("tracekit_config.json")
 
@@ -44,7 +43,6 @@ class Tracekit:
         self._ridewithgps = None
         self._garmin = None
         self._file = None
-        self._stravajson = None
         self._intervalsicu = None
 
     @staticmethod
@@ -174,20 +172,6 @@ class Tracekit:
         return self._file
 
     @property
-    def stravajson(self) -> StravaJsonProvider | None:
-        """Get the StravaJSON provider, initializing it if needed."""
-        provider_config = self.config.get("providers", {}).get("stravajson", {})
-
-        if not self._stravajson and provider_config.get("enabled", False):
-            folder = provider_config.get("folder")
-            if folder:
-                # Add home_timezone to provider config
-                enhanced_config = provider_config.copy()
-                enhanced_config["home_timezone"] = self.config.get("home_timezone", "US/Eastern")
-                self._stravajson = StravaJsonProvider(folder, config=enhanced_config)
-        return self._stravajson
-
-    @property
     def enabled_providers(self) -> list[str]:
         """Get list of enabled providers based on config."""
         providers = []
@@ -200,7 +184,6 @@ class Tracekit:
             "intervalsicu",
             "garmin",
             "file",
-            "stravajson",
         ]:
             if providers_config.get(provider_name, {}).get("enabled", False):
                 # Only add if required credentials/paths are available

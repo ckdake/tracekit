@@ -6,7 +6,6 @@ from .intervalsicu.intervalsicu_provider import IntervalsICUProvider
 from .ridewithgps.ridewithgps_provider import RideWithGPSProvider
 from .spreadsheet.spreadsheet_provider import SpreadsheetProvider
 from .strava.strava_provider import StravaProvider
-from .stravajson.stravajson_provider import StravaJsonProvider
 
 __all__ = [
     "FileProvider",
@@ -14,6 +13,5 @@ __all__ = [
     "IntervalsICUProvider",
     "RideWithGPSProvider",
     "SpreadsheetProvider",
-    "StravaJsonProvider",
     "StravaProvider",
 ]

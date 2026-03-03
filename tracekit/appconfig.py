@@ -77,7 +77,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "sync_equipment": False,
             "sync_name": False,
         },
-        "stravajson": {"enabled": False},
         "intervalsicu": {
             "enabled": False,
             "priority": 4,

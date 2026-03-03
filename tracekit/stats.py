@@ -19,7 +19,6 @@ def get_provider_activity_counts() -> dict[str, int]:
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
-    from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
     from tracekit.user_context import get_user_id
 
     models: dict[str, Any] = {
@@ -29,7 +28,6 @@ def get_provider_activity_counts() -> dict[str, int]:
         "intervalsicu": IntervalsICUActivity,
         "spreadsheet": SpreadsheetActivity,
         "file": FileActivity,
-        "stravajson": StravaJsonActivity,
     }
     uid = get_user_id()
     return {name: model.select().where(model.user_id == uid).count() for name, model in models.items()}
@@ -52,7 +50,6 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
-    from tracekit.providers.stravajson.stravajson_activity import StravaJsonActivity
 
     models = [
         StravaActivity,
@@ -61,7 +58,6 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
         IntervalsICUActivity,
         SpreadsheetActivity,
         FileActivity,
-        StravaJsonActivity,
     ]
 
     from tracekit.user_context import get_user_id

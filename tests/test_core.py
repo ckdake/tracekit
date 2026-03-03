@@ -55,7 +55,6 @@ class TesttracekitCore:
                     "ridewithgps": {"enabled": False},
                     "garmin": {"enabled": False},
                     "file": {"enabled": False},
-                    "stravajson": {"enabled": False},
                 },
             }
         )
@@ -79,7 +78,6 @@ class TesttracekitCore:
                     "ridewithgps": {"enabled": False},
                     "garmin": {"enabled": False},
                     "file": {"enabled": False},
-                    "stravajson": {"enabled": False},
                 },
             }
         )
@@ -108,7 +106,6 @@ class TesttracekitCore:
                     "ridewithgps": {"enabled": False},
                     "garmin": {"enabled": False},
                     "file": {"enabled": False},
-                    "stravajson": {"enabled": False},
                 },
             }
         )
@@ -137,7 +134,6 @@ class TesttracekitCore:
                     "ridewithgps": {"enabled": False},
                     "garmin": {"enabled": False},
                     "file": {"enabled": False},
-                    "stravajson": {"enabled": False},
                 },
             }
         )
