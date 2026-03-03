@@ -81,8 +81,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "intervalsicu": {
             "enabled": False,
             "priority": 4,
-            "sync_equipment": True,
-            "sync_name": True,
+            "sync_equipment": False,
+            "sync_name": False,
             "use_personal_credentials": False,
             "client_id": "",
             "client_secret": "",

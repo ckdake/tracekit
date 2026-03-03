@@ -789,11 +789,12 @@ select#timezone:focus {
 .provider-status.not-synced { background: #aab0b8; opacity: 0.70; }
 
 /* Per-provider synced colors */
-.provider-status.provider-strava.synced      { background: #FC4C02; }
-.provider-status.provider-garmin.synced      { background: #007CC3; }
-.provider-status.provider-ridewithgps.synced { background: #F96400; }
-.provider-status.provider-spreadsheet.synced { background: #5a6b7c; }
-.provider-status.provider-file.synced        { background: #7a7f84; }
+.provider-status.provider-strava.synced       { background: #FC4C02; }
+.provider-status.provider-garmin.synced       { background: #007CC3; }
+.provider-status.provider-ridewithgps.synced  { background: #F96400; }
+.provider-status.provider-intervalsicu.synced { background: #dd0447; }
+.provider-status.provider-spreadsheet.synced  { background: #5a6b7c; }
+.provider-status.provider-file.synced         { background: #7a7f84; }
 
 .card-loading { color: #999; font-size: 12px; text-align: center; padding: 6px 0; }
 
