@@ -8,7 +8,13 @@ next:
 - [ ] bug: just drop stravajson
 - [ ] bug: pulling provider in ui for a month doesn't get new activites in the month
 - [ ] bug: worker is running migrations
+- [ ] bug: js error on toggle sync equipment for intervals.icu
+- [ ] bug: intervals.icu gear update not working (make sure gear exists)
+- [ ] bug: strava gear update sometimes not workign due to running shoe naming
 - [ ] feat: as syncs are applied, update the visible table on /month/YYYY-MM to show as it updates
+- [ ] bug: garmin doesn't show as "connected" bubble when connected
+- [ ] feat: tracekit support api usage for local
+- [ ] geat: pull source file from intervals.icu
 - [ ] for web app, require subscription to be active for providers to sync
 - [ ] refactor all the web/sync stuff to use list of providers from code/admin, not hardcoded individually
 - [ ] discord?

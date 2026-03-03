@@ -78,10 +78,10 @@ function renderGrid(yearMonth, data) {
 
     const PROVIDER_DISPLAY = {
         strava:      { cls: 'provider-strava',      label: 'Strava',       logo: '/static/powered_by_strava.svg',      logoAlt: 'Powered by Strava',      logoHref: 'https://www.strava.com' },
-        garmin:      { cls: 'provider-garmin',      label: 'Garmin',       logo: '/static/powered_by_garmin.svg',      logoAlt: 'Powered by Garmin',      logoHref: 'https://www.garmin.com' },
+        garmin:      { cls: 'provider-garmin',      label: 'Garmin',       logo: '/static/garmin_logo.jpg',            logoAlt: 'Garmin',                 logoHref: 'https://www.garmin.com' },
         stravajson:  { cls: 'provider-strava',      label: 'Strava (JSON)',logo: '/static/powered_by_strava.svg',      logoAlt: 'Powered by Strava',      logoHref: 'https://www.strava.com' },
-        ridewithgps:  { cls: 'provider-ridewithgps',  label: 'RideWithGPS',   logo: '/static/powered_by_ridewithgps.svg', logoAlt: 'Powered by RideWithGPS', logoHref: 'https://ridewithgps.com' },
-        intervalsicu: { cls: 'provider-intervalsicu', label: 'Intervals.icu', logo: '', logoAlt: 'Intervals.icu' },
+        ridewithgps:  { cls: 'provider-ridewithgps',  label: 'RideWithGPS',   logo: '/static/ridewithgps_logo.png',       logoAlt: 'RideWithGPS',            logoHref: 'https://ridewithgps.com' },
+        intervalsicu: { cls: 'provider-intervalsicu', label: 'Intervals.icu', logo: '/static/intervalsicu_logo.png',      logoAlt: 'Intervals.icu',          logoHref: 'https://intervals.icu' },
         spreadsheet:  { cls: 'provider-spreadsheet',  label: 'Spreadsheet',   logo: '', logoAlt: 'Spreadsheet' },
         file:         { cls: 'provider-file',         label: 'File',          logo: '', logoAlt: 'File' },
     };

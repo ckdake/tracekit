@@ -389,6 +389,16 @@ body {
     font-weight: 700;
     text-align: center;
     box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+}
+
+.provider-logo {
+    display: block;
+    max-height: 32px;
+    max-width: 180px;
 }
 
 .small {
