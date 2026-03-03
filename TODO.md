@@ -5,6 +5,10 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
+- [ ] bug: just drop stravajson
+- [ ] bug: pulling provider in ui for a month doesn't get new activites in the month
+- [ ] bug: worker is running migrations
+- [ ] feat: as syncs are applied, update the visible table on /month/YYYY-MM to show as it updates
 - [ ] for web app, require subscription to be active for providers to sync
 - [ ] refactor all the web/sync stuff to use list of providers from code/admin, not hardcoded individually
 - [ ] discord?
