@@ -154,6 +154,21 @@ def _load_from_file() -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
+def _backfill_provider_defaults(config: dict[str, Any]) -> dict[str, Any]:
+    """Add default config for any providers missing from *config*.
+
+    When a new provider is added to DEFAULT_CONFIG, existing users' stored
+    configs won't have a key for it.  This ensures new providers are always
+    present with sensible defaults so the settings UI can show them.
+    """
+    providers = config.get("providers", {})
+    defaults = DEFAULT_CONFIG.get("providers", {})
+    missing = {name: {**copy.deepcopy(defaults[name]), "enabled": False} for name in defaults if name not in providers}
+    if not missing:
+        return config
+    return {**config, "providers": {**providers, **missing}}
+
+
 def load_config() -> dict[str, Any]:
     """Return the current configuration, always using the DB as source of truth.
 
@@ -189,9 +204,9 @@ def load_config() -> dict[str, Any]:
         # (added via settings UI) are not deleted.
         merged = {**db_cfg, **file_cfg}
         save_config(merged)
-        return merged
+        return _backfill_provider_defaults(merged)
 
-    return db_cfg
+    return _backfill_provider_defaults(db_cfg)
 
 
 def save_config(config: dict[str, Any]) -> None:

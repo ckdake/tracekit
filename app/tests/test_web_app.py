@@ -150,7 +150,10 @@ class TestConfigLoading:
         assert config["home_timezone"] == "US/Pacific"
         assert config["debug"] is True
         assert "providers" in config
-        assert len(config["providers"]) == 5
+        # Seeded 5 providers; backfill adds defaults for any new providers in DEFAULT_CONFIG
+        assert len(config["providers"]) >= 5
+        assert "strava" in config["providers"]
+        assert "garmin" in config["providers"]
 
     def test_config_file_synced_to_db_on_boot(self, temp_database, temp_config_file):
         """If a JSON config file differs from the DB, the DB is updated to match."""
