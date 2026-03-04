@@ -132,7 +132,8 @@
 <script>const INITIAL_CONFIG = {{ config | tojson }};
 const SYSTEM_CREDENTIALS = {{ system_credentials | tojson }};
 const ENABLED_PROVIDERS = {{ enabled_providers | tojson }};
-const HIDDEN_PROVIDER_CONFIGS = {{ hidden_provider_configs | tojson }};</script>
+const HIDDEN_PROVIDER_CONFIGS = {{ hidden_provider_configs | tojson }};
+const USER_ID = {{ user_id | tojson }};</script>
 <script src="{{ url_for('static', filename='settings.js') }}"></script>
 <script>
 async function uploadFile() {

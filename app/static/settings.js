@@ -1,6 +1,6 @@
 // Settings page logic.
-// Expects `INITIAL_CONFIG` to be defined inline before this script loads.
-/* global INITIAL_CONFIG */
+// Expects `INITIAL_CONFIG` and `USER_ID` to be defined inline before this script loads.
+/* global INITIAL_CONFIG, USER_ID */
 
 // ── Status toast ─────────────────────────────────────────────────────────────
 let toastTimer = null;
@@ -65,9 +65,9 @@ Columns (A–U):
         label: 'File',
         sync_equipment: false,
         sync_name: false,
-        instructions: 'Drop any supported activity file (<code>.gpx</code>, <code>.fit</code>, <code>.tcx</code>, or their <code>.gz</code> variants) ' +
-            'into <code>~/data/activities</code> and it will be picked up on the next sync. ' +
-            'Intended for importing files directly or hydrating activities with their original source data. ' +
+        instructions: `Files are stored in <code>~/data/activities/<strong>${USER_ID}</strong>/</code> on disk — ` +
+            'in the cloud app, use the <a href="#file-upload-card">Upload Activity Files</a> section below. ' +
+            'Supported formats: <code>.gpx</code>, <code>.fit</code>, <code>.tcx</code> (and their <code>.gz</code> variants). ' +
             '<strong>Equipment and name are not synced from files</strong> — use Strava, Garmin, RideWithGPS, or the Spreadsheet provider for those.',
         text_fields: [],
     },

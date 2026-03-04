@@ -62,6 +62,7 @@ def settings():
         system_credentials=system_credentials,
         enabled_providers=sorted(enabled_set),
         hidden_provider_configs=hidden_provider_configs,
+        user_id=current_user.id if current_user.is_authenticated else 0,
     )
 
 
