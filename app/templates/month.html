@@ -84,6 +84,9 @@ function changeLabel(c) {
     case 'Download Source File from RideWithGPS':
       return `Download source file from RideWithGPS for activity ${c.activity_id} `
            + `(<em>${c.new_value || ''}</em>) to file provider`;
+    case 'Download Source File from Intervals.icu':
+      return `Download source file from Intervals.icu for activity ${c.activity_id} `
+           + `(<em>${c.new_value || ''}</em>) to file provider`;
     default:
       return JSON.stringify(c);
   }
