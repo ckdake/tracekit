@@ -35,18 +35,23 @@
             <td>{{ row.name }}</td>
             <td class="cell-start">{{ row.last_used or '—' }}</td>
             <td class="cell-dist">{{ '%.1f'|format(row.total_distance) }}</td>
-            {% set ns = namespace(sot_found=false) %}
+            {% set ns = namespace(sot_found=false, sot_dist=0) %}
             {% for provider in ordered_providers %}
               {% set dist = row.providers.get(provider, 0) %}
               {% if dist > 0 and not ns.sot_found %}
                 {% set ns.sot_found = true %}
+                {% set ns.sot_dist = dist %}
                 <td class="cell-dist cell-auth">{{ '%.1f'|format(dist) }}</td>
               {% elif dist > 0 %}
-                {% set fix_ym = fix_months.get(row.name, {}).get(provider) %}
-                {% if fix_ym %}
-                  <td class="cell-dist cell-new"><a href="/month/{{ fix_ym }}">{{ '%.1f'|format(dist) }}</a></td>
+                {% if '%.1f'|format(dist) == '%.1f'|format(ns.sot_dist) %}
+                  <td class="cell-dist cell-auth">{{ '%.1f'|format(dist) }}</td>
                 {% else %}
-                  <td class="cell-dist cell-new">{{ '%.1f'|format(dist) }}</td>
+                  {% set fix_ym = fix_months.get(row.name, {}).get(provider) %}
+                  {% if fix_ym %}
+                    <td class="cell-dist cell-new"><a href="/month/{{ fix_ym }}">{{ '%.1f'|format(dist) }}</a></td>
+                  {% else %}
+                    <td class="cell-dist cell-new">{{ '%.1f'|format(dist) }}</td>
+                  {% endif %}
                 {% endif %}
               {% else %}
                 <td class="cell-dist">—</td>
