@@ -10,7 +10,7 @@ intervalsicu_bp = Blueprint("auth_intervalsicu", __name__)
 
 _AUTHORIZE_URL = "https://intervals.icu/oauth/authorize"
 _TOKEN_URL = "https://intervals.icu/api/oauth/token"
-_SCOPES = "ACTIVITY:WRITE"
+_SCOPES = "ACTIVITY:WRITE ATHLETE:WRITE"
 
 
 def _get_intervalsicu_client_credentials(icu_cfg: dict) -> tuple[str, str]:

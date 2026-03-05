@@ -276,29 +276,28 @@ class IntervalsICUProvider(FitnessProvider):
             return {}
 
     def _ensure_gear_exists(self, gear_name: str) -> str:
-        """Find gear by name in intervals.icu, creating it globally if not found.
+        """Find gear by name in the intervals.icu native gear list, creating it if absent.
 
-        Returns the gear_id to use when setting gear on an activity.
+        Tries exact match then case-insensitive. If still not found, creates the
+        gear via PUT upsert using a deterministic ID derived from the name.
+        Returns the gear_id.
         """
         import hashlib
 
         all_gear = self.get_all_gear()
 
-        # Exact match
         for gid, gname in all_gear.items():
             if gname == gear_name:
                 return gid
 
-        # Case-insensitive match
-        gear_name_lower = gear_name.strip().lower()
+        lower = gear_name.strip().lower()
         for gid, gname in all_gear.items():
-            if gname.strip().lower() == gear_name_lower:
+            if gname.strip().lower() == lower:
                 return gid
 
-        # Not found — create it via PUT upsert
         gear_id = "tk" + hashlib.md5(gear_name.encode()).hexdigest()[:12]
         self._put(f"/athlete/{self.athlete_id}/gear/{gear_id}", {"name": gear_name})
-        print(f"Created gear '{gear_name}' in intervals.icu with id '{gear_id}'")
+        print(f"Created gear '{gear_name}' in intervals.icu (id={gear_id})")
         return gear_id
 
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
