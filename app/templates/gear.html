@@ -13,8 +13,8 @@
 
   <section class="section-card">
     <p class="section-hint">
-      <span class="badge badge-auth">Green</span> = source of truth / gear tracked &nbsp;
-      <span class="badge badge-new">Yellow</span> = provider enabled but gear not tracked
+      <span class="badge badge-auth">Green</span> = gear tracked by this provider &nbsp;
+      <span class="badge badge-new">Yellow</span> = provider enabled but gear not tracked — click to go to the most recent affected month
     </p>
     {% if gear_rows %}
     <div class="table-scroll">
@@ -38,14 +38,16 @@
             {% set ns = namespace(sot_found=false) %}
             {% for provider in ordered_providers %}
               {% set dist = row.providers.get(provider, 0) %}
-              {% set is_enabled = config.providers.get(provider, {}).get('enabled', false) %}
               {% if dist > 0 %}
                 {% if not ns.sot_found %}{% set ns.sot_found = true %}{% endif %}
                 <td class="cell-dist cell-auth">{{ '%.1f'|format(dist) }}</td>
-              {% elif is_enabled %}
-                <td class="cell-dist cell-new">—</td>
               {% else %}
-                <td class="cell-dist">—</td>
+                {% set fix_ym = fix_months.get(row.name, {}).get(provider) %}
+                {% if fix_ym %}
+                  <td class="cell-dist cell-new"><a href="/month/{{ fix_ym }}">—</a></td>
+                {% else %}
+                  <td class="cell-dist cell-new">—</td>
+                {% endif %}
               {% endif %}
             {% endfor %}
           </tr>

@@ -9,6 +9,38 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
+
+
+def _gear_corr_key(ts: int, dist: float) -> str:
+    """Correlation key used by gear helpers: Eastern date + 0.5 mi bucket."""
+    if not ts or not dist:
+        return ""
+    try:
+        dt = datetime.fromtimestamp(ts, ZoneInfo("US/Eastern"))
+        bucket = round(dist * 2) / 2
+        return f"{dt.strftime('%Y-%m-%d')}_{bucket:.1f}"
+    except Exception:
+        return ""
+
+
+def _provider_model_map() -> dict[str, Any]:
+    """Return {provider_name: model_class} for all known providers."""
+    from tracekit.providers.file.file_activity import FileActivity
+    from tracekit.providers.garmin.garmin_activity import GarminActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+    from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
+    from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+    from tracekit.providers.strava.strava_activity import StravaActivity
+
+    return {
+        "strava": StravaActivity,
+        "garmin": GarminActivity,
+        "ridewithgps": RideWithGPSActivity,
+        "spreadsheet": SpreadsheetActivity,
+        "file": FileActivity,
+        "intervalsicu": IntervalsICUActivity,
+    }
 
 
 def get_provider_activity_counts() -> dict[str, int]:
@@ -101,8 +133,6 @@ def get_gear_summary() -> list[dict[str, Any]]:
       - last_used: ISO date string of most recent activity, or None
       - providers: {provider_name: distance_sum} for each provider
     """
-    from zoneinfo import ZoneInfo
-
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
     from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
@@ -127,16 +157,6 @@ def get_gear_summary() -> list[dict[str, Any]]:
     gear_map: dict[str, dict[str, Any]] = {}
     # Per-gear set of correlation keys already counted in the total (dedup).
     gear_seen: dict[str, set[str]] = {}
-
-    def _corr_key(ts: int, dist: float) -> str:
-        if not ts or not dist:
-            return ""
-        try:
-            dt = datetime.fromtimestamp(ts, ZoneInfo("US/Eastern"))
-            bucket = round(dist * 2) / 2
-            return f"{dt.strftime('%Y-%m-%d')}_{bucket:.1f}"
-        except Exception:
-            return ""
 
     for provider_name, model_cls in all_providers:
         try:
@@ -163,7 +183,7 @@ def get_gear_summary() -> list[dict[str, Any]]:
                 gear_map[name]["providers"][provider_name] += dist
 
                 # Deduplicate totals via correlation key (date + distance bucket).
-                key = _corr_key(int(row.start_time or 0), dist)
+                key = _gear_corr_key(int(row.start_time or 0), dist)
                 if not key or key not in gear_seen[name]:
                     gear_map[name]["total_distance"] += dist
                     if key:
@@ -184,6 +204,112 @@ def get_gear_summary() -> list[dict[str, Any]]:
         key=lambda x: (x["last_used"] or "", x["name"]),
         reverse=True,
     )
+    return result
+
+
+def get_gear_fix_months(
+    gear_rows: list[dict[str, Any]],
+    ordered_providers: list[str],
+) -> dict[str, dict[str, str]]:
+    """Return {gear_name: {provider_name: "YYYY-MM"}} for yellow (diff) cells.
+
+    For each (gear, yellow_provider) pair where the provider is enabled but has
+    0 miles, return the most recent calendar month where that provider has an
+    activity correlated (same date+distance bucket) with an SOT activity that
+    carries the correct gear name — but the provider's activity has a
+    different/missing gear name.  Falls back to the most recent SOT month if no
+    direct correlated match is found.
+    """
+    from tracekit.user_context import get_user_id
+
+    uid = get_user_id()
+
+    result: dict[str, dict[str, str]] = {}
+    if not gear_rows or not ordered_providers:
+        return result
+
+    model_map = _provider_model_map()
+
+    # Lazy-loaded per-provider cache: {corr_key: (equipment, "YYYY-MM")}
+    provider_cache: dict[str, dict[str, tuple[str, str]]] = {}
+
+    def _load(provider_name: str) -> dict[str, tuple[str, str]]:
+        if provider_name in provider_cache:
+            return provider_cache[provider_name]
+        model_cls = model_map.get(provider_name)
+        if model_cls is None:
+            provider_cache[provider_name] = {}
+            return {}
+        data: dict[str, tuple[str, str]] = {}
+        try:
+            rows = (
+                model_cls.select(model_cls.start_time, model_cls.distance, model_cls.equipment)
+                .where(model_cls.user_id == uid)
+                .where(model_cls.start_time.is_null(False))
+            )
+            for row in rows:
+                ts = int(row.start_time or 0)
+                dist = float(row.distance or 0)
+                key = _gear_corr_key(ts, dist)
+                if not key:
+                    continue
+                equip = (row.equipment or "").strip()
+                ym = datetime.fromtimestamp(ts, UTC).strftime("%Y-%m")
+                # On collision keep the most recent
+                if key not in data or ym > data[key][1]:
+                    data[key] = (equip, ym)
+        except Exception:
+            pass
+        provider_cache[provider_name] = data
+        return data
+
+    for gear_row in gear_rows:
+        gear_name = gear_row["name"]
+        providers_dist: dict[str, float] = gear_row["providers"]
+
+        # SOT = first enabled provider in priority order with miles > 0
+        sot_provider: str | None = None
+        for p in ordered_providers:
+            if providers_dist.get(p, 0) > 0:
+                sot_provider = p
+                break
+
+        if sot_provider is None:
+            continue
+
+        sot_data = _load(sot_provider)
+
+        # Corr keys where the SOT provider recorded this gear name
+        sot_keys = {key for key, (equip, _ym) in sot_data.items() if equip == gear_name}
+        if not sot_keys:
+            continue
+
+        # Most recent SOT month (fallback when no direct correlated match found)
+        fallback_ym = max((sot_data[k][1] for k in sot_keys), default=None)
+        if fallback_ym is None:
+            continue
+
+        row_result: dict[str, str] = {}
+        for provider_name in ordered_providers:
+            if provider_name == sot_provider:
+                continue
+            if providers_dist.get(provider_name, 0) > 0:
+                continue  # green — no fix needed
+
+            # Yellow cell: find most recent month with a correlated but wrong-gear activity
+            p_data = _load(provider_name)
+            best_ym: str | None = None
+            for key in sot_keys:
+                if key in p_data:
+                    p_equip, p_ym = p_data[key]
+                    if p_equip != gear_name and (best_ym is None or p_ym > best_ym):
+                        best_ym = p_ym
+
+            row_result[provider_name] = best_ym or fallback_ym
+
+        if row_result:
+            result[gear_name] = row_result
+
     return result
 
 

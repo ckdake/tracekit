@@ -7,7 +7,7 @@ import pytz
 from db_init import load_tracekit_config
 from flask import Blueprint, redirect, render_template
 from flask_login import current_user
-from helpers import get_current_date_in_timezone, get_gear_summary
+from helpers import get_current_date_in_timezone, get_gear_fix_months, get_gear_summary
 
 pages_bp = Blueprint("pages", __name__)
 
@@ -72,17 +72,20 @@ def gear():
     config = load_tracekit_config()
     gear_rows = get_gear_summary()
 
-    # Build ordered provider list from config (priority order, all providers)
+    # Only show enabled providers as columns, in priority order
     from tracekit.utils import sort_providers
 
     providers_cfg = config.get("providers", {})
-    ordered_providers = [name for name, _ in sort_providers(providers_cfg)]
+    ordered_providers = [name for name, cfg in sort_providers(providers_cfg) if cfg.get("enabled", False)]
+
+    fix_months = get_gear_fix_months(gear_rows, ordered_providers)
 
     return render_template(
         "gear.html",
         config=config,
         gear_rows=gear_rows,
         ordered_providers=ordered_providers,
+        fix_months=fix_months,
         page_name="Gear",
     )
 

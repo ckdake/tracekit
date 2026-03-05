@@ -79,6 +79,21 @@ def get_gear_summary() -> list[dict]:
         return []
 
 
+def get_gear_fix_months(gear_rows: list[dict], ordered_providers: list[str]) -> dict[str, dict[str, str]]:
+    """Return {gear_name: {provider_name: "YYYY-MM"}} for yellow (diff) cells."""
+    if not _init_db():
+        return {}
+    try:
+        from tracekit.db import get_db
+        from tracekit.stats import get_gear_fix_months as _get_fix_months
+
+        db = get_db()
+        db.connect(reuse_if_open=True)
+        return _get_fix_months(gear_rows, ordered_providers)
+    except Exception:
+        return {}
+
+
 def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """Sort providers by priority (lowest first) with disabled providers at the end."""
     from tracekit.utils import sort_providers as _sort_providers
