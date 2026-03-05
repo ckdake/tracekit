@@ -102,7 +102,7 @@ class IntervalsICUProvider(FitnessProvider):
         if distance_m:
             act.distance = Decimal(str(float(distance_m) * 0.000621371))
 
-        act.start_time = self._parse_date_local(raw.get("start_date_local"))
+        act.start_time = self._parse_date_local(raw.get("start_date"))
 
         elapsed = raw.get("elapsed_time") or raw.get("moving_time")
         act.duration_hms = self._seconds_to_hms(elapsed)
