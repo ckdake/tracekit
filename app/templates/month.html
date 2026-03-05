@@ -170,7 +170,6 @@ function renderChanges(changes) {
       <div class="change-desc">${changeLabel(c)}</div>
       <div class="change-actions">
         <button class="btn-accept" onclick="acceptChange(${i})">✓ Accept</button>
-        <button class="btn-reject" onclick="rejectChange(${i})">✕ Reject</button>
       </div>
       <div class="change-status" id="change-status-${i}"></div>
     </div>
@@ -234,16 +233,14 @@ async function loadChanges() {
   }
 }
 
-/* ── accept / reject ─────────────────────────────────────────────────────── */
+/* ── accept ──────────────────────────────────────────────────────────────── */
 
 async function acceptChange(idx) {
   const row       = document.getElementById(`change-${idx}`);
   const statusEl  = document.getElementById(`change-status-${idx}`);
   const acceptBtn = row.querySelector('.btn-accept');
-  const rejectBtn = row.querySelector('.btn-reject');
 
   acceptBtn.disabled = true;
-  rejectBtn.disabled = true;
   statusEl.textContent = 'Queuing…';
   statusEl.className = 'change-status change-status-pending';
 
@@ -259,7 +256,6 @@ async function acceptChange(idx) {
       statusEl.textContent = `✗ ${data.error}`;
       statusEl.className = 'change-status change-status-error';
       acceptBtn.disabled = false;
-      rejectBtn.disabled = false;
     } else {
       statusEl.textContent = `✓ Queued (task ${data.task_id.slice(0, 8)}…)`;
       statusEl.className = 'change-status change-status-queued';
@@ -271,18 +267,7 @@ async function acceptChange(idx) {
     statusEl.textContent = `✗ ${err}`;
     statusEl.className = 'change-status change-status-error';
     acceptBtn.disabled = false;
-    rejectBtn.disabled = false;
   }
-}
-
-function rejectChange(idx) {
-  const row      = document.getElementById(`change-${idx}`);
-  const statusEl = document.getElementById(`change-status-${idx}`);
-  row.classList.add('change-row-rejected');
-  statusEl.textContent = 'Rejected';
-  statusEl.className = 'change-status change-status-rejected';
-  row.querySelector('.btn-accept').disabled = true;
-  row.querySelector('.btn-reject').disabled = true;
 }
 
 /* ── task polling ────────────────────────────────────────────────────────── */

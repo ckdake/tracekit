@@ -1619,8 +1619,7 @@ select#timezone:focus {
     flex-wrap: wrap;
 }
 .change-row:last-child { border-bottom: none; }
-.change-row-done     { opacity: 0.55; }
-.change-row-rejected { opacity: 0.4; }
+.change-row-done { opacity: 0.55; }
 
 .change-desc {
     flex: 1;
@@ -1630,35 +1629,23 @@ select#timezone:focus {
 .change-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .change-status  { font-size: 0.8rem; flex-shrink: 0; min-width: 100px; }
 
-.btn-accept,
-.btn-reject {
+.btn-accept {
     padding: 4px 12px;
     border-radius: 4px;
-    border: 1px solid;
+    border: 1px solid #219a52;
     cursor: pointer;
     font-size: 0.82rem;
     transition: background .15s;
-}
-.btn-accept {
     background: #27ae60;
-    border-color: #219a52;
     color: #fff;
 }
 .btn-accept:hover:not(:disabled) { background: #219a52; }
-.btn-reject {
-    background: #fff;
-    border-color: #ccc;
-    color: #666;
-}
-.btn-reject:hover:not(:disabled) { background: #f5f5f5; color: #333; }
-.btn-accept:disabled,
-.btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-accept:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.change-status-pending  { color: #888; }
-.change-status-queued   { color: #2980b9; }
-.change-status-done     { color: #27ae60; font-weight: 600; }
-.change-status-error    { color: #e74c3c; }
-.change-status-rejected { color: #aaa; font-style: italic; }
+.change-status-pending { color: #888; }
+.change-status-queued  { color: #2980b9; }
+.change-status-done    { color: #27ae60; font-weight: 600; }
+.change-status-error   { color: #e74c3c; }
 
 .no-changes {
     text-align: center;
