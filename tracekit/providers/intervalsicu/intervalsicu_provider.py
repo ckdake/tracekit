@@ -49,13 +49,15 @@ class IntervalsICUProvider(FitnessProvider):
     def _post(self, path: str, data: dict) -> Any:
         url = f"{_BASE_URL}{path}"
         resp = requests.post(url, headers=self._auth_headers(), json=data, timeout=30)
-        resp.raise_for_status()
+        if not resp.ok:
+            raise requests.HTTPError(f"{resp.status_code} {resp.reason} for url: {url} — {resp.text}", response=resp)
         return resp.json()
 
     def _put(self, path: str, data: dict) -> Any:
         url = f"{_BASE_URL}{path}"
         resp = requests.put(url, headers=self._auth_headers(), json=data, timeout=30)
-        resp.raise_for_status()
+        if not resp.ok:
+            raise requests.HTTPError(f"{resp.status_code} {resp.reason} for url: {url} — {resp.text}", response=resp)
         return resp.json()
 
     @property
@@ -299,7 +301,13 @@ class IntervalsICUProvider(FitnessProvider):
             if gname.strip().lower() == lower:
                 return gid
 
-        result = self._post(f"/athlete/{self.athlete_id}/gear", {"name": gear_name})
+        result = self._post(
+            f"/athlete/{self.athlete_id}/gear",
+            {
+                "name": gear_name,
+                "type": "Bike",
+            },
+        )
         gear_id = str(result.get("id", ""))
         print(f"Created gear '{gear_name}' in intervals.icu (id={gear_id})")
         return gear_id
