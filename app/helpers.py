@@ -64,6 +64,21 @@ def get_provider_activity_counts() -> dict[str, int]:
         return {"error": f"Database error: {e}"}  # type: ignore[return-value]
 
 
+def get_gear_summary() -> list[dict]:
+    """Return per-gear mileage summary rows, sorted by most-recently used."""
+    if not _init_db():
+        return []
+    try:
+        from tracekit.db import get_db
+        from tracekit.stats import get_gear_summary as _get_gear_summary
+
+        db = get_db()
+        db.connect(reuse_if_open=True)
+        return _get_gear_summary()
+    except Exception:
+        return []
+
+
 def sort_providers(providers: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """Sort providers by priority (lowest first) with disabled providers at the end."""
     from tracekit.utils import sort_providers as _sort_providers

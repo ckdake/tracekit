@@ -197,22 +197,17 @@
 
                 <div class="provider-grid">
                     <div class="provider-card">
-                        <h3>Garmin</h3>
-                        <p>
-                            Pulls activities from Garmin Connect using your
-                            Garmin account credentials via OAuth.
-                        </p>
-                        <ul>
-                            <li>Reads activities by date range</li>
-                            <li>
-                                Fetches activity metadata including device info
-                            </li>
-                            <li>Supports updating activity name</li>
-                            <li>Reads gear (devices)</li>
-                        </ul>
-                    </div>
-                    <div class="provider-card">
-                        <h3>Strava</h3>
+                        <h3>
+                            <a
+                                href="https://www.strava.com"
+                                target="_blank"
+                                rel="noopener"
+                                ><img
+                                    src="/assets/img/powered_by_strava.svg"
+                                    alt="Powered by Strava"
+                                    class="provider-logo"
+                            /></a>
+                        </h3>
                         <p>
                             Full read/write integration with Strava via the
                             official Strava API and OAuth 2.0.
@@ -228,7 +223,42 @@
                         </ul>
                     </div>
                     <div class="provider-card">
-                        <h3>Ride with GPS</h3>
+                        <h3>
+                            <a
+                                href="https://www.garmin.com"
+                                target="_blank"
+                                rel="noopener"
+                                ><img
+                                    src="/assets/img/garmin_logo.jpg"
+                                    alt="Garmin"
+                                    class="provider-logo"
+                            /></a>
+                        </h3>
+                        <p>
+                            Pulls activities from Garmin Connect using your
+                            Garmin account credentials via OAuth.
+                        </p>
+                        <ul>
+                            <li>Reads activities by date range</li>
+                            <li>
+                                Fetches activity metadata including device info
+                            </li>
+                            <li>Supports updating activity name</li>
+                            <li>Reads gear (devices)</li>
+                        </ul>
+                    </div>
+                    <div class="provider-card">
+                        <h3>
+                            <a
+                                href="https://ridewithgps.com"
+                                target="_blank"
+                                rel="noopener"
+                                ><img
+                                    src="/assets/img/ridewithgps_logo.png"
+                                    alt="Ride with GPS"
+                                    class="provider-logo"
+                            /></a>
+                        </h3>
                         <p>
                             Integrates with Ride with GPS using API key
                             authentication.
@@ -240,7 +270,30 @@
                         </ul>
                     </div>
                     <div class="provider-card">
-                        <h3>File</h3>
+                        <h3>
+                            <a
+                                href="https://intervals.icu"
+                                target="_blank"
+                                rel="noopener"
+                                ><img
+                                    src="/assets/img/intervalsicu_logo.png"
+                                    alt="Intervals.icu"
+                                    class="provider-logo"
+                            /></a>
+                        </h3>
+                        <p>
+                            Integrates with Intervals.icu using API key
+                            authentication.
+                        </p>
+                        <ul>
+                            <li>Reads activities by date range</li>
+                            <li>Fetches full activity details</li>
+                            <li>Supports downloading original source files</li>
+                            <li>Updates activity name</li>
+                        </ul>
+                    </div>
+                    <div class="provider-card">
+                        <h3>Files</h3>
                         <p>
                             Imports activity files directly from your filesystem
                             &mdash; no external API required.
@@ -259,6 +312,18 @@
                                 activities
                             </li>
                         </ul>
+                    </div>
+                    <div class="provider-card">
+                        <h3>
+                            Wandrer.earth
+                            <span class="badge badge-optional"
+                                >Coming Soon</span
+                            >
+                        </h3>
+                        <p>
+                            Integration with Wandrer.earth is planned for a
+                            future release.
+                        </p>
                     </div>
                 </div>
 
@@ -305,6 +370,11 @@
                     <li>
                         <a href="https://ridewithgps.com/api/v1/doc"
                             >Ride with GPS API v1</a
+                        >
+                    </li>
+                    <li>
+                        <a href="https://intervals.icu/api/v1/docs"
+                            >Intervals.icu API v1</a
                         >
                     </li>
                 </ol>

@@ -7,7 +7,7 @@ import pytz
 from db_init import load_tracekit_config
 from flask import Blueprint, redirect, render_template
 from flask_login import current_user
-from helpers import get_current_date_in_timezone
+from helpers import get_current_date_in_timezone, get_gear_summary
 
 pages_bp = Blueprint("pages", __name__)
 
@@ -63,6 +63,27 @@ def settings():
         enabled_providers=sorted(enabled_set),
         hidden_provider_configs=hidden_provider_configs,
         user_id=current_user.id if current_user.is_authenticated else 0,
+    )
+
+
+@pages_bp.route("/gear")
+def gear():
+    """Gear summary page — total mileage per gear item, broken down by provider."""
+    config = load_tracekit_config()
+    gear_rows = get_gear_summary()
+
+    # Build ordered provider list from config (priority order, all providers)
+    from tracekit.utils import sort_providers
+
+    providers_cfg = config.get("providers", {})
+    ordered_providers = [name for name, _ in sort_providers(providers_cfg)]
+
+    return render_template(
+        "gear.html",
+        config=config,
+        gear_rows=gear_rows,
+        ordered_providers=ordered_providers,
+        page_name="Gear",
     )
 
 

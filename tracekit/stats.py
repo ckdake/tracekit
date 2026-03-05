@@ -92,6 +92,90 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
     return {"timestamp": max_ts, "formatted": formatted}
 
 
+def get_gear_summary() -> list[dict[str, Any]]:
+    """Return per-gear mileage summary, sorted by most-recently used.
+
+    Each entry contains:
+      - name: canonical gear name (from Activity.equipment)
+      - total_distance: sum of all activity distances for this gear (miles)
+      - last_used: ISO date string of most recent activity, or None
+      - providers: {provider_name: distance_sum} for each provider
+    """
+    from tracekit.activity import Activity
+    from tracekit.user_context import get_user_id
+
+    uid = get_user_id()
+
+    activities = list(
+        Activity.select()
+        .where(Activity.user_id == uid)
+        .where(Activity.equipment.is_null(False))
+        .where(Activity.equipment != "")
+    )
+
+    # Map provider name → (id_field_on_Activity or None)
+    provider_id_fields: dict[str, str | None] = {
+        "strava": "strava_id",
+        "garmin": "garmin_id",
+        "ridewithgps": "ridewithgps_id",
+        "spreadsheet": "spreadsheet_id",
+        "file": None,
+        "intervalsicu": None,
+    }
+
+    gear_map: dict[str, dict[str, Any]] = {}
+
+    for act in activities:
+        name = (act.equipment or "").strip()
+        if not name:
+            continue
+        if name not in gear_map:
+            gear_map[name] = {
+                "name": name,
+                "total_distance": 0.0,
+                "last_used": None,
+                "providers": {p: 0.0 for p in provider_id_fields},
+            }
+        dist = float(act.distance or 0)
+        gear_map[name]["total_distance"] += dist
+
+        if act.date:
+            d = str(act.date)
+            if gear_map[name]["last_used"] is None or d > gear_map[name]["last_used"]:
+                gear_map[name]["last_used"] = d
+
+        for provider, id_field in provider_id_fields.items():
+            if id_field and getattr(act, id_field, None):
+                gear_map[name]["providers"][provider] += dist
+
+    # For providers without an ID field on Activity, query their tables directly.
+    # Match on equipment name (best-effort; names may differ from canonical).
+    try:
+        from tracekit.providers.file.file_activity import FileActivity
+        from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+
+        for model_cls, key in [(FileActivity, "file"), (IntervalsICUActivity, "intervalsicu")]:
+            rows = (
+                model_cls.select()
+                .where(model_cls.user_id == uid)
+                .where(model_cls.equipment.is_null(False))
+                .where(model_cls.equipment != "")
+            )
+            for row in rows:
+                name = (row.equipment or "").strip()
+                if name and name in gear_map:
+                    gear_map[name]["providers"][key] += float(row.distance or 0)
+    except Exception:
+        pass
+
+    result = sorted(
+        gear_map.values(),
+        key=lambda x: (x["last_used"] or "", x["name"]),
+        reverse=True,
+    )
+    return result
+
+
 def get_database_info() -> dict[str, Any]:
     """Return {table_name: row_count} for every model in the database."""
     from tracekit.database import get_all_models

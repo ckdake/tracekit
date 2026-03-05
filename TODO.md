@@ -25,7 +25,6 @@ later
 - [ ] refactor auth to make it harder to write SQL that bypasses.
 - [ ] user limits and rate limiting. TBD!
 - [ ] outbound email sending for email verificaiton on login, and password reset
-- [ ] add new source data files to file data when found in other places
 - [ ] i think we need a websocket or something for realtime updates
 - [ ] add inbound webhooks from ridewithgps on trips -> verify
 
