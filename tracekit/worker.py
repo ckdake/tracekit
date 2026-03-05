@@ -282,14 +282,14 @@ def apply_sync_change(self, change_dict: dict, year_month: str, user_id: int = 0
                 set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)
             return {"success": True, "message": msg}
         else:
-            try:
-                from tracekit.notification import create_notification
+            with contextlib.suppress(Exception):
                 from tracekit.provider_status import record_operation
 
                 record_operation(provider, change_dict.get("change_type", "apply_change"), False, msg)
+            with contextlib.suppress(Exception):
+                from tracekit.notification import create_notification
+
                 create_notification(f"Sync change failed: {msg}", category="error")
-            except Exception:
-                pass
             return {"success": False, "message": msg}
 
     except Exception as exc:
@@ -312,15 +312,15 @@ def apply_sync_change(self, change_dict: dict, year_month: str, user_id: int = 0
                 raise
 
         msg = str(exc)
-        try:
-            from tracekit.notification import create_notification
+        provider = change_dict.get("provider", "unknown")
+        with contextlib.suppress(Exception):
             from tracekit.provider_status import record_operation
 
-            provider = change_dict.get("provider", "unknown")
             record_operation(provider, change_dict.get("change_type", "apply_change"), False, msg)
+        with contextlib.suppress(Exception):
+            from tracekit.notification import create_notification
+
             create_notification(f"Sync change error for {year_month}: {msg}", category="error")
-        except Exception:
-            pass
         raise
 
 
