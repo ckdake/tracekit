@@ -147,6 +147,10 @@ class IntervalsICUProvider(FitnessProvider):
                         & (IntervalsICUActivity.user_id == uid)
                     )
                     if existing:
+                        # Backfill equipment if the API returned it and we don't have it locally
+                        if act.equipment and not existing.equipment:
+                            existing.equipment = act.equipment
+                            existing.save()
                         continue
                     act.user_id = uid
                     act.save()
@@ -271,18 +275,35 @@ class IntervalsICUProvider(FitnessProvider):
             print(f"Error getting Intervals.icu gear: {e}")
             return {}
 
-    def set_gear(self, gear_name: str, activity_id: str) -> bool:
-        """Set gear for an Intervals.icu activity by gear name."""
+    def _ensure_gear_exists(self, gear_name: str) -> str:
+        """Find gear by name in intervals.icu, creating it globally if not found.
+
+        Returns the gear_id to use when setting gear on an activity.
+        """
+        import hashlib
+
         all_gear = self.get_all_gear()
-        gear_id = None
+
+        # Exact match
         for gid, gname in all_gear.items():
             if gname == gear_name:
-                gear_id = gid
-                break
+                return gid
 
-        if gear_id is None:
-            available = ", ".join(all_gear.values()) or "(none)"
-            raise ValueError(f"Gear '{gear_name}' not found in Intervals.icu gear list. Available: {available}")
+        # Case-insensitive match
+        gear_name_lower = gear_name.strip().lower()
+        for gid, gname in all_gear.items():
+            if gname.strip().lower() == gear_name_lower:
+                return gid
+
+        # Not found — create it via PUT upsert
+        gear_id = "tk" + hashlib.md5(gear_name.encode()).hexdigest()[:12]
+        self._put(f"/athlete/{self.athlete_id}/gear/{gear_id}", {"name": gear_name})
+        print(f"Created gear '{gear_name}' in intervals.icu with id '{gear_id}'")
+        return gear_id
+
+    def set_gear(self, gear_name: str, activity_id: str) -> bool:
+        """Set gear for an Intervals.icu activity by gear name, creating it globally if needed."""
+        gear_id = self._ensure_gear_exists(gear_name)
 
         self._put(f"/activity/{activity_id}", {"gear": {"id": gear_id}})
 
