@@ -481,39 +481,38 @@ class StravaProvider(FitnessProvider):
 
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
         """Set gear for a Strava activity by gear name."""
-        try:
-            all_gear = self.get_all_gear()
-            gear_id = None
-            for gid, gname in all_gear.items():
-                if gname == gear_name:
-                    gear_id = gid
-                    break
+        all_gear = self.get_all_gear()
+        gear_id = None
+        for gid, gname in all_gear.items():
+            if gname == gear_name:
+                gear_id = gid
+                break
 
-            if gear_id is None:
-                available = ", ".join(all_gear.values()) or "(none)"
-                raise ValueError(f"Gear '{gear_name}' not found in Strava gear list. Available: {available}")
+        if gear_id is None:
+            available = ", ".join(all_gear.values()) or "(none)"
+            raise ValueError(f"Gear '{gear_name}' not found in Strava gear list. Available: {available}")
 
-            # Use stravalib to update the activity with gear_id
-            self.client.update_activity(activity_id=int(activity_id), gear_id=gear_id)
+        # Use stravalib to update the activity with gear_id
+        self.client.update_activity(activity_id=int(activity_id), gear_id=gear_id)
 
-            # Pull fresh data from upstream to sync our local copy (best-effort)
+        # Sync local copy — use gear_name as fallback if fresh fetch fails or returns no gear
+        local = StravaActivity.get_or_none(
+            (StravaActivity.strava_id == str(activity_id)) & (StravaActivity.user_id == get_user_id())
+        )
+        if local:
+            new_equip = gear_name  # known-correct fallback
             try:
                 fresh_activity = self.client.get_activity(int(activity_id))
-                local = StravaActivity.get_or_none(
-                    (StravaActivity.strava_id == str(activity_id)) & (StravaActivity.user_id == get_user_id())
-                )
-                if local and fresh_activity:
-                    gear = getattr(fresh_activity, "gear", None)
-                    if gear and hasattr(gear, "name") and gear.name:
-                        local.equipment = self._normalize_strava_gear_name(str(gear.name))
-                    local.save()
+                if fresh_activity:
+                    fresh_gear = getattr(fresh_activity, "gear", None)
+                    if fresh_gear and hasattr(fresh_gear, "name") and fresh_gear.name:
+                        new_equip = self._normalize_strava_gear_name(str(fresh_gear.name))
             except Exception as e:
                 print(f"Could not refresh local Strava activity {activity_id} after set_gear: {e}")
+            local.equipment = new_equip
+            local.save()
 
-            return True
-
-        except Exception as e:
-            raise RuntimeError(f"Error setting gear for Strava activity {activity_id}: {e}") from e
+        return True
 
     def reset_activities(self, date_filter: str | None = None) -> int:
         """Delete activities for a specific month or all activities."""

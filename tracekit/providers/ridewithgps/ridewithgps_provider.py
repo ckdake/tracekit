@@ -221,48 +221,45 @@ class RideWithGPSProvider(FitnessProvider):
 
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
         """Set gear for a RideWithGPS trip by gear name."""
-        try:
-            all_gear = self.get_all_gear()
-            gear_id = None
-            for gid, gname in all_gear.items():
-                if gname == gear_name:
-                    gear_id = gid
-                    break
+        all_gear = self.get_all_gear()
+        gear_id = None
+        for gid, gname in all_gear.items():
+            if gname == gear_name:
+                gear_id = gid
+                break
 
-            if gear_id is None:
-                available = ", ".join(all_gear.values()) or "(none)"
-                raise ValueError(f"Gear '{gear_name}' not found in RideWithGPS gear list. Available: {available}")
+        if gear_id is None:
+            available = ", ".join(all_gear.values()) or "(none)"
+            raise ValueError(f"Gear '{gear_name}' not found in RideWithGPS gear list. Available: {available}")
 
-            response = self.client.patch(
-                path=f"/trips/{activity_id}.json",
-                params={
-                    "trip": {
-                        "gear_id": int(gear_id),
-                    }
-                },
-            )
+        response = self.client.patch(
+            path=f"/trips/{activity_id}.json",
+            params={
+                "trip": {
+                    "gear_id": int(gear_id),
+                }
+            },
+        )
 
-            if hasattr(response, "error"):
-                raise RuntimeError(f"RideWithGPS API error: {response.error}")
+        if hasattr(response, "error"):
+            raise RuntimeError(f"RideWithGPS API error: {response.error}")
 
-            # Pull fresh data from upstream to sync our local copy
+        # Sync local copy — use gear_name as fallback if fresh fetch fails or returns no gear
+        local = RideWithGPSActivity.get_or_none(
+            (RideWithGPSActivity.ridewithgps_id == str(activity_id)) & (RideWithGPSActivity.user_id == get_user_id())
+        )
+        if local:
+            new_equip = gear_name  # known-correct fallback
             try:
                 fresh_trip = self.client.get(path=f"/trips/{activity_id}.json").trip
-                local = RideWithGPSActivity.get_or_none(
-                    (RideWithGPSActivity.ridewithgps_id == str(activity_id))
-                    & (RideWithGPSActivity.user_id == get_user_id())
-                )
-                if local and fresh_trip:
-                    if hasattr(fresh_trip, "gear") and fresh_trip.gear and hasattr(fresh_trip.gear, "name"):
-                        local.equipment = str(fresh_trip.gear.name)
-                    local.save()
+                if fresh_trip and hasattr(fresh_trip, "gear") and fresh_trip.gear and hasattr(fresh_trip.gear, "name"):
+                    new_equip = str(fresh_trip.gear.name)
             except Exception as e:
                 print(f"Could not refresh local RideWithGPS activity {activity_id} after set_gear: {e}")
+            local.equipment = new_equip
+            local.save()
 
-            return True
-
-        except Exception as e:
-            raise RuntimeError(f"Error setting gear for RideWithGPS trip {activity_id}: {e}") from e
+        return True
 
     def sync_single_activity(self, trip_id: str) -> RideWithGPSActivity | None:
         """Fetch a single trip from RideWithGPS by ID and upsert it locally.

@@ -195,29 +195,27 @@ def test_set_gear():
 
 
 def test_set_gear_not_found():
-    """Test that set_gear handles gear name not found gracefully."""
+    """Test that set_gear raises when gear name not found."""
     provider = RideWithGPSProvider()
 
     # Mock the client.post method (should not be called)
     provider.client.post = MagicMock()
 
-    # Test setting gear with name that doesn't exist
-    result = provider.set_gear("Nonexistent Gear", "315572559")
+    # Test setting gear with name that doesn't exist — should raise
+    with pytest.raises((ValueError, RuntimeError), match="not found"):
+        provider.set_gear("Nonexistent Gear", "315572559")
 
     # Verify the API call was NOT made
     provider.client.post.assert_not_called()
 
-    assert result is False
-
 
 def test_set_gear_failure():
-    """Test that set_gear handles API failures gracefully."""
+    """Test that set_gear raises on API failures."""
     provider = RideWithGPSProvider()
 
     # Mock the client.post method to raise an exception
     provider.client.post = MagicMock(side_effect=Exception("API Error"))
 
-    # Test setting gear with failure
-    result = provider.set_gear("2021 Commencal Meta AM HT 29", "315572559")
-
-    assert result is False
+    # Test setting gear with failure — should raise
+    with pytest.raises((RuntimeError, Exception)):
+        provider.set_gear("2021 Commencal Meta AM HT 29", "315572559")

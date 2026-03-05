@@ -273,38 +273,37 @@ class IntervalsICUProvider(FitnessProvider):
 
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
         """Set gear for an Intervals.icu activity by gear name."""
-        try:
-            all_gear = self.get_all_gear()
-            gear_id = None
-            for gid, gname in all_gear.items():
-                if gname == gear_name:
-                    gear_id = gid
-                    break
+        all_gear = self.get_all_gear()
+        gear_id = None
+        for gid, gname in all_gear.items():
+            if gname == gear_name:
+                gear_id = gid
+                break
 
-            if gear_id is None:
-                available = ", ".join(all_gear.values()) or "(none)"
-                raise ValueError(f"Gear '{gear_name}' not found in Intervals.icu gear list. Available: {available}")
+        if gear_id is None:
+            available = ", ".join(all_gear.values()) or "(none)"
+            raise ValueError(f"Gear '{gear_name}' not found in Intervals.icu gear list. Available: {available}")
 
-            self._put(f"/activity/{activity_id}", {"gear": {"id": gear_id}})
+        self._put(f"/activity/{activity_id}", {"gear": {"id": gear_id}})
 
-            # Refresh local copy
+        # Sync local copy — use gear_name as fallback if fresh fetch fails or returns no gear
+        local = IntervalsICUActivity.get_or_none(
+            (IntervalsICUActivity.intervalsicu_id == str(activity_id)) & (IntervalsICUActivity.user_id == get_user_id())
+        )
+        if local:
+            new_equip = gear_name  # known-correct fallback
             try:
                 fresh = self._get(f"/activity/{activity_id}")
-                local = IntervalsICUActivity.get_or_none(
-                    (IntervalsICUActivity.intervalsicu_id == str(activity_id))
-                    & (IntervalsICUActivity.user_id == get_user_id())
-                )
-                if local and fresh:
-                    gear = fresh.get("gear")
-                    if isinstance(gear, dict) and gear.get("name"):
-                        local.equipment = str(gear["name"])
-                    local.save()
+                if fresh:
+                    fresh_gear = fresh.get("gear")
+                    if isinstance(fresh_gear, dict) and fresh_gear.get("name"):
+                        new_equip = str(fresh_gear["name"])
             except Exception as e:
                 print(f"Could not refresh local Intervals.icu activity {activity_id} after set_gear: {e}")
+            local.equipment = new_equip
+            local.save()
 
-            return True
-        except Exception as e:
-            raise RuntimeError(f"Error setting gear for Intervals.icu activity {activity_id}: {e}") from e
+        return True
 
     def download_activity_file(self, activity_id: str, dest_dir: str) -> str:
         """Download the source FIT file for an Intervals.icu activity.

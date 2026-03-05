@@ -238,11 +238,9 @@ class TestStravaProviderGear:
         # Mock get_all_gear to return test gear
         provider.get_all_gear = Mock(return_value={"b123": "Trek Bike"})
 
-        # Call set_gear with non-existent gear name
-        result = provider.set_gear("Nonexistent Bike", "12345")
-
-        # Verify the result is False
-        assert result is False
+        # Call set_gear with non-existent gear name — should raise
+        with pytest.raises((ValueError, RuntimeError), match="not found"):
+            provider.set_gear("Nonexistent Bike", "12345")
 
         # Verify the API was not called
         mock_client.update_activity.assert_not_called()
@@ -260,11 +258,9 @@ class TestStravaProviderGear:
         # Mock get_all_gear to return test gear
         provider.get_all_gear = Mock(return_value={"b123": "Trek Bike"})
 
-        # Call set_gear
-        result = provider.set_gear("Trek Bike", "12345")
-
-        # Verify the result is False due to exception
-        assert result is False
+        # Call set_gear — should raise due to API exception
+        with pytest.raises((RuntimeError, Exception)):
+            provider.set_gear("Trek Bike", "12345")
 
         # Verify the API was called
         mock_client.update_activity.assert_called_once()

@@ -54,7 +54,12 @@
                   {% endif %}
                 {% endif %}
               {% else %}
-                <td class="cell-dist">—</td>
+                {% set fix_ym = fix_months.get(row.name, {}).get(provider) %}
+                {% if fix_ym %}
+                  <td class="cell-dist"><a href="/month/{{ fix_ym }}">—</a></td>
+                {% else %}
+                  <td class="cell-dist">—</td>
+                {% endif %}
               {% endif %}
             {% endfor %}
           </tr>

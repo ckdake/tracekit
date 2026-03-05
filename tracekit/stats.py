@@ -281,12 +281,22 @@ def get_gear_fix_months(
 
         sot_data = _load(sot_provider)
 
+        # Most recent month the SOT has this gear (used for empty-cell links)
+        sot_latest_ym = max(
+            (ym for _eq, ym in sot_data.values() if _eq == gear_name),
+            default=None,
+        )
+
         row_result: dict[str, str] = {}
         for provider_name in ordered_providers:
             if provider_name == sot_provider:
                 continue
+
             if providers_dist.get(provider_name, 0) == 0:
-                continue  # empty cell — no fix needed
+                # Empty cell: link to most recent SOT month so user can update it
+                if sot_latest_ym:
+                    row_result[provider_name] = sot_latest_ym
+                continue
 
             # Yellow cell: find most recent month where yellow provider has this
             # gear but SOT doesn't have a matching activity with the same gear.
