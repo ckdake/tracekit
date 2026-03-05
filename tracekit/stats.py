@@ -124,15 +124,17 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
     return {"timestamp": max_ts, "formatted": formatted}
 
 
-def get_gear_summary() -> list[dict[str, Any]]:
+def get_gear_summary(home_timezone: str = "UTC") -> list[dict[str, Any]]:
     """Return per-gear mileage summary, sorted by most-recently used.
 
     Each entry contains:
       - name: gear name (from provider equipment field)
       - total_distance: deduplicated total across providers (miles)
-      - last_used: ISO date string of most recent activity, or None
+      - last_used: ISO date string of most recent activity (in home_timezone), or None
       - providers: {provider_name: distance_sum} for each provider
     """
+    from zoneinfo import ZoneInfo
+
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
     from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
@@ -191,10 +193,11 @@ def get_gear_summary() -> list[dict[str, Any]]:
 
                 if row.start_time:
                     try:
-                        d = datetime.fromtimestamp(int(row.start_time), UTC).strftime("%Y-%m-%d")
+                        tz = ZoneInfo(home_timezone)
+                        d = datetime.fromtimestamp(int(row.start_time), tz).strftime("%Y-%m-%d")
                         if gear_map[name]["last_used"] is None or d > gear_map[name]["last_used"]:
                             gear_map[name]["last_used"] = d
-                    except (ValueError, TypeError, OSError):
+                    except (ValueError, TypeError, OSError, KeyError):
                         pass
         except Exception:
             pass

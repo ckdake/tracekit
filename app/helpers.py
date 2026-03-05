@@ -64,7 +64,7 @@ def get_provider_activity_counts() -> dict[str, int]:
         return {"error": f"Database error: {e}"}  # type: ignore[return-value]
 
 
-def get_gear_summary() -> list[dict]:
+def get_gear_summary(home_timezone: str = "UTC") -> list[dict]:
     """Return per-gear mileage summary rows, sorted by most-recently used."""
     if not _init_db():
         return []
@@ -74,7 +74,7 @@ def get_gear_summary() -> list[dict]:
 
         db = get_db()
         db.connect(reuse_if_open=True)
-        return _get_gear_summary()
+        return _get_gear_summary(home_timezone)
     except Exception:
         return []
 

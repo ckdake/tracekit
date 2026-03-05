@@ -230,8 +230,8 @@ class RideWithGPSProvider(FitnessProvider):
                     break
 
             if gear_id is None:
-                print(f"Gear '{gear_name}' not found in RideWithGPS gear list")
-                return False
+                available = ", ".join(all_gear.values()) or "(none)"
+                raise ValueError(f"Gear '{gear_name}' not found in RideWithGPS gear list. Available: {available}")
 
             response = self.client.patch(
                 path=f"/trips/{activity_id}.json",
@@ -243,8 +243,7 @@ class RideWithGPSProvider(FitnessProvider):
             )
 
             if hasattr(response, "error"):
-                print(f"API returned error: {response.error}")
-                return False
+                raise RuntimeError(f"RideWithGPS API error: {response.error}")
 
             # Pull fresh data from upstream to sync our local copy
             try:
@@ -263,8 +262,7 @@ class RideWithGPSProvider(FitnessProvider):
             return True
 
         except Exception as e:
-            print(f"Error setting gear for RideWithGPS trip {activity_id}: {e}")
-            return False
+            raise RuntimeError(f"Error setting gear for RideWithGPS trip {activity_id}: {e}") from e
 
     def sync_single_activity(self, trip_id: str) -> RideWithGPSActivity | None:
         """Fetch a single trip from RideWithGPS by ID and upsert it locally.

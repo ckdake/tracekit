@@ -282,8 +282,8 @@ class IntervalsICUProvider(FitnessProvider):
                     break
 
             if gear_id is None:
-                print(f"Gear '{gear_name}' not found in Intervals.icu gear list")
-                return False
+                available = ", ".join(all_gear.values()) or "(none)"
+                raise ValueError(f"Gear '{gear_name}' not found in Intervals.icu gear list. Available: {available}")
 
             self._put(f"/activity/{activity_id}", {"gear": {"id": gear_id}})
 
@@ -304,8 +304,7 @@ class IntervalsICUProvider(FitnessProvider):
 
             return True
         except Exception as e:
-            print(f"Error setting gear for Intervals.icu activity {activity_id}: {e}")
-            return False
+            raise RuntimeError(f"Error setting gear for Intervals.icu activity {activity_id}: {e}") from e
 
     def download_activity_file(self, activity_id: str, dest_dir: str) -> str:
         """Download the source FIT file for an Intervals.icu activity.

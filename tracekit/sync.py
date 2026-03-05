@@ -656,25 +656,28 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
             if not prov:
                 return False, f"{provider} provider not available"
 
-            if provider in ("ridewithgps", "strava", "intervalsicu"):
-                ok = prov.set_gear(change.new_value, change.activity_id)
-            elif provider == "spreadsheet":
-                ok = prov.update_activity(
-                    {
-                        "spreadsheet_id": change.activity_id,
-                        "equipment": change.new_value,
-                    }
-                )
-            else:
+            try:
+                if provider in ("ridewithgps", "strava", "intervalsicu"):
+                    ok = prov.set_gear(change.new_value, change.activity_id)
+                elif provider == "spreadsheet":
+                    ok = prov.update_activity(
+                        {
+                            "spreadsheet_id": change.activity_id,
+                            "equipment": change.new_value,
+                        }
+                    )
+                else:
+                    return (
+                        False,
+                        f"Equipment update not supported for provider '{provider}'",
+                    )
                 return (
-                    False,
-                    f"Equipment update not supported for provider '{provider}'",
+                    (True, f"Equipment updated for {change.activity_id}")
+                    if ok
+                    else (False, f"Equipment update failed for {change.activity_id}")
                 )
-            return (
-                (True, f"Equipment updated for {change.activity_id}")
-                if ok
-                else (False, f"Equipment update failed for {change.activity_id}")
-            )
+            except Exception as exc:
+                return (False, f"Equipment update failed for {change.activity_id}: {exc}")
 
         elif change_type == ChangeType.UPDATE_METADATA:
             prov = tracekit.get_provider(provider)

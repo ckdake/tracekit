@@ -70,7 +70,7 @@ def settings():
 def gear():
     """Gear summary page — total mileage per gear item, broken down by provider."""
     config = load_tracekit_config()
-    gear_rows = get_gear_summary()
+    gear_rows = get_gear_summary(config.get("home_timezone", "UTC"))
 
     # Only show enabled providers as columns, in priority order
     from tracekit.utils import sort_providers

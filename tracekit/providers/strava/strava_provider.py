@@ -490,11 +490,8 @@ class StravaProvider(FitnessProvider):
                     break
 
             if gear_id is None:
-                print(f"Gear '{gear_name}' not found in Strava gear list")
-                print("Available gear:")
-                for gid, gname in all_gear.items():
-                    print(f"  {gid}: {gname}")
-                return False
+                available = ", ".join(all_gear.values()) or "(none)"
+                raise ValueError(f"Gear '{gear_name}' not found in Strava gear list. Available: {available}")
 
             # Use stravalib to update the activity with gear_id
             self.client.update_activity(activity_id=int(activity_id), gear_id=gear_id)
@@ -516,8 +513,7 @@ class StravaProvider(FitnessProvider):
             return True
 
         except Exception as e:
-            print(f"Error setting gear for Strava activity {activity_id}: {e}")
-            return False
+            raise RuntimeError(f"Error setting gear for Strava activity {activity_id}: {e}") from e
 
     def reset_activities(self, date_filter: str | None = None) -> int:
         """Delete activities for a specific month or all activities."""
