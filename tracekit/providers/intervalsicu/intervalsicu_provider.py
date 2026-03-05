@@ -46,6 +46,12 @@ class IntervalsICUProvider(FitnessProvider):
         resp.raise_for_status()
         return resp.json()
 
+    def _post(self, path: str, data: dict) -> Any:
+        url = f"{_BASE_URL}{path}"
+        resp = requests.post(url, headers=self._auth_headers(), json=data, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+
     def _put(self, path: str, data: dict) -> Any:
         url = f"{_BASE_URL}{path}"
         resp = requests.put(url, headers=self._auth_headers(), json=data, timeout=30)
@@ -282,8 +288,6 @@ class IntervalsICUProvider(FitnessProvider):
         gear via PUT upsert using a deterministic ID derived from the name.
         Returns the gear_id.
         """
-        import hashlib
-
         all_gear = self.get_all_gear()
 
         for gid, gname in all_gear.items():
@@ -295,8 +299,8 @@ class IntervalsICUProvider(FitnessProvider):
             if gname.strip().lower() == lower:
                 return gid
 
-        gear_id = "tk" + hashlib.md5(gear_name.encode()).hexdigest()[:12]
-        self._put(f"/athlete/{self.athlete_id}/gear/{gear_id}", {"name": gear_name})
+        result = self._post(f"/athlete/{self.athlete_id}/gear", {"name": gear_name})
+        gear_id = str(result.get("id", ""))
         print(f"Created gear '{gear_name}' in intervals.icu (id={gear_id})")
         return gear_id
 
