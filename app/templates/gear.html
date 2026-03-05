@@ -12,6 +12,10 @@
   </div>
 
   <section class="section-card">
+    <p class="section-hint">
+      <span class="badge badge-auth">Green</span> = source of truth / gear tracked &nbsp;
+      <span class="badge badge-new">Yellow</span> = provider enabled but gear not tracked
+    </p>
     {% if gear_rows %}
     <div class="table-scroll">
       <table class="sync-table">
@@ -31,9 +35,18 @@
             <td>{{ row.name }}</td>
             <td class="cell-start">{{ row.last_used or '—' }}</td>
             <td class="cell-dist">{{ '%.1f'|format(row.total_distance) }}</td>
+            {% set ns = namespace(sot_found=false) %}
             {% for provider in ordered_providers %}
-            {% set dist = row.providers.get(provider, 0) %}
-            <td class="cell-dist">{% if dist > 0 %}{{ '%.1f'|format(dist) }}{% else %}—{% endif %}</td>
+              {% set dist = row.providers.get(provider, 0) %}
+              {% set is_enabled = config.providers.get(provider, {}).get('enabled', false) %}
+              {% if dist > 0 %}
+                {% if not ns.sot_found %}{% set ns.sot_found = true %}{% endif %}
+                <td class="cell-dist cell-auth">{{ '%.1f'|format(dist) }}</td>
+              {% elif is_enabled %}
+                <td class="cell-dist cell-new">—</td>
+              {% else %}
+                <td class="cell-dist">—</td>
+              {% endif %}
             {% endfor %}
           </tr>
           {% endfor %}
