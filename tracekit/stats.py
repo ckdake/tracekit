@@ -213,12 +213,9 @@ def get_gear_fix_months(
 ) -> dict[str, dict[str, str]]:
     """Return {gear_name: {provider_name: "YYYY-MM"}} for yellow (diff) cells.
 
-    For each (gear, yellow_provider) pair where the provider is enabled but has
-    0 miles, return the most recent calendar month where that provider has an
-    activity correlated (same date+distance bucket) with an SOT activity that
-    carries the correct gear name — but the provider's activity has a
-    different/missing gear name.  Falls back to the most recent SOT month if no
-    direct correlated match is found.
+    Yellow = provider has miles > 0 for this gear but is NOT the SOT provider.
+    Returns the most recent month that provider recorded an activity with this
+    gear name, so the user can navigate there to investigate the discrepancy.
     """
     from tracekit.user_context import get_user_id
 
@@ -230,37 +227,35 @@ def get_gear_fix_months(
 
     model_map = _provider_model_map()
 
-    # Lazy-loaded per-provider cache: {corr_key: (equipment, "YYYY-MM")}
-    provider_cache: dict[str, dict[str, tuple[str, str]]] = {}
+    # Lazy-loaded per-provider cache: {gear_name: most_recent_YYYY-MM}
+    provider_latest: dict[str, dict[str, str]] = {}
 
-    def _load(provider_name: str) -> dict[str, tuple[str, str]]:
-        if provider_name in provider_cache:
-            return provider_cache[provider_name]
+    def _load_latest(provider_name: str) -> dict[str, str]:
+        if provider_name in provider_latest:
+            return provider_latest[provider_name]
         model_cls = model_map.get(provider_name)
         if model_cls is None:
-            provider_cache[provider_name] = {}
+            provider_latest[provider_name] = {}
             return {}
-        data: dict[str, tuple[str, str]] = {}
+        data: dict[str, str] = {}
         try:
             rows = (
-                model_cls.select(model_cls.start_time, model_cls.distance, model_cls.equipment)
+                model_cls.select(model_cls.start_time, model_cls.equipment)
                 .where(model_cls.user_id == uid)
                 .where(model_cls.start_time.is_null(False))
+                .where(model_cls.equipment.is_null(False))
+                .where(model_cls.equipment != "")
             )
             for row in rows:
-                ts = int(row.start_time or 0)
-                dist = float(row.distance or 0)
-                key = _gear_corr_key(ts, dist)
-                if not key:
-                    continue
                 equip = (row.equipment or "").strip()
-                ym = datetime.fromtimestamp(ts, UTC).strftime("%Y-%m")
-                # On collision keep the most recent
-                if key not in data or ym > data[key][1]:
-                    data[key] = (equip, ym)
+                if not equip:
+                    continue
+                ym = datetime.fromtimestamp(int(row.start_time), UTC).strftime("%Y-%m")
+                if equip not in data or ym > data[equip]:
+                    data[equip] = ym
         except Exception:
             pass
-        provider_cache[provider_name] = data
+        provider_latest[provider_name] = data
         return data
 
     for gear_row in gear_rows:
@@ -277,35 +272,18 @@ def get_gear_fix_months(
         if sot_provider is None:
             continue
 
-        sot_data = _load(sot_provider)
-
-        # Corr keys where the SOT provider recorded this gear name
-        sot_keys = {key for key, (equip, _ym) in sot_data.items() if equip == gear_name}
-        if not sot_keys:
-            continue
-
-        # Most recent SOT month (fallback when no direct correlated match found)
-        fallback_ym = max((sot_data[k][1] for k in sot_keys), default=None)
-        if fallback_ym is None:
-            continue
-
         row_result: dict[str, str] = {}
         for provider_name in ordered_providers:
             if provider_name == sot_provider:
                 continue
-            if providers_dist.get(provider_name, 0) > 0:
-                continue  # green — no fix needed
+            if providers_dist.get(provider_name, 0) == 0:
+                continue  # empty cell — no fix needed
 
-            # Yellow cell: find most recent month with a correlated but wrong-gear activity
-            p_data = _load(provider_name)
-            best_ym: str | None = None
-            for key in sot_keys:
-                if key in p_data:
-                    p_equip, p_ym = p_data[key]
-                    if p_equip != gear_name and (best_ym is None or p_ym > best_ym):
-                        best_ym = p_ym
-
-            row_result[provider_name] = best_ym or fallback_ym
+            # Yellow cell (has miles but not SOT): most recent month with this gear
+            latest = _load_latest(provider_name)
+            ym = latest.get(gear_name)
+            if ym:
+                row_result[provider_name] = ym
 
         if row_result:
             result[gear_name] = row_result

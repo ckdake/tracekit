@@ -78,6 +78,13 @@ def gear():
     providers_cfg = config.get("providers", {})
     ordered_providers = [name for name, cfg in sort_providers(providers_cfg) if cfg.get("enabled", False)]
 
+    # Overwrite total_distance with the SOT provider's sum (highest-priority with miles).
+    for row in gear_rows:
+        for p in ordered_providers:
+            if row["providers"].get(p, 0) > 0:
+                row["total_distance"] = row["providers"][p]
+                break
+
     fix_months = get_gear_fix_months(gear_rows, ordered_providers)
 
     return render_template(

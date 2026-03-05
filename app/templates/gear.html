@@ -38,16 +38,18 @@
             {% set ns = namespace(sot_found=false) %}
             {% for provider in ordered_providers %}
               {% set dist = row.providers.get(provider, 0) %}
-              {% if dist > 0 %}
-                {% if not ns.sot_found %}{% set ns.sot_found = true %}{% endif %}
+              {% if dist > 0 and not ns.sot_found %}
+                {% set ns.sot_found = true %}
                 <td class="cell-dist cell-auth">{{ '%.1f'|format(dist) }}</td>
-              {% else %}
+              {% elif dist > 0 %}
                 {% set fix_ym = fix_months.get(row.name, {}).get(provider) %}
                 {% if fix_ym %}
-                  <td class="cell-dist cell-new"><a href="/month/{{ fix_ym }}">—</a></td>
+                  <td class="cell-dist cell-new"><a href="/month/{{ fix_ym }}">{{ '%.1f'|format(dist) }}</a></td>
                 {% else %}
-                  <td class="cell-dist cell-new">—</td>
+                  <td class="cell-dist cell-new">{{ '%.1f'|format(dist) }}</td>
                 {% endif %}
+              {% else %}
+                <td class="cell-dist">—</td>
               {% endif %}
             {% endfor %}
           </tr>
