@@ -5,6 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
+- [ ] feat: on sync, use Activty table to link up to all provider activities
 - [ ] bug: pulling provider in ui for a month doesn't get new activites in the month
 - [ ] bug: worker is running migrations
 - [ ] bug: js error on toggle sync equipment for intervals.icu

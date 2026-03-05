@@ -96,65 +96,50 @@ def get_gear_summary() -> list[dict[str, Any]]:
     """Return per-gear mileage summary, sorted by most-recently used.
 
     Each entry contains:
-      - name: canonical gear name (from Activity.equipment)
-      - total_distance: sum of all activity distances for this gear (miles)
+      - name: gear name (from provider equipment field)
+      - total_distance: deduplicated total across providers (miles)
       - last_used: ISO date string of most recent activity, or None
       - providers: {provider_name: distance_sum} for each provider
     """
-    from tracekit.activity import Activity
+    from zoneinfo import ZoneInfo
+
+    from tracekit.providers.file.file_activity import FileActivity
+    from tracekit.providers.garmin.garmin_activity import GarminActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+    from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
+    from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+    from tracekit.providers.strava.strava_activity import StravaActivity
     from tracekit.user_context import get_user_id
 
     uid = get_user_id()
 
-    activities = list(
-        Activity.select()
-        .where(Activity.user_id == uid)
-        .where(Activity.equipment.is_null(False))
-        .where(Activity.equipment != "")
-    )
-
-    # Map provider name → (id_field_on_Activity or None)
-    provider_id_fields: dict[str, str | None] = {
-        "strava": "strava_id",
-        "garmin": "garmin_id",
-        "ridewithgps": "ridewithgps_id",
-        "spreadsheet": "spreadsheet_id",
-        "file": None,
-        "intervalsicu": None,
-    }
+    # Fixed provider list; ordering here doesn't affect correctness (dedup is per-gear).
+    all_providers: list[tuple[str, Any]] = [
+        ("strava", StravaActivity),
+        ("garmin", GarminActivity),
+        ("ridewithgps", RideWithGPSActivity),
+        ("spreadsheet", SpreadsheetActivity),
+        ("file", FileActivity),
+        ("intervalsicu", IntervalsICUActivity),
+    ]
+    provider_names = [p for p, _ in all_providers]
 
     gear_map: dict[str, dict[str, Any]] = {}
+    # Per-gear set of correlation keys already counted in the total (dedup).
+    gear_seen: dict[str, set[str]] = {}
 
-    for act in activities:
-        name = (act.equipment or "").strip()
-        if not name:
-            continue
-        if name not in gear_map:
-            gear_map[name] = {
-                "name": name,
-                "total_distance": 0.0,
-                "last_used": None,
-                "providers": {p: 0.0 for p in provider_id_fields},
-            }
-        dist = float(act.distance or 0)
-        gear_map[name]["total_distance"] += dist
+    def _corr_key(ts: int, dist: float) -> str:
+        if not ts or not dist:
+            return ""
+        try:
+            dt = datetime.fromtimestamp(ts, ZoneInfo("US/Eastern"))
+            bucket = round(dist * 2) / 2
+            return f"{dt.strftime('%Y-%m-%d')}_{bucket:.1f}"
+        except Exception:
+            return ""
 
-        if act.date:
-            d = str(act.date)
-            if gear_map[name]["last_used"] is None or d > gear_map[name]["last_used"]:
-                gear_map[name]["last_used"] = d
-
-        for provider, id_field in provider_id_fields.items():
-            if id_field and getattr(act, id_field, None):
-                gear_map[name]["providers"][provider] += dist
-
-    # For providers without an ID field on Activity, query their tables directly.
-    # Match on equipment name (best-effort; names may differ from canonical).
-    try:
-        from tracekit.providers.file.file_activity import FileActivity
-        from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
-
-        for model_cls, key in [(FileActivity, "file"), (IntervalsICUActivity, "intervalsicu")]:
+    for provider_name, model_cls in all_providers:
+        try:
             rows = (
                 model_cls.select()
                 .where(model_cls.user_id == uid)
@@ -163,10 +148,36 @@ def get_gear_summary() -> list[dict[str, Any]]:
             )
             for row in rows:
                 name = (row.equipment or "").strip()
-                if name and name in gear_map:
-                    gear_map[name]["providers"][key] += float(row.distance or 0)
-    except Exception:
-        pass
+                if not name:
+                    continue
+                if name not in gear_map:
+                    gear_map[name] = {
+                        "name": name,
+                        "total_distance": 0.0,
+                        "last_used": None,
+                        "providers": {p: 0.0 for p in provider_names},
+                    }
+                    gear_seen[name] = set()
+
+                dist = float(row.distance or 0)
+                gear_map[name]["providers"][provider_name] += dist
+
+                # Deduplicate totals via correlation key (date + distance bucket).
+                key = _corr_key(int(row.start_time or 0), dist)
+                if not key or key not in gear_seen[name]:
+                    gear_map[name]["total_distance"] += dist
+                    if key:
+                        gear_seen[name].add(key)
+
+                if row.start_time:
+                    try:
+                        d = datetime.fromtimestamp(int(row.start_time), UTC).strftime("%Y-%m-%d")
+                        if gear_map[name]["last_used"] is None or d > gear_map[name]["last_used"]:
+                            gear_map[name]["last_used"] = d
+                    except (ValueError, TypeError, OSError):
+                        pass
+        except Exception:
+            pass
 
     result = sorted(
         gear_map.values(),
