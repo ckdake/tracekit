@@ -479,6 +479,33 @@ class StravaProvider(FitnessProvider):
             print(f"Error getting Strava gear: {e}")
             return {}
 
+    def _find_retired_gear_id(self, gear_name: str) -> str | None:
+        """Return a Strava gear ID for a retired gear item by searching local activity records.
+
+        ``get_all_gear()`` only returns active gear.  When a gear item is retired
+        it no longer appears in the athlete profile, but past activities still
+        carry its ID in ``raw_data``.  We search those records so we can update
+        an activity with a retired gear ID without needing to unretire it.
+        """
+        uid = get_user_id()
+        activities_with_gear = (
+            StravaActivity.select()
+            .where((StravaActivity.user_id == uid) & (StravaActivity.equipment == gear_name))
+            .limit(10)
+        )
+        for act in activities_with_gear:
+            if not act.raw_data:
+                continue
+            try:
+                raw = json.loads(act.raw_data)
+                gear = raw.get("gear") or {}
+                gear_id = gear.get("id")
+                if gear_id:
+                    return str(gear_id)
+            except Exception:
+                continue
+        return None
+
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
         """Set gear for a Strava activity by gear name."""
         all_gear = self.get_all_gear()
@@ -487,6 +514,10 @@ class StravaProvider(FitnessProvider):
             if gname == gear_name:
                 gear_id = gid
                 break
+
+        if gear_id is None:
+            # Not in active gear — check retired gear via local activity records.
+            gear_id = self._find_retired_gear_id(gear_name)
 
         if gear_id is None:
             available = ", ".join(all_gear.values()) or "(none)"

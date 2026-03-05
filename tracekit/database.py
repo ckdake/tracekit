@@ -228,6 +228,11 @@ def _run_schema_upgrades() -> None:
     with contextlib.suppress(Exception):
         db.execute_sql('UPDATE "user" SET "status" = \'active\' WHERE "id" = 1')
 
+    # ---- notification.message: VARCHAR(255) → TEXT -------------------------
+    if not is_sqlite:
+        with contextlib.suppress(Exception):
+            db.execute_sql('ALTER TABLE "notification" ALTER COLUMN "message" TYPE TEXT')
+
     # ---- activity.user_id: VARCHAR(null=True) → INTEGER NOT NULL DEFAULT 0 --
     _migrate_activity_user_id(db, is_sqlite)
 

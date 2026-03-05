@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 
-from peewee import BooleanField, CharField, IntegerField, Model
+from peewee import BooleanField, CharField, IntegerField, Model, TextField
 
 from tracekit.db import db
 from tracekit.user_context import get_user_id
@@ -13,7 +13,7 @@ EXPIRY_24H = int(timedelta(hours=24).total_seconds())
 class Notification(Model):
     """A single notification shown in the UI bell-icon dropdown."""
 
-    message = CharField()
+    message = TextField()
     category = CharField(default="info")  # "info" | "error"
     read = BooleanField(default=False)
     created = IntegerField()  # Unix timestamp
