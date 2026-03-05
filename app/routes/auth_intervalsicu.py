@@ -10,7 +10,7 @@ intervalsicu_bp = Blueprint("auth_intervalsicu", __name__)
 
 _AUTHORIZE_URL = "https://intervals.icu/oauth/authorize"
 _TOKEN_URL = "https://intervals.icu/api/oauth/token"
-_SCOPES = "ACTIVITY:WRITE"
+_SCOPES = "ACTIVITY:WRITE SETTINGS:WRITE"
 
 
 def _get_intervalsicu_client_credentials(icu_cfg: dict) -> tuple[str, str]:
@@ -84,9 +84,13 @@ def api_auth_intervalsicu_authorize():
         )
 
     try:
+        from urllib.parse import urlencode
+
         scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
         redirect_uri = f"{scheme}://{request.host}/api/auth/intervalsicu/callback"
-        authorize_url = f"{_AUTHORIZE_URL}?client_id={client_id}&redirect_uri={redirect_uri}&scope={_SCOPES}"
+        authorize_url = (
+            f"{_AUTHORIZE_URL}?{urlencode({'client_id': client_id, 'redirect_uri': redirect_uri, 'scope': _SCOPES})}"
+        )
         return redirect(authorize_url)
     except Exception as e:
         return f"<h3>Error</h3><p>{e}</p>", 500
