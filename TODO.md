@@ -5,6 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
+- [ ] data: 2024-02-29 19:20 gamrin shows up on march 2024 review
 - [ ] bug: trailing spaces in names, fix it. even in source.
 - [ ] feat: "year by year" status, so can zoom in to months
 - [ ] bug: worker logs are only on stdout, not in sentry logs
