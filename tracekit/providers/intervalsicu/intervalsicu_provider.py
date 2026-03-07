@@ -146,10 +146,21 @@ class IntervalsICUProvider(FitnessProvider):
             )
             print(f"Found {len(raw_activities)} Intervals.icu activities for {date_filter}")
 
+            all_gear: dict[str, str] = {}
+            try:
+                all_gear = self.get_all_gear()
+            except Exception as e:
+                print(f"Could not fetch Intervals.icu gear list: {e}")
+
             uid = get_user_id()
             for raw in raw_activities:
                 try:
                     act = self._activity_to_model(raw)
+                    # Activity list endpoint returns gear.name as null; look up by ID
+                    if not act.equipment:
+                        raw_gear = raw.get("gear")
+                        if isinstance(raw_gear, dict) and raw_gear.get("id"):
+                            act.equipment = all_gear.get(str(raw_gear["id"]))
                     existing = IntervalsICUActivity.get_or_none(
                         (IntervalsICUActivity.intervalsicu_id == act.intervalsicu_id)
                         & (IntervalsICUActivity.user_id == uid)
