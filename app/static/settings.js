@@ -31,7 +31,7 @@ const PROVIDER_META = {
             { key: 'client_secret', label: 'client secret', field_type: 'password' },
         ],
     },
-    garmin:      { label: 'Garmin',       sync_equipment: true,  sync_equipment_disabled: true, sync_name: true,
+    garmin:      { label: 'Garmin',       sync_equipment: true,  sync_name: true,
         instructions: 'Garmin authentication tokens are valid for approximately one year. Re-authenticate before they expire to avoid interruption.',
         text_fields: [] },
     spreadsheet: {

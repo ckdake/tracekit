@@ -60,7 +60,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         },
         "garmin": {
             "enabled": False,
-            "sync_equipment": False,
+            "sync_equipment": True,
             "sync_name": True,
             "email": "",
             "garth_tokens": "",
