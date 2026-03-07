@@ -172,6 +172,61 @@ class TestGarminProviderPullActivities:
                 # Check that GarminActivity was instantiated
                 mock_garmin_activity_class.assert_called_once()
 
+    @patch("tracekit.providers.garmin.garmin_provider.GarminActivity")
+    @patch("tracekit.providers.garmin.garmin_provider.ProviderSync")
+    def test_pull_activities_fetches_gear(self, mock_provider_sync, mock_garmin_activity_cls):
+        """Test that pull_activities calls get_activity_gear and sets equipment."""
+        provider = GarminProvider()
+
+        mock_provider_sync.get_or_none.return_value = None
+
+        raw_activity = {"activityId": 12345, "activityName": "Morning Ride", "activityType": {"typeKey": "cycling"}}
+        provider.fetch_activities_for_month = Mock(return_value=[raw_activity])
+        provider._get_device_map = Mock(return_value={})
+        provider._get_garmin_activities_for_month = Mock(return_value=[])
+
+        mock_instance = Mock()
+        mock_instance.garmin_id = "12345"
+        mock_garmin_activity_cls.return_value = mock_instance
+        mock_garmin_activity_cls.get_or_none.return_value = None  # not a duplicate
+
+        mock_client = Mock()
+        mock_client.get_activity_gear.return_value = [{"uuid": "uuid-bike", "displayName": "Trek Bike"}]
+        provider._get_client = Mock(return_value=mock_client)
+
+        provider.pull_activities(date_filter="2021-01")
+
+        mock_client.get_activity_gear.assert_called_once_with("12345")
+        assert mock_instance.equipment == "Trek Bike"
+        mock_instance.save.assert_called_once()
+
+    @patch("tracekit.providers.garmin.garmin_provider.GarminActivity")
+    @patch("tracekit.providers.garmin.garmin_provider.ProviderSync")
+    def test_pull_activities_gear_api_error_does_not_abort(self, mock_provider_sync, mock_garmin_activity_cls):
+        """Test that a gear API error does not prevent the activity from being saved."""
+        provider = GarminProvider()
+
+        mock_provider_sync.get_or_none.return_value = None
+
+        raw_activity = {"activityId": 12345, "activityName": "Morning Ride"}
+        provider.fetch_activities_for_month = Mock(return_value=[raw_activity])
+        provider._get_device_map = Mock(return_value={})
+        provider._get_garmin_activities_for_month = Mock(return_value=[])
+
+        mock_instance = Mock()
+        mock_instance.garmin_id = "12345"
+        mock_garmin_activity_cls.return_value = mock_instance
+        mock_garmin_activity_cls.get_or_none.return_value = None
+
+        mock_client = Mock()
+        mock_client.get_activity_gear.side_effect = Exception("gear API down")
+        provider._get_client = Mock(return_value=mock_client)
+
+        provider.pull_activities(date_filter="2021-01")
+
+        # Activity should still be saved despite gear fetch failure
+        mock_instance.save.assert_called_once()
+
     @patch("tracekit.providers.garmin.garmin_provider.ProviderSync")
     def test_pull_activities_with_duplicate_activity(self, mock_provider_sync):
         """Test pull_activities when encountering duplicate activity."""

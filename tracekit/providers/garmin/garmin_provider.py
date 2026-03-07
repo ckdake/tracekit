@@ -173,6 +173,19 @@ class GarminProvider(FitnessProvider):
                     print(f"Skipping duplicate Garmin activity {raw_activity.get('activityId')}")
                     continue
 
+                # Fetch gear for this activity from Garmin API
+                try:
+                    activity_id_str = garmin_activity.garmin_id
+                    activity_gear = self._get_client().get_activity_gear(activity_id_str)
+                    items = [activity_gear] if isinstance(activity_gear, dict) else (activity_gear or [])
+                    for g in items:
+                        name = (g or {}).get("displayName", "").strip() if isinstance(g, dict) else ""
+                        if name:
+                            garmin_activity.equipment = name
+                            break
+                except Exception as e:
+                    print(f"Could not fetch gear for Garmin activity {garmin_activity.garmin_id}: {e}")
+
                 # Save to garmin_activities table
                 garmin_activity.user_id = get_user_id()
                 garmin_activity.save()
