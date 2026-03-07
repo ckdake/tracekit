@@ -156,7 +156,7 @@ def generate_correlation_key(timestamp: int, distance: float) -> str:
     try:
         dt = datetime.fromtimestamp(timestamp, ZoneInfo("US/Eastern"))
         date_str = dt.strftime("%Y-%m-%d")
-        distance_bucket = math.floor(distance * 2 + 0.1) / 2
+        distance_bucket = math.floor(distance * 2 + 0.3) / 2
         return f"{date_str}_{distance_bucket:.1f}"
     except (ValueError, TypeError):
         return ""
