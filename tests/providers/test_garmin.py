@@ -436,7 +436,10 @@ class TestGarminProviderGear:
                 "displayName": "New Bike",
                 "customMakeModel": "New Bike",
                 "gearStatusName": "active",
-                "userProfilePk": "12345",
+                "gearTypeName": "Bike",
+                "gearMakeName": "Other",
+                "gearModelName": "Unknown Bike",
+                "userProfilePk": 12345,
             },
         )
 

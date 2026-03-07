@@ -407,11 +407,14 @@ class GarminProvider(FitnessProvider):
         """
         client = self._get_client()
         device_last_used = client.get_device_last_used()
-        user_profile_pk = device_last_used["userProfileNumber"]
+        user_profile_pk = int(device_last_used["userProfileNumber"])
         payload = {
             "displayName": gear_name,
             "customMakeModel": gear_name,
             "gearStatusName": "active",
+            "gearTypeName": "Bike",
+            "gearMakeName": "Other",
+            "gearModelName": "Unknown Bike",
             "userProfilePk": user_profile_pk,
         }
         result = client.garth.post("connectapi", "/gear-service/gear", json=payload).json()
