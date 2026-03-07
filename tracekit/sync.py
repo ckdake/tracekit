@@ -11,7 +11,6 @@ The CLI command and web UI are both thin wrappers around these functions.
 from __future__ import annotations
 
 import contextlib
-import math
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -144,24 +143,31 @@ def process_activity_for_display(activity, provider: str) -> dict:
     }
 
 
-def generate_correlation_key(timestamp: int, distance: float) -> str:
-    """Generate a correlation key for matching activities across providers.
+def generate_correlation_keys(timestamp: int, distance: float) -> tuple[str, str]:
+    """Generate a pair of correlation keys for matching activities across providers.
 
-    Uses eastern-timezone date + whole-mile bucket so that activities recorded
-    at slightly different distances still match (GPS variance across providers
-    is ~0.005 mi, well within a 1-mile bucket). The +0.1 shift places bucket
-    boundaries at x.9 miles, avoiding common training-distance round numbers.
+    Returns (fine_key, coarse_key):
+      - fine_key:   200 m buckets (boundaries at 100 m intervals)
+      - coarse_key: 2000 m buckets (boundaries at 1000 m intervals)
+
+    Two activities are considered the same if they share at least one key.
+    Using two resolutions eliminates the boundary-straddling problem: GPS
+    variance across providers is ~30 m, so two readings of the same activity
+    can only straddle a fine-key (100 m) boundary — and the coarse key
+    catches that case, since the coarse boundaries are 1000 m apart.
     """
     if not timestamp or not distance:
-        return ""
+        return "", ""
 
     try:
         dt = datetime.fromtimestamp(timestamp, ZoneInfo("US/Eastern"))
         date_str = dt.strftime("%Y-%m-%d")
-        distance_bucket = math.floor(distance + 0.1)
-        return f"{date_str}_{distance_bucket}"
+        dist_m = float(distance) * 1609.344
+        fine = round(dist_m / 200) * 200
+        coarse = round(dist_m / 2000) * 2000
+        return f"{date_str}_f_{int(fine)}", f"{date_str}_c_{int(coarse)}"
     except (ValueError, TypeError):
-        return ""
+        return "", ""
 
 
 def convert_activity_to_spreadsheet_format(source_activity: dict, grouped_activities: dict) -> dict:
@@ -180,14 +186,20 @@ def convert_activity_to_spreadsheet_format(source_activity: dict, grouped_activi
     strava_id = ""
     ridewithgps_id = ""
 
-    correlation_key = generate_correlation_key(source_activity["timestamp"], source_activity["distance"])
-    if correlation_key in grouped_activities:
-        for act in grouped_activities[correlation_key]:
-            if act["provider"] == "garmin":
+    seen_providers: set[str] = set()
+    for key in generate_correlation_keys(source_activity["timestamp"], source_activity["distance"]):
+        if not key or key not in grouped_activities:
+            continue
+        for act in grouped_activities[key]:
+            provider = act["provider"]
+            if provider in seen_providers:
+                continue
+            seen_providers.add(provider)
+            if provider == "garmin":
                 garmin_id = str(act["id"]) if act["id"] else ""
-            elif act["provider"] == "strava":
+            elif provider == "strava":
                 strava_id = str(act["id"]) if act["id"] else ""
-            elif act["provider"] == "ridewithgps":
+            elif provider == "ridewithgps":
                 ridewithgps_id = str(act["id"]) if act["id"] else ""
 
     distance = source_activity["distance"] or 0
@@ -265,12 +277,13 @@ def compute_month_changes(
         for act in provider_activities:
             all_acts.append(process_activity_for_display(act, provider_name))
 
-    # Group by correlation key
+    # Group by correlation keys — each activity is inserted under both its fine
+    # and coarse keys so that GPS-boundary-straddling activities still match.
     grouped: dict[str, list[dict]] = defaultdict(list)
     for act in all_acts:
-        key = generate_correlation_key(act["timestamp"], act["distance"])
-        if key:
-            grouped[key].append(act)
+        for key in generate_correlation_keys(act["timestamp"], act["distance"]):
+            if key:
+                grouped[key].append(act)
 
     # Determine provider priority from config (lower number = higher priority)
     provider_config = config.get("providers", {})
@@ -283,8 +296,16 @@ def compute_month_changes(
     provider_priority = [p for p, _ in priority_order]
 
     all_changes: list[ActivityChange] = []
+    seen_groups: set[frozenset] = set()
 
     for _key, group in grouped.items():
+        # Deduplicate: same physical activity may appear under both fine and
+        # coarse keys; skip if we've already processed this exact group.
+        fingerprint = frozenset((a["provider"], str(a["id"])) for a in group)
+        if fingerprint in seen_groups:
+            continue
+        seen_groups.add(fingerprint)
+
         if len(group) < 2:
             # Single-provider groups: nothing to sync
             continue

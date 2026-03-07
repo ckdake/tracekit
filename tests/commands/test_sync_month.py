@@ -4,7 +4,7 @@ import pytest
 
 from tracekit.sync import (
     convert_activity_to_spreadsheet_format,
-    generate_correlation_key,
+    generate_correlation_keys,
 )
 
 
@@ -17,18 +17,20 @@ from tracekit.sync import (
         (1743546548, 15.551244, 1743480000, 15.55),
         (1720411200, 2.5, 1720475888, 2.5043798),
         (1741642895, 2.4997, 1741579200, 2.5),
-        # ~0.005 mi GPS variance between providers, all in same whole-mile bucket
         (1682986398, 8.251795, 1682986398, 8.249344),
         (1682986398, 8.251794, 1682986398, 8.249321),
         (1752795437, 16.452102, 1752795437, 16.447550),
         (1752795437, 16.452102, 1752795437, 16.447504),
-        # Garmin/Intervals (14.850618) vs Strava/RideWithGPS (14.846x) — all floor to 14
         (1754432295, 14.850618, 1754432295, 14.846335),
         (1754432295, 14.850618, 1754432295, 14.846293),
+        (1769816817, 8.900549, 1769816817, 8.898555),
+        (1769816817, 8.900549, 1769816817, 8.898468),
     ],
 )
 def test_generate_correlation_key(timestamp1, distance1, timestamp2, distance2):
-    assert generate_correlation_key(timestamp1, distance1) == generate_correlation_key(timestamp2, distance2)
+    keys1 = set(generate_correlation_keys(timestamp1, distance1))
+    keys2 = set(generate_correlation_keys(timestamp2, distance2))
+    assert keys1 & keys2, f"No shared key: {keys1} vs {keys2}"
 
 
 def test_convert_activity_to_spreadsheet_format():
@@ -63,9 +65,9 @@ def test_convert_activity_to_spreadsheet_format():
     }
 
     # Mock grouped activities with correlated activities
-    correlation_key = generate_correlation_key(1720411200, 15.5)
+    fine_key, _coarse_key = generate_correlation_keys(1720411200, 15.5)
     grouped_activities = {
-        correlation_key: [
+        fine_key: [
             {
                 "provider": "strava",
                 "id": "12345",

@@ -16,7 +16,7 @@ from tracekit.sync import (
     apply_change,
     compute_month_changes,
     convert_activity_to_spreadsheet_format,
-    generate_correlation_key,
+    generate_correlation_keys,
     process_activity_for_display,
 )
 
@@ -191,27 +191,34 @@ class TestGenerateCorrelationKey:
         ],
     )
     def test_same_day_similar_distance_match(self, ts1, d1, ts2, d2):
-        assert generate_correlation_key(ts1, d1) == generate_correlation_key(ts2, d2)
+        keys1 = set(generate_correlation_keys(ts1, d1))
+        keys2 = set(generate_correlation_keys(ts2, d2))
+        assert keys1 & keys2, f"No shared key: {keys1} vs {keys2}"
 
     def test_empty_for_zero_timestamp(self):
-        assert generate_correlation_key(0, 10.0) == ""
+        assert generate_correlation_keys(0, 10.0) == ("", "")
 
     def test_empty_for_zero_distance(self):
-        assert generate_correlation_key(1720411200, 0) == ""
+        assert generate_correlation_keys(1720411200, 0) == ("", "")
 
     def test_different_dates_no_match(self):
-        # Same distance, two weeks apart → different keys
-        assert generate_correlation_key(1720411200, 15.0) != generate_correlation_key(1721620800, 15.0)
+        # Same distance, two weeks apart → no shared keys
+        keys1 = set(generate_correlation_keys(1720411200, 15.0))
+        keys2 = set(generate_correlation_keys(1721620800, 15.0))
+        assert not (keys1 & keys2)
 
     def test_different_distances_no_match(self):
         # Same day, wildly different distances
-        assert generate_correlation_key(1720411200, 5.0) != generate_correlation_key(1720411200, 25.0)
+        keys1 = set(generate_correlation_keys(1720411200, 5.0))
+        keys2 = set(generate_correlation_keys(1720411200, 25.0))
+        assert not (keys1 & keys2)
 
     def test_key_format(self):
-        key = generate_correlation_key(1720411200, 15.0)
-        parts = key.split("_")
-        assert len(parts) == 2
-        assert parts[0].count("-") == 2  # YYYY-MM-DD
+        fine_key, coarse_key = generate_correlation_keys(1720411200, 15.0)
+        assert "_f_" in fine_key
+        assert "_c_" in coarse_key
+        assert fine_key.startswith("2024-07-08")
+        assert coarse_key.startswith("2024-07-08")
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +262,7 @@ class TestConvertActivityToSpreadsheetFormat:
 
     def test_basic_conversion(self):
         src = self._make_source()
-        key = generate_correlation_key(src["timestamp"], src["distance"])
+        key = generate_correlation_keys(src["timestamp"], src["distance"])[0]
         grouped = {key: [src]}
         result = convert_activity_to_spreadsheet_format(src, grouped)
 
@@ -270,7 +277,7 @@ class TestConvertActivityToSpreadsheetFormat:
         strava_act = self._make_source("strava", distance=15.5)
         garmin_act = {**strava_act, "provider": "garmin", "id": "G999"}
         rwgps_act = {**strava_act, "provider": "ridewithgps", "id": "R111"}
-        key = generate_correlation_key(strava_act["timestamp"], strava_act["distance"])
+        key = generate_correlation_keys(strava_act["timestamp"], strava_act["distance"])[0]
         grouped = {key: [strava_act, garmin_act, rwgps_act]}
 
         result = convert_activity_to_spreadsheet_format(strava_act, grouped)
@@ -282,14 +289,14 @@ class TestConvertActivityToSpreadsheetFormat:
     def test_duration_hms_format(self):
         src = self._make_source()
         src["obj"].duration = 3661  # 1:01:01
-        key = generate_correlation_key(src["timestamp"], src["distance"])
+        key = generate_correlation_keys(src["timestamp"], src["distance"])[0]
         result = convert_activity_to_spreadsheet_format(src, {key: [src]})
         assert result["duration_hms"] == "01:01:01"
 
     def test_no_duration(self):
         src = self._make_source()
         src["obj"].duration = None
-        key = generate_correlation_key(src["timestamp"], src["distance"])
+        key = generate_correlation_keys(src["timestamp"], src["distance"])[0]
         result = convert_activity_to_spreadsheet_format(src, {key: [src]})
         assert result["duration_hms"] == ""
 
@@ -657,7 +664,7 @@ class TestApplyChange:
             "name": "Ride",
             "equipment": "Trek",
         }
-        key = generate_correlation_key(1720411200, 15.0)
+        key = generate_correlation_keys(1720411200, 15.0)[0]
         grouped = {key: [source_act]}
         ch = ActivityChange(
             ChangeType.ADD_ACTIVITY,
