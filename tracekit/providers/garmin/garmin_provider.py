@@ -177,6 +177,7 @@ class GarminProvider(FitnessProvider):
                 try:
                     activity_id_str = garmin_activity.garmin_id
                     activity_gear = self._get_client().get_activity_gear(activity_id_str)
+                    print(f"[garmin] get_activity_gear({activity_id_str}) raw response: {activity_gear!r}")
                     items = [activity_gear] if isinstance(activity_gear, dict) else (activity_gear or [])
                     for g in items:
                         name = (g or {}).get("displayName", "").strip() if isinstance(g, dict) else ""
@@ -184,7 +185,7 @@ class GarminProvider(FitnessProvider):
                             garmin_activity.equipment = name
                             break
                 except Exception as e:
-                    print(f"Could not fetch gear for Garmin activity {garmin_activity.garmin_id}: {e}")
+                    print(f"[garmin] get_activity_gear error for {garmin_activity.garmin_id}: {e}")
 
                 # Save to garmin_activities table
                 garmin_activity.user_id = get_user_id()
