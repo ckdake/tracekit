@@ -658,7 +658,7 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
                 return False, f"{provider} provider not available"
 
             try:
-                if provider in ("ridewithgps", "strava", "intervalsicu"):
+                if provider in ("ridewithgps", "strava", "intervalsicu", "garmin"):
                     ok = prov.set_gear(change.new_value, change.activity_id)
                 elif provider == "spreadsheet":
                     ok = prov.update_activity(

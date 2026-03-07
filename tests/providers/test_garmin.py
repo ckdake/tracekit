@@ -259,24 +259,23 @@ class TestGarminProviderGear:
     """Test Garmin provider gear functionality."""
 
     def test_get_all_gear_success(self):
-        """Test successful gear retrieval."""
+        """Test successful gear retrieval returns uuid → display_name mapping."""
         provider = GarminProvider()
 
         # Mock client
         mock_client = Mock()
         mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
         mock_client.get_gear.return_value = [
-            {"displayName": "Trek Bike"},
-            {"displayName": "Running Shoes"},
-            {"displayName": ""},  # Empty name should be ignored
+            {"uuid": "uuid-bike", "displayName": "Trek Bike"},
+            {"uuid": "uuid-shoes", "displayName": "Running Shoes"},
+            {"uuid": "", "displayName": "No UUID"},  # missing uuid should be ignored
+            {"uuid": "uuid-noname", "displayName": ""},  # missing name should be ignored
         ]
         provider._get_client = Mock(return_value=mock_client)
 
         result = provider.get_all_gear()
 
-        # Verify gear mapping
-        expected = {"Trek Bike": "Trek Bike", "Running Shoes": "Running Shoes"}
-        assert result == expected
+        assert result == {"uuid-bike": "Trek Bike", "uuid-shoes": "Running Shoes"}
         mock_client.get_device_last_used.assert_called_once()
         mock_client.get_gear.assert_called_once_with("12345")
 
@@ -286,7 +285,7 @@ class TestGarminProviderGear:
 
         # Mock client to raise exception
         mock_client = Mock()
-        mock_client.get_gear.side_effect = Exception("API Error")
+        mock_client.get_device_last_used.side_effect = Exception("API Error")
         provider._get_client = Mock(return_value=mock_client)
 
         result = provider.get_all_gear()
@@ -294,13 +293,104 @@ class TestGarminProviderGear:
         # Should return empty dict on error
         assert result == {}
 
-    def test_set_gear_not_supported(self):
-        """Test that set_gear is not supported."""
+    def test_find_gear_uuid_found(self):
+        """Test _find_gear_uuid returns UUID when gear name matches."""
         provider = GarminProvider()
 
-        result = provider.set_gear("Trek Bike", "12345")
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.get_gear.return_value = [
+            {"uuid": "uuid-bike", "displayName": "Trek Bike"},
+            {"uuid": "uuid-shoes", "displayName": "Running Shoes"},
+        ]
+        provider._get_client = Mock(return_value=mock_client)
 
-        # Should return False as not supported
+        result = provider._find_gear_uuid("Trek Bike")
+        assert result == "uuid-bike"
+
+    def test_find_gear_uuid_not_found(self):
+        """Test _find_gear_uuid returns None when gear name is absent."""
+        provider = GarminProvider()
+
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.get_gear.return_value = [{"uuid": "uuid-bike", "displayName": "Trek Bike"}]
+        provider._get_client = Mock(return_value=mock_client)
+
+        result = provider._find_gear_uuid("Unknown Gear")
+        assert result is None
+
+    def test_set_gear_success(self):
+        """Test set_gear successfully sets gear and updates local DB."""
+        provider = GarminProvider()
+
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.get_gear.return_value = [{"uuid": "uuid-bike", "displayName": "Trek Bike"}]
+        # Activity has no existing gear
+        mock_client.get_activity_gear.return_value = {}
+        mock_client.add_gear_to_activity.return_value = {"success": True}
+        provider._get_client = Mock(return_value=mock_client)
+
+        with patch("tracekit.providers.garmin.garmin_provider.GarminActivity") as mock_act_cls:
+            mock_local = Mock()
+            mock_act_cls.get_or_none.return_value = mock_local
+
+            result = provider.set_gear("Trek Bike", "99999")
+
+        assert result is True
+        mock_client.add_gear_to_activity.assert_called_once_with("uuid-bike", "99999")
+        mock_local.save.assert_called_once()
+        assert mock_local.equipment == "Trek Bike"
+
+    def test_set_gear_removes_existing_gear(self):
+        """Test set_gear removes old gear before adding new one."""
+        provider = GarminProvider()
+
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.get_gear.return_value = [{"uuid": "uuid-new", "displayName": "New Bike"}]
+        mock_client.get_activity_gear.return_value = {"uuid": "uuid-old", "displayName": "Old Bike"}
+        provider._get_client = Mock(return_value=mock_client)
+
+        with patch("tracekit.providers.garmin.garmin_provider.GarminActivity") as mock_act_cls:
+            mock_act_cls.get_or_none.return_value = None
+
+            result = provider.set_gear("New Bike", "99999")
+
+        assert result is True
+        mock_client.remove_gear_from_activity.assert_called_once_with("uuid-old", "99999")
+        mock_client.add_gear_to_activity.assert_called_once_with("uuid-new", "99999")
+
+    def test_set_gear_gear_not_found(self):
+        """Test set_gear returns False when gear name is not in account."""
+        provider = GarminProvider()
+
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.get_gear.return_value = [{"uuid": "uuid-bike", "displayName": "Trek Bike"}]
+        provider._get_client = Mock(return_value=mock_client)
+
+        result = provider.set_gear("Unknown Gear", "99999")
+
+        assert result is False
+        mock_client.add_gear_to_activity.assert_not_called()
+
+    def test_set_gear_api_error(self):
+        """Test set_gear returns False on API error."""
+        provider = GarminProvider()
+
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.get_gear.return_value = [{"uuid": "uuid-bike", "displayName": "Trek Bike"}]
+        mock_client.get_activity_gear.return_value = {}
+        mock_client.add_gear_to_activity.side_effect = Exception("API Error")
+        provider._get_client = Mock(return_value=mock_client)
+
+        with patch("tracekit.providers.garmin.garmin_provider.GarminActivity") as mock_act_cls:
+            mock_act_cls.get_or_none.return_value = None
+            result = provider.set_gear("Trek Bike", "99999")
+
         assert result is False
 
 

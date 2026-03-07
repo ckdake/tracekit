@@ -256,7 +256,10 @@ class GarminProvider(FitnessProvider):
                 raise
 
     def get_all_gear(self) -> dict[str, str]:
-        """Get all gear from Garmin Connect."""
+        """Get all gear from Garmin Connect.
+
+        Returns a dict mapping gear UUID → display name.
+        """
         try:
             client = self._get_client()
 
@@ -267,12 +270,12 @@ class GarminProvider(FitnessProvider):
             # Get gear list
             gear_list = client.get_gear(user_profile_number)
 
-            # Convert to name -> name mapping (like other providers)
             gear_dict = {}
             for gear_item in gear_list:
+                uuid = gear_item.get("uuid", "")
                 display_name = gear_item.get("displayName", "")
-                if display_name:
-                    gear_dict[display_name] = display_name
+                if uuid and display_name:
+                    gear_dict[uuid] = display_name
 
             return gear_dict
 
@@ -371,11 +374,63 @@ class GarminProvider(FitnessProvider):
         """Create a new GarminActivity from activity data."""
         raise NotImplementedError("GarminActivity does not support creating activities. yet")
 
+    def _find_gear_uuid(self, gear_name: str) -> str | None:
+        """Return the UUID of the gear with the given display name, or None if not found."""
+        client = self._get_client()
+        device_last_used = client.get_device_last_used()
+        user_profile_number = device_last_used["userProfileNumber"]
+        gear_list = client.get_gear(user_profile_number)
+        for gear_item in gear_list:
+            if gear_item.get("displayName") == gear_name:
+                return gear_item.get("uuid")
+        return None
+
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
-        """Set gear for an activity - not yet supported by Garmin Connect API."""
-        print("Setting gear for individual activities is not supported by Garmin Connect API")
-        print("Gear can only be set as defaults for activity types through the Garmin Connect website")
-        return False
+        """Set gear for an activity on Garmin Connect.
+
+        Looks up the gear UUID by display name, removes any existing gear from
+        the activity, then adds the new gear.  Also upserts the local
+        GarminActivity.equipment field so the DB stays in sync.
+
+        Returns True on success, False if the gear name is not found in the
+        user's Garmin account.
+        """
+        try:
+            client = self._get_client()
+
+            gear_uuid = self._find_gear_uuid(gear_name)
+            if not gear_uuid:
+                print(f"Gear '{gear_name}' not found in Garmin Connect account")
+                return False
+
+            # Remove any gear currently associated with this activity
+            try:
+                current_gear = client.get_activity_gear(activity_id)
+                items = [current_gear] if isinstance(current_gear, dict) else (current_gear or [])
+                for gear_item in items:
+                    old_uuid = gear_item.get("uuid") if isinstance(gear_item, dict) else None
+                    if old_uuid:
+                        client.remove_gear_from_activity(old_uuid, activity_id)
+            except Exception as e:
+                print(f"Could not remove existing gear from Garmin activity {activity_id}: {e}")
+
+            # Add the new gear
+            client.add_gear_to_activity(gear_uuid, activity_id)
+
+            # Upsert local record
+            local = GarminActivity.get_or_none(
+                (GarminActivity.garmin_id == str(activity_id)) & (GarminActivity.user_id == get_user_id())
+            )
+            if local:
+                local.equipment = gear_name
+                local.save()
+
+            print(f"Set gear '{gear_name}' for Garmin activity {activity_id}")
+            return True
+
+        except Exception as e:
+            print(f"Error setting gear for Garmin activity {activity_id}: {e}")
+            return False
 
     def _get_garmin_activities_for_month(self, date_filter: str) -> list["GarminActivity"]:
         """Get GarminActivity objects for a specific month."""

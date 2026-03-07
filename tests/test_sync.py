@@ -573,6 +573,22 @@ class TestApplyChange:
         ok, _msg = apply_change(ch, tk)
         assert ok
 
+    def test_update_equipment_garmin(self):
+        tk = self._make_tk()
+        tk.get_provider.return_value.set_gear.return_value = True
+        ch = ActivityChange(ChangeType.UPDATE_EQUIPMENT, "garmin", "99999", "", "Trek Bike")
+        ok, _msg = apply_change(ch, tk)
+        assert ok
+        tk.get_provider.return_value.set_gear.assert_called_once_with("Trek Bike", "99999")
+
+    def test_update_equipment_garmin_failure(self):
+        tk = self._make_tk()
+        tk.get_provider.return_value.set_gear.return_value = False
+        ch = ActivityChange(ChangeType.UPDATE_EQUIPMENT, "garmin", "99999", "", "Unknown Gear")
+        ok, msg = apply_change(ch, tk)
+        assert not ok
+        assert "99999" in msg
+
     def test_update_metadata_spreadsheet(self):
         tk = self._make_tk()
         tk.get_provider.return_value.update_activity.return_value = True
