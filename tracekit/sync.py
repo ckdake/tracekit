@@ -186,21 +186,28 @@ def convert_activity_to_spreadsheet_format(source_activity: dict, grouped_activi
     strava_id = ""
     ridewithgps_id = ""
 
-    seen_providers: set[str] = set()
-    for key in generate_correlation_keys(source_activity["timestamp"], source_activity["distance"]):
-        if not key or key not in grouped_activities:
-            continue
-        for act in grouped_activities[key]:
-            provider = act["provider"]
-            if provider in seen_providers:
-                continue
-            seen_providers.add(provider)
-            if provider == "garmin":
-                garmin_id = str(act["id"]) if act["id"] else ""
-            elif provider == "strava":
-                strava_id = str(act["id"]) if act["id"] else ""
-            elif provider == "ridewithgps":
-                ridewithgps_id = str(act["id"]) if act["id"] else ""
+    fine_key, coarse_key = generate_correlation_keys(source_activity["timestamp"], source_activity["distance"])
+    # Fast path: canonical fine key (covers 99% of cases).
+    group = grouped_activities.get(fine_key) or []
+    # Slow path: scan for coarse key match (boundary-straddling activities where
+    # the canonical group is stored under a different fine key).
+    if not group and coarse_key:
+        for acts_in_group in grouped_activities.values():
+            for act in acts_in_group:
+                _, act_coarse = generate_correlation_keys(act.get("timestamp"), act.get("distance"))
+                if act_coarse == coarse_key:
+                    group = acts_in_group
+                    break
+            if group:
+                break
+    for act in group:
+        provider = act["provider"]
+        if provider == "garmin":
+            garmin_id = str(act["id"]) if act["id"] else ""
+        elif provider == "strava":
+            strava_id = str(act["id"]) if act["id"] else ""
+        elif provider == "ridewithgps":
+            ridewithgps_id = str(act["id"]) if act["id"] else ""
 
     distance = source_activity["distance"] or 0
     if distance:
@@ -277,13 +284,55 @@ def compute_month_changes(
         for act in provider_activities:
             all_acts.append(process_activity_for_display(act, provider_name))
 
-    # Group by correlation keys — each activity is inserted under both its fine
-    # and coarse keys so that GPS-boundary-straddling activities still match.
-    grouped: dict[str, list[dict]] = defaultdict(list)
+    # Group by fine key first (one entry per fine-key cluster).
+    fine_grouped: dict[str, list[dict]] = defaultdict(list)
     for act in all_acts:
-        for key in generate_correlation_keys(act["timestamp"], act["distance"]):
-            if key:
-                grouped[key].append(act)
+        fine_key, _ = generate_correlation_keys(act["timestamp"], act["distance"])
+        if fine_key:
+            fine_grouped[fine_key].append(act)
+
+    # Detect boundary-straddling activities: two fine-key groups that share a
+    # coarse key mean the same physical activity was split across a fine boundary.
+    coarse_to_fines: dict[str, set[str]] = defaultdict(set)
+    for act in all_acts:
+        fine_key, coarse_key = generate_correlation_keys(act["timestamp"], act["distance"])
+        if fine_key and coarse_key:
+            coarse_to_fines[coarse_key].add(fine_key)
+
+    # Union-find: merge fine-key groups that share a coarse key.
+    _parent: dict[str, str] = {}
+
+    def _resolve(fk: str) -> str:
+        root = fk
+        while _parent.get(root, root) != root:
+            root = _parent[root]
+        node = fk
+        while _parent.get(node, node) != root:
+            nxt = _parent.get(node, node)
+            _parent[node] = root
+            node = nxt
+        return root
+
+    for fine_keys in coarse_to_fines.values():
+        if len(fine_keys) > 1:
+            fk_list = sorted(fine_keys)
+            canon = _resolve(fk_list[0])
+            for fk in fk_list[1:]:
+                r = _resolve(fk)
+                if r != canon:
+                    _parent[r] = canon
+
+    # Build final grouped dict: one entry per physical group (canonical fine key).
+    grouped_dd: dict[str, list[dict]] = defaultdict(list)
+    seen_ak: set[tuple] = set()
+    for fine_key, acts in fine_grouped.items():
+        canon = _resolve(fine_key)
+        for act in acts:
+            ak = (act["provider"], str(act["id"]))
+            if ak not in seen_ak:
+                seen_ak.add(ak)
+                grouped_dd[canon].append(act)
+    grouped: dict[str, list[dict]] = dict(grouped_dd)
 
     # Determine provider priority from config (lower number = higher priority)
     provider_config = config.get("providers", {})
@@ -296,16 +345,8 @@ def compute_month_changes(
     provider_priority = [p for p, _ in priority_order]
 
     all_changes: list[ActivityChange] = []
-    seen_groups: set[frozenset] = set()
 
     for _key, group in grouped.items():
-        # Deduplicate: same physical activity may appear under both fine and
-        # coarse keys; skip if we've already processed this exact group.
-        fingerprint = frozenset((a["provider"], str(a["id"])) for a in group)
-        if fingerprint in seen_groups:
-            continue
-        seen_groups.add(fingerprint)
-
         if len(group) < 2:
             # Single-provider groups: nothing to sync
             continue
