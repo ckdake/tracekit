@@ -9,6 +9,7 @@ import datetime
 import json
 from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import dateutil.parser
 import garminconnect
@@ -131,10 +132,19 @@ class GarminProvider(FitnessProvider):
                     distance_meters = float(raw_activity.get("distance", 0))
                     garmin_activity.distance = Decimal(str(distance_meters * 0.000621371))
 
-                # Start time
-                if raw_activity.get("startTimeGMT"):
-                    start_time_str = raw_activity.get("startTimeGMT")
-                    dt = dateutil.parser.parse(start_time_str)
+                # Start time — use local time + home_tz so the stored UTC epoch is
+                # correct regardless of server timezone.
+                home_tz = ZoneInfo(self.config.get("home_timezone", "US/Eastern"))
+                local_str = raw_activity.get("startTimeLocal")
+                if local_str:
+                    dt = dateutil.parser.parse(local_str)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=home_tz)
+                    garmin_activity.start_time = int(dt.timestamp())
+                elif raw_activity.get("startTimeGMT"):
+                    dt = dateutil.parser.parse(raw_activity["startTimeGMT"])
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=datetime.UTC)
                     garmin_activity.start_time = int(dt.timestamp())
 
                 # Duration
@@ -195,10 +205,20 @@ class GarminProvider(FitnessProvider):
                 except Exception as e:
                     print(f"[garmin] get_activity_gear error for {garmin_activity.garmin_id}: {e}")
 
-                # Save to garmin_activities table
-                garmin_activity.user_id = get_user_id()
-                garmin_activity.save()
-                persisted_activities.append(garmin_activity)
+                # Save to garmin_activities table (update start_time if already exists)
+                uid = get_user_id()
+                garmin_activity.user_id = uid
+                existing_garmin = GarminActivity.get_or_none(
+                    (GarminActivity.garmin_id == garmin_activity.garmin_id) & (GarminActivity.user_id == uid)
+                )
+                if existing_garmin:
+                    if garmin_activity.start_time and existing_garmin.start_time != garmin_activity.start_time:
+                        existing_garmin.start_time = garmin_activity.start_time
+                        existing_garmin.save()
+                    persisted_activities.append(existing_garmin)
+                else:
+                    garmin_activity.save()
+                    persisted_activities.append(garmin_activity)
 
             except Exception as e:
                 print(f"Error processing Garmin activity: {e}")

@@ -6,6 +6,7 @@ import json
 import os
 from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -102,7 +103,18 @@ class IntervalsICUProvider(FitnessProvider):
         if distance_m:
             act.distance = Decimal(str(float(distance_m) * 0.000621371))
 
-        act.start_time = self._parse_date_local(raw.get("start_date"))
+        # Use start_date_local (naive local time) + home_tz for correct UTC epoch.
+        # Falls back to start_date (UTC with Z) if local field is absent.
+        local_str = raw.get("start_date_local")
+        if local_str:
+            try:
+                tz = ZoneInfo(self.config.get("home_timezone", "US/Eastern"))
+                dt = datetime.datetime.fromisoformat(local_str)
+                act.start_time = int(dt.replace(tzinfo=tz).timestamp())
+            except Exception:
+                act.start_time = self._parse_date_local(raw.get("start_date"))
+        else:
+            act.start_time = self._parse_date_local(raw.get("start_date"))
 
         elapsed = raw.get("elapsed_time") or raw.get("moving_time")
         act.duration_hms = self._seconds_to_hms(elapsed)
@@ -166,9 +178,14 @@ class IntervalsICUProvider(FitnessProvider):
                         & (IntervalsICUActivity.user_id == uid)
                     )
                     if existing:
-                        # Backfill equipment if the API returned it and we don't have it locally
+                        updated = False
                         if act.equipment and not existing.equipment:
                             existing.equipment = act.equipment
+                            updated = True
+                        if act.start_time and existing.start_time != act.start_time:
+                            existing.start_time = act.start_time
+                            updated = True
+                        if updated:
                             existing.save()
                         continue
                     act.user_id = uid
