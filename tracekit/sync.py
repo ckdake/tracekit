@@ -147,8 +147,10 @@ def process_activity_for_display(activity, provider: str) -> dict:
 def generate_correlation_key(timestamp: int, distance: float) -> str:
     """Generate a correlation key for matching activities across providers.
 
-    Uses eastern-timezone date + distance bucket (0.5 mi resolution) so that
-    activities recorded at slightly different times/distances still match.
+    Uses eastern-timezone date + whole-mile bucket so that activities recorded
+    at slightly different distances still match (GPS variance across providers
+    is ~0.005 mi, well within a 1-mile bucket). The +0.1 shift places bucket
+    boundaries at x.9 miles, avoiding common training-distance round numbers.
     """
     if not timestamp or not distance:
         return ""
@@ -156,8 +158,8 @@ def generate_correlation_key(timestamp: int, distance: float) -> str:
     try:
         dt = datetime.fromtimestamp(timestamp, ZoneInfo("US/Eastern"))
         date_str = dt.strftime("%Y-%m-%d")
-        distance_bucket = math.floor(distance * 2 + 0.3) / 2
-        return f"{date_str}_{distance_bucket:.1f}"
+        distance_bucket = math.floor(distance + 0.1)
+        return f"{date_str}_{distance_bucket}"
     except (ValueError, TypeError):
         return ""
 
