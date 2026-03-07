@@ -678,6 +678,14 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
                     else (False, f"Equipment update failed for {change.activity_id}")
                 )
             except Exception as exc:
+                from tracekit.providers.garmin.garmin_provider import GarminGearNotFoundError
+
+                if isinstance(exc, GarminGearNotFoundError):
+                    return (
+                        False,
+                        f"Gear '{exc.gear_name}' not found in Garmin Connect. "
+                        f"Add it at connect.garmin.com/modern/gear before syncing.",
+                    )
                 return (False, f"Equipment update failed for {change.activity_id}: {exc}")
 
         elif change_type == ChangeType.UPDATE_METADATA:

@@ -25,6 +25,14 @@ from tracekit.providers.garmin.garmin_activity import GarminActivity
 from tracekit.user_context import get_user_id
 
 
+class GarminGearNotFoundError(Exception):
+    """Raised when a gear name does not exist in the user's Garmin Connect account."""
+
+    def __init__(self, gear_name: str) -> None:
+        self.gear_name = gear_name
+        super().__init__(gear_name)
+
+
 class GarminProvider(FitnessProvider):
     """Provider for Garmin Connect activities."""
 
@@ -399,46 +407,22 @@ class GarminProvider(FitnessProvider):
                 return gear_item.get("uuid")
         return None
 
-    def _create_gear(self, gear_name: str) -> str:
-        """Create a new gear item in Garmin Connect and return its UUID.
-
-        Uses the gear name as both displayName and customMakeModel — Garmin
-        requires these fields but doesn't enforce their values.
-        """
-        client = self._get_client()
-        device_last_used = client.get_device_last_used()
-        user_profile_pk = int(device_last_used["userProfileNumber"])
-        payload = {
-            "displayName": gear_name,
-            "customMakeModel": gear_name,
-            "gearStatusName": "active",
-            "gearTypeName": "Bike",
-            "gearMakeName": "Other",
-            "gearModelName": "Unknown Bike",
-            "userProfilePk": user_profile_pk,
-        }
-        result = client.garth.post("connectapi", "/gear-service/gear", json=payload).json()
-        uuid = result.get("uuid")
-        if not uuid:
-            raise RuntimeError(f"Garmin gear creation returned no UUID: {result!r}")
-        print(f"Created Garmin gear '{gear_name}' with UUID {uuid}")
-        return uuid
-
     def set_gear(self, gear_name: str, activity_id: str) -> bool:
         """Set gear for an activity on Garmin Connect.
 
-        Looks up the gear UUID by display name; if not found, creates the gear
-        first.  Removes any existing gear from the activity, then adds the new
-        gear.  Also upserts the local GarminActivity.equipment field so the DB
-        stays in sync.
+        Looks up the gear UUID by display name, removes any existing gear from
+        the activity, then adds the new gear.  Also upserts the local
+        GarminActivity.equipment field so the DB stays in sync.
+
+        Raises GarminGearNotFoundError if the gear name does not exist in the
+        user's Garmin Connect account.
         """
         try:
             client = self._get_client()
 
             gear_uuid = self._find_gear_uuid(gear_name)
             if not gear_uuid:
-                print(f"Gear '{gear_name}' not found — creating it in Garmin Connect")
-                gear_uuid = self._create_gear(gear_name)
+                raise GarminGearNotFoundError(gear_name)
 
             # Remove any gear currently associated with this activity
             try:
@@ -465,6 +449,8 @@ class GarminProvider(FitnessProvider):
             print(f"Set gear '{gear_name}' for Garmin activity {activity_id}")
             return True
 
+        except GarminGearNotFoundError:
+            raise
         except Exception as e:
             print(f"Error setting gear for Garmin activity {activity_id}: {e}")
             return False

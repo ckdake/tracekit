@@ -6,12 +6,13 @@ Tracked here for visibility. PRs and issues welcome.
 
 next:
 - [ ] bug: worker logs are only on stdout, not in sentry logs
-- [ ] feat: "add" to spreadsheet data
+- [ ] feat: spreadsheet: ability to add
 - [ ] feat: on sync, use Activty table to link up to all provider activities
+- [ ] feat: garmin: ability to create gear
 - [ ] bug: pulling provider in ui for a month doesn't get new activites in the month
 - [ ] bug: worker is running migrations
 - [ ] bug: js error on toggle sync equipment for intervals.icu
-- [ ] bug: strava gear update sometimes not workign due to running shoe naming
+- [ ] bug: strava: gear update sometimes not workign due to running shoe naming
 - [ ] feat: as syncs are applied, update the visible table on /month/YYYY-MM to show as it updates
 - [ ] for web app, require subscription to be active for providers to sync
 - [ ] refactor all the web/sync stuff to use list of providers from code/admin, not hardcoded individually
