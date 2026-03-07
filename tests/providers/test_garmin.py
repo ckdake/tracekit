@@ -417,19 +417,59 @@ class TestGarminProviderGear:
         mock_client.remove_gear_from_activity.assert_called_once_with("uuid-old", "99999")
         mock_client.add_gear_to_activity.assert_called_once_with("uuid-new", "99999")
 
-    def test_set_gear_gear_not_found(self):
-        """Test set_gear returns False when gear name is not in account."""
+    def test_create_gear_success(self):
+        """Test _create_gear POSTs to Garmin API and returns the UUID."""
         provider = GarminProvider()
 
         mock_client = Mock()
         mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
-        mock_client.get_gear.return_value = [{"uuid": "uuid-bike", "displayName": "Trek Bike"}]
+        mock_client.garth.post.return_value.json.return_value = {"uuid": "new-uuid-123", "displayName": "New Bike"}
         provider._get_client = Mock(return_value=mock_client)
 
-        result = provider.set_gear("Unknown Gear", "99999")
+        uuid = provider._create_gear("New Bike")
 
-        assert result is False
-        mock_client.add_gear_to_activity.assert_not_called()
+        assert uuid == "new-uuid-123"
+        mock_client.garth.post.assert_called_once_with(
+            "connectapi",
+            "/gear-service/gear",
+            json={
+                "displayName": "New Bike",
+                "customMakeModel": "New Bike",
+                "gearStatusName": "active",
+                "userProfilePk": "12345",
+            },
+        )
+
+    def test_create_gear_no_uuid_raises(self):
+        """Test _create_gear raises if the API response contains no UUID."""
+        provider = GarminProvider()
+
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.garth.post.return_value.json.return_value = {}
+        provider._get_client = Mock(return_value=mock_client)
+
+        with pytest.raises(RuntimeError, match="no UUID"):
+            provider._create_gear("New Bike")
+
+    def test_set_gear_creates_when_not_found(self):
+        """Test set_gear creates the gear in Garmin Connect if it doesn't exist yet."""
+        provider = GarminProvider()
+
+        mock_client = Mock()
+        mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
+        mock_client.get_gear.return_value = []  # no existing gear
+        mock_client.garth.post.return_value.json.return_value = {"uuid": "new-uuid-abc"}
+        mock_client.get_activity_gear.return_value = []
+        provider._get_client = Mock(return_value=mock_client)
+
+        with patch("tracekit.providers.garmin.garmin_provider.GarminActivity") as mock_act_cls:
+            mock_act_cls.get_or_none.return_value = None
+            result = provider.set_gear("Brand New Bike", "99999")
+
+        assert result is True
+        mock_client.garth.post.assert_called_once()
+        mock_client.add_gear_to_activity.assert_called_once_with("new-uuid-abc", "99999")
 
     def test_set_gear_api_error(self):
         """Test set_gear returns False on API error."""

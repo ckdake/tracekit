@@ -5,6 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
+- [ ] bug: worker logs are only on stdout, not in sentry logs
 - [ ] feat: "add" to spreadsheet data
 - [ ] feat: on sync, use Activty table to link up to all provider activities
 - [ ] bug: pulling provider in ui for a month doesn't get new activites in the month
