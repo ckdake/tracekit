@@ -215,7 +215,11 @@ def _sync_local_activity(activity_id, user_id: int):
 
 
 def _handle_deauthorize(owner_id):
-    """Disable Strava and clear tokens for the user who revoked access."""
+    """Disable Strava and clear tokens for the user who revoked access.
+
+    Per Strava API TOS, all data retrieved via the Strava API must be deleted
+    immediately when a user deauthorizes the application.
+    """
     import json
 
     from tracekit.appconfig import AppConfig
@@ -227,6 +231,19 @@ def _handle_deauthorize(owner_id):
         return
 
     set_user_id(user_id)
+
+    # Delete all Strava activity data for this user (required by Strava API TOS).
+    try:
+        from tracekit.appconfig import load_config
+        from tracekit.core import Tracekit
+
+        config = load_config()
+        tk = Tracekit(config)
+        if tk.strava:
+            deleted = tk.strava.reset_activities(None)
+            log.info("Strava deauth: deleted %d activity records for user_id=%d", deleted, user_id)
+    except Exception as e:
+        log.error("Strava deauth: error deleting activity data for user_id=%d: %s", user_id, e)
 
     try:
         row = AppConfig.get_or_none((AppConfig.key == "providers") & (AppConfig.user_id == user_id))
@@ -247,7 +264,10 @@ def _handle_deauthorize(owner_id):
             .execute()
         )
         log.info("Strava deauth: disabled provider for user_id=%d", user_id)
-        _notify_admin(f"Strava webhook: user {user_id} (athlete {owner_id}) deauthorized — provider disabled", "error")
+        _notify_admin(
+            f"Strava webhook: user {user_id} (athlete {owner_id}) deauthorized — provider disabled and all data deleted",
+            "error",
+        )
     except Exception as e:
         log.error("Strava deauth: error disabling provider for user_id=%d: %s", user_id, e)
         _notify_admin(f"Strava webhook: deauth error for user {user_id}: {e}", "error")

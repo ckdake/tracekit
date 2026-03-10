@@ -39,6 +39,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "strava": {
             "enabled": False,
             "priority": 3,
+            "write_only": True,  # Strava API TOS: Strava is a write target only, never a source of truth
             "sync_equipment": True,
             "sync_name": True,
             "use_personal_credentials": False,

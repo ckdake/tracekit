@@ -337,6 +337,10 @@ class StravaProvider(FitnessProvider):
             if gear_name:
                 strava_activity.equipment = self._normalize_strava_gear_name(str(gear_name))
 
+        device_name = getattr(full_activity, "device_name", None)
+        if device_name:
+            strava_activity.device_name = str(device_name)
+
         if hasattr(full_activity, "model_dump"):
             raw_data = full_activity.model_dump()
         elif hasattr(full_activity, "dict"):
@@ -391,7 +395,16 @@ class StravaProvider(FitnessProvider):
             (StravaActivity.strava_id == str(strava_id)) & (StravaActivity.user_id == uid)
         )
         if existing:
-            for field in ("name", "activity_type", "distance", "start_time", "duration_hms", "equipment", "raw_data"):
+            for field in (
+                "name",
+                "activity_type",
+                "distance",
+                "start_time",
+                "duration_hms",
+                "equipment",
+                "device_name",
+                "raw_data",
+            ):
                 setattr(existing, field, getattr(local, field))
             existing.save()
             print(f"Strava webhook: updated local activity {strava_id}")

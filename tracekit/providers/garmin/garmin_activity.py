@@ -15,9 +15,6 @@ class GarminActivity(BaseProviderActivity):
     # Garmin-specific ID field
     garmin_id = CharField(max_length=50, unique=True, index=True)
 
-    # Device that recorded this activity (e.g. "Forerunner 965")
-    device_name = CharField(max_length=255, null=True)
-
     class Meta:  # type: ignore
         database = db
         table_name = "garmin_activities"

@@ -202,6 +202,11 @@ def _run_schema_upgrades() -> None:
         is_sqlite,
         [
             ("garmin_activities", "device_name", "VARCHAR(255)"),
+            ("strava_activities", "device_name", "VARCHAR(255)"),
+            ("ridewithgps_activities", "device_name", "VARCHAR(255)"),
+            ("intervalsicu_activities", "device_name", "VARCHAR(255)"),
+            ("file_activities", "device_name", "VARCHAR(255)"),
+            ("spreadsheet_activities", "device_name", "VARCHAR(255)"),
             ("notification", "expires", "INTEGER"),
             ("provider_status", "rate_limit_type", "VARCHAR(64)"),
             ("provider_status", "rate_limit_reset_at", "INTEGER"),

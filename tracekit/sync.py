@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import contextlib
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, NamedTuple
 from zoneinfo import ZoneInfo
@@ -44,6 +44,7 @@ class ActivityChange(NamedTuple):
     old_value: str | None = None
     new_value: str | None = None
     source_provider: str | None = None
+    stale: bool = False  # True when write-only provider data is >7 days old (current state unknown)
 
     def __str__(self) -> str:
         if self.change_type == ChangeType.UPDATE_NAME:
@@ -97,6 +98,7 @@ class ActivityChange(NamedTuple):
             "old_value": self.old_value,
             "new_value": self.new_value,
             "source_provider": self.source_provider,
+            "stale": self.stale,
         }
 
     @classmethod
@@ -109,6 +111,7 @@ class ActivityChange(NamedTuple):
             old_value=data.get("old_value"),
             new_value=data.get("new_value"),
             source_provider=data.get("source_provider"),
+            stale=data.get("stale", False),
         )
 
 
@@ -278,10 +281,29 @@ def compute_month_changes(
     activities = tracekit.pull_activities(year_month)
     config = tracekit.config
 
-    # Gather all provider activities into a flat list
+    provider_config = config.get("providers", {})
+
+    # Providers flagged write_only (e.g. Strava per their API TOS) may never be
+    # authoritative sources for other providers.  Their data is also subject to a
+    # 7-day freshness window: stale records are excluded from correlation so that
+    # activities won't be wrongly matched against data that may have drifted.
+    _write_only_freshness_days = 7
+    write_only_providers = {name for name, cfg in provider_config.items() if cfg.get("write_only", False)}
+
+    _now = datetime.now(UTC)
+
+    # Gather all provider activities into a flat list, excluding stale write-only data.
     all_acts: list[dict] = []
     for provider_name, provider_activities in activities.items():
+        is_write_only = provider_name in write_only_providers
         for act in provider_activities:
+            if is_write_only:
+                updated_at = getattr(act, "updated_at", None)
+                if updated_at is not None:
+                    if updated_at.tzinfo is None:
+                        updated_at = updated_at.replace(tzinfo=UTC)
+                    if (_now - updated_at).days >= _write_only_freshness_days:
+                        continue  # too stale for matching
             all_acts.append(process_activity_for_display(act, provider_name))
 
     # Group by fine key first (one entry per fine-key cluster).
@@ -335,7 +357,6 @@ def compute_month_changes(
     grouped: dict[str, list[dict]] = dict(grouped_dd)
 
     # Determine provider priority from config (lower number = higher priority)
-    provider_config = config.get("providers", {})
     provider_priorities = {
         name: settings.get("priority", 999)
         for name, settings in provider_config.items()
@@ -353,26 +374,28 @@ def compute_month_changes(
 
         by_provider = {a["provider"]: a for a in group}
 
-        # Determine authoritative name and equipment
+        # Determine authoritative name and equipment.
+        # Write-only providers (e.g. Strava) are never the authority — they can
+        # only receive updates from authoritative providers, never drive them.
         auth_provider = None
         auth_name = ""
         auth_equipment = ""
 
         for p in provider_priority:
-            if p in by_provider and by_provider[p]["name"]:
+            if p in by_provider and by_provider[p]["name"] and p not in write_only_providers:
                 auth_provider = p
                 auth_name = by_provider[p]["name"]
                 break
 
         if not auth_provider:
             for p in provider_priority:
-                if p in by_provider:
+                if p in by_provider and p not in write_only_providers:
                     auth_provider = p
                     auth_name = by_provider[p]["name"]
                     break
 
         for p in provider_priority:
-            if p in by_provider and by_provider[p]["equipment"]:
+            if p in by_provider and by_provider[p]["equipment"] and p not in write_only_providers:
                 auth_equipment = by_provider[p]["equipment"]
                 break
 
@@ -390,6 +413,13 @@ def compute_month_changes(
             if sync_name and provider != auth_provider and auth_name:
                 current_name = activity["name"]
                 if current_name != auth_name:
+                    # For write-only providers, flag if the stored data is stale so
+                    # the UI can warn that the current remote state is unknown.
+                    is_stale = provider in write_only_providers and (
+                        (obj_updated := getattr(activity.get("obj"), "updated_at", None)) is not None
+                        and (_now - (obj_updated if obj_updated.tzinfo else obj_updated.replace(tzinfo=UTC))).days
+                        >= _write_only_freshness_days
+                    )
                     all_changes.append(
                         ActivityChange(
                             change_type=ChangeType.UPDATE_NAME,
@@ -397,6 +427,7 @@ def compute_month_changes(
                             activity_id=str(activity["id"]),
                             old_value=current_name,
                             new_value=auth_name,
+                            stale=is_stale,
                         )
                     )
 
@@ -408,6 +439,11 @@ def compute_month_changes(
                     "no equipment",
                 )
                 if equip_wrong:
+                    is_stale = provider in write_only_providers and (
+                        (obj_updated := getattr(activity.get("obj"), "updated_at", None)) is not None
+                        and (_now - (obj_updated if obj_updated.tzinfo else obj_updated.replace(tzinfo=UTC))).days
+                        >= _write_only_freshness_days
+                    )
                     all_changes.append(
                         ActivityChange(
                             change_type=ChangeType.UPDATE_EQUIPMENT,
@@ -415,6 +451,7 @@ def compute_month_changes(
                             activity_id=str(activity["id"]),
                             old_value=activity["equipment"],
                             new_value=auth_equipment,
+                            stale=is_stale,
                         )
                     )
 
@@ -451,7 +488,11 @@ def compute_month_changes(
                     )
 
         # ── Missing provider (ADD_ACTIVITY) ─────────────────────────────
-        # Check which enabled providers are missing this activity
+        # Check which enabled providers are missing this activity.
+        # Write-only providers cannot be the source of an ADD_ACTIVITY —
+        # activities originating in Strava must never propagate outward.
+        if auth_provider in write_only_providers:
+            continue
         for provider_name in provider_priority:
             if provider_name not in by_provider:
                 sync_name = provider_config.get(provider_name, {}).get("sync_name", True)

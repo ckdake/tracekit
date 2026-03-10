@@ -156,6 +156,17 @@ No CLI step needed. Enter your email, password, and API key directly in the Sett
 
 > Re-authenticate any time tokens expire by clicking the button again.
 
+#### Strava write-only enforcement (API TOS)
+
+Strava's API terms require that Strava data is never used as a source of truth for other providers, and that all Strava data is deleted immediately when a user disconnects. TraceKit enforces this by setting `"write_only": True` on the Strava provider entry in `tracekit/appconfig.py`. The sync engine reads this flag and:
+
+- never selects Strava as the authoritative provider when resolving name/equipment conflicts
+- never propagates Strava-only activities outward to other providers
+- excludes Strava activity records older than 7 days from correlation (per API TOS data freshness requirements)
+- deletes all Strava activity data immediately on user disconnect (both via the Settings UI "Disconnect Strava" button and via the Strava deauthorization webhook)
+
+If `"write_only"` is removed or set to `False` for the Strava provider in `tracekit/appconfig.py`, Strava will start behaving like any other provider (source-of-truth capable). Do not do this — it would violate the Strava API TOS.
+
 ### Garmin
 
 Garmin uses garth for OAuth. Tokens are stored in the database and valid for roughly a year.

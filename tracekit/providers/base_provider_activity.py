@@ -39,6 +39,7 @@ class BaseProviderActivity(Model):
     activity_type = CharField(max_length=50, null=True)
     duration_hms = CharField(max_length=20, null=True)
     equipment = CharField(max_length=255, null=True)
+    device_name = CharField(max_length=255, null=True)
 
     # Location information
     location_name = CharField(max_length=255, null=True)

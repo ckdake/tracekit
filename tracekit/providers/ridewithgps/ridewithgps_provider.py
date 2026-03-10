@@ -128,6 +128,10 @@ class RideWithGPSProvider(FitnessProvider):
                         rwgps_activity.state = str(trip.administrative_area)
                     if hasattr(trip, "gear") and trip.gear and hasattr(trip.gear, "name"):
                         rwgps_activity.equipment = str(trip.gear.name)
+                    if hasattr(trip, "device") and trip.device:
+                        device_name = getattr(trip.device, "name", None) or str(trip.device) or None
+                        if device_name:
+                            rwgps_activity.device_name = device_name
                     existing = RideWithGPSActivity.get_or_none(
                         (RideWithGPSActivity.ridewithgps_id == str(trip.id))
                         & (RideWithGPSActivity.user_id == get_user_id())
@@ -292,12 +296,16 @@ class RideWithGPSProvider(FitnessProvider):
             local.state = str(trip.administrative_area)
         if hasattr(trip, "gear") and trip.gear and hasattr(trip.gear, "name"):
             local.equipment = str(trip.gear.name)
+        if hasattr(trip, "device") and trip.device:
+            device_name = getattr(trip.device, "name", None) or str(trip.device) or None
+            if device_name:
+                local.device_name = device_name
 
         existing = RideWithGPSActivity.get_or_none(
             (RideWithGPSActivity.ridewithgps_id == str(trip_id)) & (RideWithGPSActivity.user_id == uid)
         )
         if existing:
-            for field in ("name", "distance", "start_time", "city", "state", "equipment"):
+            for field in ("name", "distance", "start_time", "city", "state", "equipment", "device_name"):
                 val = getattr(local, field, None)
                 if val is not None:
                     setattr(existing, field, val)

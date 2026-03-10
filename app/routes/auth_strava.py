@@ -3,7 +3,8 @@
 import os
 
 from db_init import _init_db
-from flask import Blueprint, redirect, request
+from flask import Blueprint, jsonify, redirect, request
+from flask_login import current_user
 
 strava_bp = Blueprint("auth_strava", __name__)
 
@@ -144,3 +145,56 @@ def api_auth_strava_callback():
         return _strava_callback_page(True, "Strava authentication successful!")
     except Exception as e:
         return _strava_callback_page(False, f"Token exchange failed: {e}")
+
+
+@strava_bp.route("/api/auth/strava/disconnect", methods=["POST"])
+def api_auth_strava_disconnect():
+    """Disconnect Strava: delete all local Strava activity data then clear credentials.
+
+    Required by Strava API TOS: when a user unlinks Strava, all data retrieved
+    via the Strava API must be immediately deleted.
+    """
+    _init_db()
+
+    from tracekit.user_context import set_user_id
+
+    if current_user.is_authenticated:
+        set_user_id(current_user.id)
+
+    errors = []
+
+    # 1. Delete all Strava activity data for this user.
+    try:
+        from tracekit.appconfig import load_config
+        from tracekit.core import Tracekit
+
+        config = load_config()
+        tk = Tracekit(config)
+        if tk.strava:
+            tk.strava.reset_activities(None)
+    except Exception as e:
+        errors.append(f"activity deletion failed: {e}")
+
+    # 2. Clear OAuth tokens and disable the provider.
+    try:
+        import json
+
+        from tracekit.appconfig import AppConfig, clear_strava_tokens
+
+        clear_strava_tokens()
+        user_id = current_user.id if current_user.is_authenticated else 0
+        row = AppConfig.get_or_none((AppConfig.key == "providers") & (AppConfig.user_id == user_id))
+        if row:
+            providers = json.loads(row.value)
+            strava_cfg = providers.get("strava", {}).copy()
+            strava_cfg["enabled"] = False
+            providers["strava"] = strava_cfg
+            AppConfig.update({AppConfig.value: json.dumps(providers)}).where(
+                (AppConfig.key == "providers") & (AppConfig.user_id == user_id)
+            ).execute()
+    except Exception as e:
+        errors.append(f"credential clearing failed: {e}")
+
+    if errors:
+        return jsonify({"error": "; ".join(errors)}), 500
+    return jsonify({"status": "disconnected"})

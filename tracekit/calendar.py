@@ -191,26 +191,27 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
         except Exception as e:
             print(f"Error getting activity days for {provider}/{year_month}: {e}")
 
-    garmin_devices: list[str] = []
-    try:
-        rows = (
-            GarminActivity.select(GarminActivity.device_name)
-            .where(
-                GarminActivity.start_time.is_null(False)
-                & (GarminActivity.start_time >= start_ts)
-                & (GarminActivity.start_time <= end_ts)
-                & GarminActivity.device_name.is_null(False)
-                & (GarminActivity.user_id == uid)
-            )
-            .distinct()
-        )
-        garmin_devices = sorted({r.device_name for r in rows if r.device_name})
-    except Exception:
-        pass
-
     provider_metadata: dict[str, dict] = {}
-    if garmin_devices:
-        provider_metadata["garmin"] = {"devices": garmin_devices}
+    for provider, model in provider_models.items():
+        if provider not in activity_counts:
+            continue
+        try:
+            rows = (
+                model.select(model.device_name)
+                .where(
+                    model.start_time.is_null(False)
+                    & (model.start_time >= start_ts)
+                    & (model.start_time <= end_ts)
+                    & model.device_name.is_null(False)
+                    & (model.user_id == uid)
+                )
+                .distinct()
+            )
+            devices = sorted({r.device_name for r in rows if r.device_name})
+            if devices:
+                provider_metadata[provider] = {"devices": devices}
+        except Exception:
+            pass
 
     return {
         "year_month": year_month,

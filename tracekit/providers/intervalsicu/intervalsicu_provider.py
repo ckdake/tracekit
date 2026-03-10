@@ -135,6 +135,10 @@ class IntervalsICUProvider(FitnessProvider):
         if isinstance(gear, dict) and gear.get("name"):
             act.equipment = str(gear["name"])
 
+        device_name = raw.get("device_name")
+        if device_name:
+            act.device_name = str(device_name)
+
         act.source = str(raw.get("source", "") or "") or None
         act.raw_data = json.dumps(raw, default=str)
         return act
@@ -181,6 +185,9 @@ class IntervalsICUProvider(FitnessProvider):
                         updated = False
                         if act.equipment and not existing.equipment:
                             existing.equipment = act.equipment
+                            updated = True
+                        if act.device_name and not existing.device_name:
+                            existing.device_name = act.device_name
                             updated = True
                         if act.start_time and existing.start_time != act.start_time:
                             existing.start_time = act.start_time

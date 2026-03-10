@@ -15,6 +15,11 @@ function showStatus(text, type = 'ok') {
 const PROVIDER_META = {
     strava: {
         label: 'Strava', sync_equipment: true, sync_name: true,
+        // Strava API TOS: Strava is a write-only target — it can never be the
+        // authoritative source for other providers.
+        write_only: true,
+        sync_equipment_label: 'Write equipment',
+        sync_name_label: 'Write name',
         // No text_fields by default — client_id/secret come from system credentials.
         // They are revealed in personal_credential_fields when the toggle is on.
         text_fields: [],
@@ -161,7 +166,8 @@ function makeProviderCard(name, data) {
 
     const header = document.createElement('div');
     header.className = 'provider-header';
-    header.innerHTML = `<span class="drag-handle">⠿</span><span class="provider-name">${escHtml(meta.label)}</span><span class="provider-activity-count"></span><span class="provider-inline-status"></span>`;
+    const writeOnlyBadge = meta.write_only ? '<span class="write-only-badge">write only</span>' : '';
+    header.innerHTML = `<span class="drag-handle">⠿</span><span class="provider-name">${escHtml(meta.label)}</span>${writeOnlyBadge}<span class="provider-activity-count"></span><span class="provider-inline-status"></span>`;
 
     const enabledToggle = makeToggle(`en-${name}`, data.enabled, 'Enabled');
     enabledToggle.querySelector('input').addEventListener('change', e => {
@@ -181,7 +187,8 @@ function makeProviderCard(name, data) {
     controls.className = 'provider-controls';
 
     if (meta.sync_equipment) {
-        const t = makeToggle(`se-${name}`, data.sync_equipment ?? false, 'Sync equipment');
+        const equipLabel = meta.sync_equipment_label || 'Sync equipment';
+        const t = makeToggle(`se-${name}`, data.sync_equipment ?? false, equipLabel);
         const seInput = t.querySelector('input');
         seInput.disabled = !data.enabled || !!meta.sync_equipment_disabled;
         if (!meta.sync_equipment_disabled) seInput.addEventListener('change', autoSave);
@@ -189,7 +196,8 @@ function makeProviderCard(name, data) {
         controls.appendChild(t);
     }
     if (meta.sync_name) {
-        const t = makeToggle(`sn-${name}`, data.sync_name ?? false, 'Sync name');
+        const nameLabel = meta.sync_name_label || 'Sync name';
+        const t = makeToggle(`sn-${name}`, data.sync_name ?? false, nameLabel);
         t.querySelector('input').disabled = !data.enabled;
         t.querySelector('input').addEventListener('change', autoSave);
         controls.appendChild(t);
@@ -223,6 +231,36 @@ function makeProviderCard(name, data) {
         authBtn.appendChild(stravaImg);
         authBtn.addEventListener('click', () => { window.location.href = '/api/auth/strava/authorize'; });
         card.appendChild(authBtn);
+
+        if (data.access_token) {
+            const disconnectBtn = document.createElement('button');
+            disconnectBtn.type = 'button';
+            disconnectBtn.className = 'btn btn-danger strava-disconnect-btn';
+            disconnectBtn.textContent = 'Disconnect Strava';
+            disconnectBtn.title = 'Disconnecting will immediately and permanently delete all Strava activity data from TraceKit (required by Strava API terms).';
+            disconnectBtn.addEventListener('click', async () => {
+                if (!confirm('Disconnecting Strava will immediately and permanently delete ALL Strava activity data from TraceKit. This is required by Strava\'s API terms and cannot be undone.\n\nContinue?')) return;
+                disconnectBtn.disabled = true;
+                disconnectBtn.textContent = 'Disconnecting…';
+                try {
+                    const resp = await fetch('/api/auth/strava/disconnect', { method: 'POST' });
+                    if (resp.ok) {
+                        showStatus('Strava disconnected. All Strava data deleted.');
+                        window.location.reload();
+                    } else {
+                        const d = await resp.json().catch(() => ({}));
+                        showStatus('Error: ' + (d.error || 'disconnect failed'), 'error');
+                        disconnectBtn.disabled = false;
+                        disconnectBtn.textContent = 'Disconnect Strava';
+                    }
+                } catch (e) {
+                    showStatus('Network error: ' + e.message, 'error');
+                    disconnectBtn.disabled = false;
+                    disconnectBtn.textContent = 'Disconnect Strava';
+                }
+            });
+            card.appendChild(disconnectBtn);
+        }
     }
 
     // RideWithGPS: OAuth button, same pattern as Strava.
@@ -404,10 +442,30 @@ function renderProviders(config) {
             return pa !== pb ? pa - pb : a[0].localeCompare(b[0]);
         });
 
+    const normalEntries   = entries.filter(([name]) => !(PROVIDER_META[name] || {}).write_only);
+    const writeOnlyEntries = entries.filter(([name]) =>  (PROVIDER_META[name] || {}).write_only);
+
     const list = document.getElementById('provider-list');
     list.innerHTML = '';
-    for (const [name, data] of entries) {
+
+    for (const [name, data] of normalEntries) {
         list.appendChild(makeProviderCard(name, data));
+    }
+
+    if (writeOnlyEntries.length > 0) {
+        const divider = document.createElement('div');
+        divider.className = 'write-only-divider';
+        divider.innerHTML = '<hr><span class="write-only-divider-label">Write-only providers — receive updates, never a source of truth</span>';
+        list.appendChild(divider);
+
+        for (const [name, data] of writeOnlyEntries) {
+            const card = makeProviderCard(name, data);
+            // Write-only providers should not be dragged into the authoritative
+            // provider ordering — remove drag capability.
+            card.draggable = false;
+            card.querySelector('.drag-handle')?.remove();
+            list.appendChild(card);
+        }
     }
 }
 
