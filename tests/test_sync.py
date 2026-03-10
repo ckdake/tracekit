@@ -408,6 +408,48 @@ class TestComputeMonthChanges:
         assert name_changes[0].provider == "ridewithgps"
         assert name_changes[0].new_value == "Authoritative Name"
 
+    def test_auth_name_with_spaces_triggers_update_on_auth_provider(self):
+        """If the authoritative provider's name has leading/trailing spaces, it
+        should receive an UPDATE_NAME change to strip them."""
+        act1 = _make_act_obj(name="  Morning Ride  ", ts=1720411200, distance=15.0)
+        act2 = _make_act_obj(name="Morning Ride", ts=1720411200, distance=15.0)
+        act2.provider_id = "rwgps-id"
+        tk = _make_tracekit_mock(
+            {"strava": [act1], "ridewithgps": [act2]},
+            provider_config={
+                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
+                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+            },
+        )
+        _, changes = compute_month_changes(tk, "2024-07")
+        name_changes = [c for c in changes if c.change_type == ChangeType.UPDATE_NAME]
+        # Auth provider (strava) gets a change to strip its own spaces
+        auth_change = next((c for c in name_changes if c.provider == "strava"), None)
+        assert auth_change is not None
+        assert auth_change.old_value == "  Morning Ride  "
+        assert auth_change.new_value == "Morning Ride"
+        # ridewithgps already matches the stripped name → no change needed
+        assert not any(c.provider == "ridewithgps" for c in name_changes)
+
+    def test_downstream_name_compared_to_stripped_auth_name(self):
+        """Downstream providers are compared against the stripped auth name, so a
+        provider whose name matches the stripped form gets no change."""
+        act1 = _make_act_obj(name=" Morning Ride ", ts=1720411200, distance=15.0)
+        act2 = _make_act_obj(name="Wrong Name", ts=1720411200, distance=15.0)
+        act2.provider_id = "rwgps-id"
+        tk = _make_tracekit_mock(
+            {"strava": [act1], "ridewithgps": [act2]},
+            provider_config={
+                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
+                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+            },
+        )
+        _, changes = compute_month_changes(tk, "2024-07")
+        name_changes = [c for c in changes if c.change_type == ChangeType.UPDATE_NAME]
+        rwgps_change = next(c for c in name_changes if c.provider == "ridewithgps")
+        # Downstream receives the stripped name, not the original spaced one
+        assert rwgps_change.new_value == "Morning Ride"
+
     def test_equipment_mismatch_generates_change(self):
         act1 = _make_act_obj(name="Ride", equipment="Trek", ts=1720411200, distance=15.0)
         act2 = _make_act_obj(name="Ride", equipment="", ts=1720411200, distance=15.0)

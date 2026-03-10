@@ -404,15 +404,34 @@ def compute_month_changes(
 
         auth_activity = by_provider[auth_provider]
 
+        # Strip leading/trailing whitespace from the authoritative name so all
+        # providers (including the authority itself) converge on the clean value.
+        auth_name_stripped = (auth_name or "").strip()
+
         for provider in by_provider:
             sync_name = provider_config.get(provider, {}).get("sync_name", True)
             sync_equipment = provider_config.get(provider, {}).get("sync_equipment", True)
             activity = by_provider[provider]
 
             # ── Name sync ───────────────────────────────────────────────
-            if sync_name and provider != auth_provider and auth_name:
+            if sync_name and auth_name_stripped:
                 current_name = activity["name"]
-                if current_name != auth_name:
+                # For the authoritative provider, only suggest an update if its
+                # own name has leading/trailing spaces (no cross-provider diff).
+                # For every other provider, compare against the stripped name.
+                if provider == auth_provider:
+                    if auth_name != auth_name_stripped:
+                        all_changes.append(
+                            ActivityChange(
+                                change_type=ChangeType.UPDATE_NAME,
+                                provider=provider,
+                                activity_id=str(activity["id"]),
+                                old_value=auth_name,
+                                new_value=auth_name_stripped,
+                            )
+                        )
+                    continue
+                if current_name != auth_name_stripped:
                     # For write-only providers, flag if the stored data is stale so
                     # the UI can warn that the current remote state is unknown.
                     is_stale = provider in write_only_providers and (
@@ -426,7 +445,7 @@ def compute_month_changes(
                             provider=provider,
                             activity_id=str(activity["id"]),
                             old_value=current_name,
-                            new_value=auth_name,
+                            new_value=auth_name_stripped,
                             stale=is_stale,
                         )
                     )
