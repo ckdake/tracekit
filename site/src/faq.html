@@ -315,6 +315,14 @@
                                 unlinking does not delete historical data.
                             </p>
                             <p>
+                                <strong>Strava is an exception:</strong> when
+                                you unlink Strava, all Strava activity data is
+                                immediately and permanently deleted from
+                                TraceKit. This is required by Strava's API
+                                terms. Export anything you need before
+                                unlinking.
+                            </p>
+                            <p>
                                 To fully revoke TraceKit's access, also remove
                                 it from the provider's own connected-apps
                                 settings page (e.g. Strava's "My Apps" page).
@@ -329,17 +337,110 @@
                         </summary>
                         <div class="faq-a">
                             <div class="provider-note warning">
-                                <strong>Strava</strong>
-                                Strava's API does not allow downloading the
-                                original source files (GPX, FIT, or TCX) for
-                                activities. Activity metadata — name, type,
-                                distance, duration, and so on — syncs normally,
-                                but the raw files are not available through the
-                                API. If Strava is your only provider and you
-                                want source files in TraceKit, export your full
-                                Strava data archive from Strava's settings page
-                                and contact us to have it imported via the Files
-                                provider.
+                                <strong>Strava — important restrictions</strong>
+                                <p>
+                                    Strava's API terms place specific
+                                    requirements on how TraceKit may use your
+                                    Strava data. Please read these carefully:
+                                </p>
+                                <ul>
+                                    <li>
+                                        <strong
+                                            >Strava is always a write target,
+                                            never a source.</strong
+                                        >
+                                        TraceKit treats Strava as a destination
+                                        only. For example, if you set an
+                                        activity name in Garmin, TraceKit can
+                                        push that name to Strava — but it will
+                                        never go the other direction and push a
+                                        Strava name to Garmin or another
+                                        provider. Your other providers are
+                                        always authoritative.
+                                    </li>
+                                    <li>
+                                        <strong
+                                            >Out-of-sync detection and
+                                            updates.</strong
+                                        >
+                                        When TraceKit notices that Strava is out
+                                        of sync with your authoritative data
+                                        (e.g. a name or gear assignment
+                                        differs), it will surface the
+                                        discrepancy and offer to update Strava
+                                        for you. Nothing is written until you
+                                        explicitly approve.
+                                    </li>
+                                    <li>
+                                        <strong
+                                            >Creating activities in
+                                            Strava.</strong
+                                        >
+                                        If you record an activity somewhere else
+                                        (Garmin, RideWithGPS, etc.), TraceKit
+                                        can create a matching activity in Strava
+                                        on your behalf. Activities you
+                                        originally created in Strava are never
+                                        pushed outward to other providers.
+                                    </li>
+                                    <li>
+                                        <strong
+                                            >No source files from
+                                            Strava.</strong
+                                        >
+                                        Strava's API does not permit downloading
+                                        original source files (GPX, FIT, TCX)
+                                        for activities. Raw files are not
+                                        available through the API regardless of
+                                        how the activity was recorded.
+                                    </li>
+                                    <li>
+                                        <strong
+                                            >Initial backfill via
+                                            export.</strong
+                                        >
+                                        You can export your data archive from
+                                        Strava's settings page and import the
+                                        individual activity files (FIT, GPX,
+                                        etc.) into TraceKit via the Files
+                                        provider. Those files are treated
+                                        identically to files uploaded from any
+                                        other source — no Strava restrictions
+                                        apply to them. Note that this only
+                                        covers the files themselves; any sync
+                                        suggestions or updates back to Strava
+                                        still require a live Strava connection,
+                                        and all of the restrictions above apply.
+                                    </li>
+                                    <li>
+                                        <strong
+                                            >Data freshness — 7-day
+                                            window.</strong
+                                        >
+                                        Strava data must have been retrieved
+                                        within the last 7 days to be used for
+                                        activity matching. If you update an
+                                        activity's name or gear after the 7-day
+                                        window has passed, TraceKit will still
+                                        offer to push the change to Strava, but
+                                        it will not be able to confirm whether
+                                        Strava already has that value until you
+                                        press the "Accept" button and the update
+                                        is applied.
+                                    </li>
+                                    <li>
+                                        <strong
+                                            >Unlinking deletes all Strava
+                                            data.</strong
+                                        >
+                                        When you unlink Strava, every piece of
+                                        Strava activity data stored in TraceKit
+                                        is immediately and permanently deleted.
+                                        This is a hard requirement of Strava's
+                                        API terms. Export anything you need
+                                        before unlinking.
+                                    </li>
+                                </ul>
                             </div>
                             <div class="provider-note warning">
                                 <strong>Garmin</strong>
