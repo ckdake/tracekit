@@ -75,17 +75,6 @@ h2 { color: #34495e; margin-top: 30px; }
     margin-left: auto;
     flex-shrink: 0;
 }
-.header-recent {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
-    color: rgba(255,255,255,.35);
-    white-space: nowrap;
-    margin-right: 4px;
-}
-.recent-label { text-transform: uppercase; letter-spacing: .05em; font-size: 0.68rem; }
-.recent-value  { color: rgba(255,255,255,.55); font-variant-numeric: tabular-nums; }
 .header-logout-form { display: contents; }
 .header-nav-link {
     color: rgba(255,255,255,.55);
@@ -98,10 +87,6 @@ h2 { color: #34495e; margin-top: 30px; }
 }
 .header-nav-link:hover { background: rgba(255,255,255,.07); color: #fff; }
 .header-nav-link.active { color: #fff; background: rgba(255,255,255,.11); }
-/* notif-bell on dark header */
-.notif-bell { color: rgba(255,255,255,.55); }
-.notif-bell:hover, .notif-bell.active { color: #fff; background: rgba(255,255,255,.07); }
-.header-user-email { color: rgba(255,255,255,.45); font-size: 0.8rem; }
 .impersonation-badge { color: rgba(255,165,0,.85); font-size: 0.78rem; }
 
 
@@ -222,7 +207,7 @@ h2 { color: #34495e; margin-top: 30px; }
 /* ── Header auth ─────────────────────────────────────────────────────────────── */
 .header-user-email {
     font-size: 0.8rem;
-    color: rgba(0,0,0,.5);
+    color: rgba(255,255,255,.45);
     max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1333,15 +1318,15 @@ select#timezone:focus {
     cursor: pointer;
     padding: 6px 8px;
     border-radius: 6px;
-    color: rgba(0,0,0,.45);
+    color: rgba(255,255,255,.55);
     display: flex;
     align-items: center;
     transition: background .15s, color .15s;
     line-height: 1;
 }
 .notif-bell:hover,
-.notif-bell-has-unread { color: #1a1a2e; }
-.notif-bell:hover { background: rgba(0,0,0,.05); }
+.notif-bell-has-unread { color: #fff; }
+.notif-bell:hover { background: rgba(255,255,255,.07); }
 .notif-badge {
     position: absolute;
     top: 2px;

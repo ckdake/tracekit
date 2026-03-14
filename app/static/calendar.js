@@ -3,6 +3,7 @@
 /* global PROVIDER_CONFIG, INITIAL_OLDEST */
 
 let oldestLoaded = INITIAL_OLDEST || null;
+let _loadingMore  = false;
 
 // ── Build a mini SMTWRFS calendar grid HTML for one provider ─────────────────
 function buildMiniCal(yearMonth, activeDays) {
@@ -74,6 +75,26 @@ function renderGrid(yearMonth, data) {
         totalEl.innerHTML = (daysText ? daysText + ' ' : '') + syncBadge;
     } else {
         totalEl.textContent = daysText;
+    }
+
+    // Update the timeline rail dot and the month card status ring.
+    const _ringCls = syncStatus === 'synced' ? 'ok' : syncStatus === 'requires_action' ? 'warn' : 'pending';
+
+    const tlLink = document.querySelector(`.timeline-month[href="#card-${yearMonth}"]`);
+    if (tlLink) {
+        const dot = tlLink.querySelector('.tl-dot');
+        if (dot) dot.className = 'tl-dot ' + _ringCls;
+    }
+
+    const RING_ICONS = {
+        ok:      '<polyline points="20 6 9 17 4 12"/>',
+        warn:    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+        pending: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+    };
+    const ringEl = document.getElementById('ring-' + yearMonth);
+    if (ringEl) {
+        ringEl.className = 'month-status-ring ' + _ringCls;
+        ringEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">${RING_ICONS[_ringCls]}</svg>`;
     }
 
     const PROVIDER_DISPLAY = {
@@ -390,35 +411,80 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (grid) grid.innerHTML = '<div class="card-loading" style="color:#dc3545">Load error</div>';
         });
     }
+    setupInfiniteScroll();
 });
-// ── Append a month card to the grid ────────────────────────────────────────────────
-function appendMonthCard(ym, year, month) {
-    const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'long' });
+// ── Append a month card to the main grid ─────────────────────────────────────
+function appendMonthCard(ym, year, monthNum) {
+    const monthName = new Date(year, monthNum - 1, 1).toLocaleString('default', { month: 'long' });
     const div = document.createElement('div');
     div.className = 'month-card';
     div.id = 'card-' + ym;
     div.innerHTML = `
-        <div class="month-header">
-            <div class="month-title-row">
-                <span>${monthName} ${year}</span>
-                <div class="month-btn-group">
-                    <a class="sync-review-link" href="/month/${ym}" title="Sync Review">⇄</a>
-                    <button class="pull-btn" data-month="${ym}" onclick="pullMonth(this)" title="Pull">⬇</button>
-                    <button class="reset-btn" data-month="${ym}" onclick="resetMonth(this)" title="Reset month data">↺</button>
-                </div>
+        <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="month-status-ring pending" id="ring-${ym}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             </div>
-            <div class="total-label" id="total-${ym}"></div>
+            <div class="month-info">
+                <div class="month-title">${monthName} ${year}</div>
+                <div class="month-meta" id="total-${ym}"></div>
+            </div>
+            <div class="month-btn-group">
+                <a class="sync-review-link month-action-btn" href="/month/${ym}" title="Sync Review" onclick="event.stopPropagation()">⇄</a>
+                <button class="pull-btn month-action-btn" data-month="${ym}"
+                        onclick="event.stopPropagation(); pullMonth(this)" title="Pull">⬇</button>
+                <button class="reset-btn month-action-btn" data-month="${ym}"
+                        onclick="event.stopPropagation(); resetMonth(this)" title="Reset month data">↺</button>
+            </div>
+            <svg class="expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div class="provider-grid" id="grid-${ym}">
-            <div class="card-loading">Loading…</div>
-        </div>
-        <div class="pull-status" id="status-${ym}"></div>`;
-    document.getElementById('calendar-grid').appendChild(div);
+        <div class="month-body">
+            <div class="provider-grid" id="grid-${ym}">
+                <div class="card-loading">Loading…</div>
+            </div>
+            <div class="pull-status" id="status-${ym}"></div>
+        </div>`;
+    const sentinel = document.getElementById('load-more-sentinel');
+    const grid = document.getElementById('calendar-grid');
+    if (sentinel) grid.insertBefore(div, sentinel);
+    else grid.appendChild(div);
 }
 
-// ── Load 12 more months going back in time ────────────────────────────────────────
+// ── Append a month entry to the timeline rail ─────────────────────────────────
+function appendTimelineEntry(ym, year, monthNum) {
+    const monthName = new Date(year, monthNum - 1, 1).toLocaleString('default', { month: 'long' });
+    const list = document.querySelector('.timeline-list');
+    if (!list) return;
+    const sentinel = document.getElementById('tl-sentinel');
+
+    // Add a year header when crossing a year boundary
+    const yearDivs = list.querySelectorAll('.timeline-year');
+    const lastYearEl = yearDivs[yearDivs.length - 1];
+    const lastYear = lastYearEl ? parseInt(lastYearEl.textContent) : null;
+    if (lastYear !== year) {
+        const yearDiv = document.createElement('div');
+        yearDiv.className = 'timeline-year';
+        yearDiv.textContent = year;
+        if (sentinel) list.insertBefore(yearDiv, sentinel);
+        else list.appendChild(yearDiv);
+    }
+
+    const a = document.createElement('a');
+    a.href = '#card-' + ym;
+    a.className = 'timeline-month';
+    a.innerHTML = `<div class="tl-dot pending"></div>${monthName}`;
+    a.addEventListener('click', e => {
+        e.preventDefault();
+        const card = document.getElementById('card-' + ym);
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    if (sentinel) list.insertBefore(a, sentinel);
+    else list.appendChild(a);
+}
+
+// ── Load 12 more months going back in time ────────────────────────────────────
 async function loadMoreMonths() {
-    if (!oldestLoaded) return;
+    if (!oldestLoaded || _loadingMore) return;
+    _loadingMore = true;
     let [y, m] = oldestLoaded.split('-').map(Number);
     const newMonths = [];
     for (let i = 0; i < 12; i++) {
@@ -426,10 +492,10 @@ async function loadMoreMonths() {
         if (m === 0) { m = 12; y--; }
         const ym = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`;
         appendMonthCard(ym, y, m);
+        appendTimelineEntry(ym, y, m);
         newMonths.push(ym);
         oldestLoaded = ym;
     }
-    // newMonths is newest-first, so last = oldest, first = newest
     const from = newMonths[newMonths.length - 1];
     const to   = newMonths[0];
     try {
@@ -441,5 +507,28 @@ async function loadMoreMonths() {
             const grid = document.getElementById('grid-' + ym);
             if (grid) grid.innerHTML = '<div class="card-loading" style="color:#dc3545">Load error</div>';
         });
+    } finally {
+        _loadingMore = false;
+    }
+}
+
+// ── Wire up IntersectionObserver for infinite scroll ──────────────────────────
+function setupInfiniteScroll() {
+    const syncContent = document.querySelector('.sync-content');
+    if (syncContent) {
+        const obs = new IntersectionObserver(entries => {
+            if (entries.some(e => e.isIntersecting)) loadMoreMonths();
+        }, { root: syncContent, threshold: 0 });
+        const sentinel = document.getElementById('load-more-sentinel');
+        if (sentinel) obs.observe(sentinel);
+    }
+
+    const tlList = document.querySelector('.timeline-list');
+    if (tlList) {
+        const obs = new IntersectionObserver(entries => {
+            if (entries.some(e => e.isIntersecting)) loadMoreMonths();
+        }, { root: tlList, threshold: 0 });
+        const sentinel = document.getElementById('tl-sentinel');
+        if (sentinel) obs.observe(sentinel);
     }
 }

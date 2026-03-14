@@ -58,7 +58,7 @@ fetch('/api/recent-activity')
     .then(r => r.json())
     .then(d => {
         if (d.formatted) {
-            const el = document.getElementById('recent-activity-time');
+            const el = document.getElementById('recent-activity-time-sync');
             if (el) el.textContent = d.formatted;
         }
     })
