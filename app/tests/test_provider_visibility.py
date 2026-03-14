@@ -168,7 +168,11 @@ class TestSaveSystemProviders:
     """save_system_providers() persists values and is idempotent."""
 
     def test_save_and_reload(self, db):
-        from tracekit.appconfig import ALL_PROVIDERS, get_system_providers, save_system_providers
+        from tracekit.appconfig import (
+            ALL_PROVIDERS,
+            get_system_providers,
+            save_system_providers,
+        )
 
         payload = {p: False for p in ALL_PROVIDERS}
         save_system_providers(payload)
@@ -235,7 +239,11 @@ class TestToggleProviderEndpoint:
         assert get_system_providers()["strava"] is False
 
     def test_toggle_enables_disabled_provider(self, admin_client, db):
-        from tracekit.appconfig import ALL_PROVIDERS, get_system_providers, save_system_providers
+        from tracekit.appconfig import (
+            ALL_PROVIDERS,
+            get_system_providers,
+            save_system_providers,
+        )
 
         save_system_providers({p: (p != "strava") for p in ALL_PROVIDERS})
         resp = admin_client.post("/admin/providers/strava/toggle")

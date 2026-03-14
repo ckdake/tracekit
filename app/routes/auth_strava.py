@@ -17,7 +17,10 @@ def _get_strava_client_credentials(strava_cfg: dict) -> tuple[str, str]:
     precedence, falling back to any value the user has stored.
     """
     if strava_cfg.get("use_personal_credentials"):
-        return strava_cfg.get("client_id", "").strip(), strava_cfg.get("client_secret", "").strip()
+        return (
+            strava_cfg.get("client_id", "").strip(),
+            strava_cfg.get("client_secret", "").strip(),
+        )
     client_id = os.environ.get("STRAVA_CLIENT_ID", "").strip() or strava_cfg.get("client_id", "").strip()
     client_secret = os.environ.get("STRAVA_CLIENT_SECRET", "").strip() or strava_cfg.get("client_secret", "").strip()
     return client_id, client_secret

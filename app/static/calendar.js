@@ -1,6 +1,20 @@
 // Calendar page logic.
-// Expects `PROVIDER_CONFIG` and `INITIAL_OLDEST` to be defined inline before this script loads.
-/* global PROVIDER_CONFIG, INITIAL_OLDEST */
+// Expects `PROVIDER_CONFIG`, `INITIAL_OLDEST`, `OLDEST_ACTIVITY_MONTH`, and `HOME_TIMEZONE` to be defined inline before this script loads.
+/* global PROVIDER_CONFIG, INITIAL_OLDEST, OLDEST_ACTIVITY_MONTH, HOME_TIMEZONE */
+
+// ── Format a Unix timestamp in the user's home timezone ──────────────────────
+function formatSyncTime(ts) {
+    if (!ts) return '';
+    try {
+        return new Intl.DateTimeFormat('en-US', {
+            timeZone: HOME_TIMEZONE,
+            month: 'short', day: 'numeric',
+            hour: 'numeric', minute: '2-digit', hour12: false,
+        }).format(new Date(ts * 1000));
+    } catch (_) {
+        return new Date(ts * 1000).toLocaleString();
+    }
+}
 
 let oldestLoaded = INITIAL_OLDEST || null;
 let _loadingMore  = false;
@@ -59,23 +73,9 @@ function renderGrid(yearMonth, data) {
         return;
     }
 
-    const allActiveDays = new Set();
-    enabledProviders.forEach(p => {
-        ((data.activity_days || {})[p] || []).forEach(d => allActiveDays.add(d));
-    });
-    const daysText = allActiveDays.size > 0 ? allActiveDays.size + ' active days' : '';
+    const maxCount = Math.max(0, ...enabledProviders.map(p => data.activity_counts[p] || 0));
+    totalEl.textContent = maxCount > 0 ? maxCount + ' activities' : '';
     const syncStatus = data.month_sync_status;
-    let syncBadge = '';
-    if (syncStatus === 'synced') {
-        syncBadge = '<span class="month-sync-badge month-sync-synced" title="Synchronized — no changes needed">✓</span>';
-    } else if (syncStatus === 'requires_action') {
-        syncBadge = '<span class="month-sync-badge month-sync-action" title="Sync review needed — changes required">!</span>';
-    }
-    if (syncBadge) {
-        totalEl.innerHTML = (daysText ? daysText + ' ' : '') + syncBadge;
-    } else {
-        totalEl.textContent = daysText;
-    }
 
     // Update the timeline rail dot and the month card status ring.
     const _ringCls = syncStatus === 'synced' ? 'ok' : syncStatus === 'requires_action' ? 'warn' : 'pending';
@@ -132,10 +132,8 @@ function renderGrid(yearMonth, data) {
             ? '<div class="provider-devices">' + devices.map(d => '<span class="device-chip">⌚ ' + d + '</span>').join('') + '</div>'
             : '';
 
-        // Logo or fallback text label at bottom
-        const logoHtml = info.logo
-            ? '<div class="provider-logo-row"><a href="' + info.logoHref + '" target="_blank" rel="noopener"><img src="' + info.logo + '" alt="' + info.logoAlt + '" class="provider-logo-img"></a></div>'
-            : '<div class="provider-name-label">' + (info.label || p) + '</div>';
+        // Provider name at the top
+        const nameHtml = '<div class="provider-name-label">' + (info.label || p) + '</div>';
 
         // Status label shown in the chiclet footer
         let statusHtml = '';
@@ -150,7 +148,13 @@ function renderGrid(yearMonth, data) {
             }
         }
 
-        // Footer strip: status on left, pull button on right.
+        // Sync timestamp shown in footer when not actively syncing
+        const syncTime = (!isActive && pullStatus && pullStatus.updated_at)
+            ? formatSyncTime(pullStatus.updated_at) : '';
+        const syncTimeHtml = syncTime
+            ? '<span class="pcs-sync-time">' + syncTime + '</span>' : '';
+
+        // Footer strip: status/time on left, pull button on right.
         const isSuccess = pullStatus && pullStatus.status === 'success';
         const btnContent = isActive   ? '<span class="spinner spinner-sm"></span>'
                          : isSuccess  ? '<span class="btn-icon-check">✓</span><span class="btn-icon-pull">⬇</span>'
@@ -162,10 +166,11 @@ function renderGrid(yearMonth, data) {
             + ' data-month="' + yearMonth + '" data-provider="' + p
             + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">'
             + btnContent + '</button>';
-        const footerHtml = '<div class="provider-footer">' + statusHtml + pullBtn + '</div>';
+        const footerHtml = '<div class="provider-footer">'
+            + (statusHtml || syncTimeHtml) + pullBtn + '</div>';
 
         return '<div class="provider-status ' + cls + ' ' + providerCls + '" title="' + tooltip + '">'
-            + '<div class="provider-content">' + countHtml + miniCalHtml + deviceHtml + logoHtml + '</div>'
+            + '<div class="provider-content">' + nameHtml + countHtml + miniCalHtml + deviceHtml + '</div>'
             + footerHtml
             + '</div>';
     }).join('');
@@ -475,7 +480,10 @@ function appendTimelineEntry(ym, year, monthNum) {
     a.addEventListener('click', e => {
         e.preventDefault();
         const card = document.getElementById('card-' + ym);
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (card) {
+            card.classList.add('expanded');
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     });
     if (sentinel) list.insertBefore(a, sentinel);
     else list.appendChild(a);
@@ -484,6 +492,8 @@ function appendTimelineEntry(ym, year, monthNum) {
 // ── Load 12 more months going back in time ────────────────────────────────────
 async function loadMoreMonths() {
     if (!oldestLoaded || _loadingMore) return;
+    // Stop once we've passed the oldest month that has any activity data.
+    if (OLDEST_ACTIVITY_MONTH && oldestLoaded <= OLDEST_ACTIVITY_MONTH) return;
     _loadingMore = true;
     let [y, m] = oldestLoaded.split('-').map(Number);
     const newMonths = [];
@@ -509,6 +519,28 @@ async function loadMoreMonths() {
         });
     } finally {
         _loadingMore = false;
+        requestAnimationFrame(_recheckSentinels);
+    }
+}
+
+// ── Re-check whether sentinels are still visible after a load ────────────────
+// IntersectionObserver only fires on state *changes*; if the sentinel is still
+// visible after inserting 12 months, we need to trigger another load manually.
+function _recheckSentinels() {
+    if (OLDEST_ACTIVITY_MONTH && oldestLoaded <= OLDEST_ACTIVITY_MONTH) return;
+    const syncContent = document.querySelector('.sync-content');
+    const mainSentinel = document.getElementById('load-more-sentinel');
+    if (syncContent && mainSentinel) {
+        const sr = mainSentinel.getBoundingClientRect();
+        const cr = syncContent.getBoundingClientRect();
+        if (sr.top < cr.bottom && sr.bottom > cr.top) { loadMoreMonths(); return; }
+    }
+    const tlList = document.querySelector('.timeline-list');
+    const tlSentinel = document.getElementById('tl-sentinel');
+    if (tlList && tlSentinel) {
+        const sr = tlSentinel.getBoundingClientRect();
+        const lr = tlList.getBoundingClientRect();
+        if (sr.top < lr.bottom && sr.bottom > lr.top) loadMoreMonths();
     }
 }
 

@@ -3,7 +3,11 @@
 from db_init import _init_db, load_tracekit_config
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
-from helpers import get_database_info, get_most_recent_activity, get_provider_activity_counts
+from helpers import (
+    get_database_info,
+    get_most_recent_activity,
+    get_provider_activity_counts,
+)
 
 api_bp = Blueprint("api", __name__)
 

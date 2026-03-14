@@ -296,7 +296,11 @@ class FileProvider(FitnessProvider):
         for year_month in unique_months:
             existing_sync = ProviderSync.get_or_none(year_month, self.provider_name)
             if not existing_sync:
-                ProviderSync.create(year_month=year_month, provider=self.provider_name, user_id=get_user_id())
+                ProviderSync.create(
+                    year_month=year_month,
+                    provider=self.provider_name,
+                    user_id=get_user_id(),
+                )
                 print(f"Marked {year_month} as synced for {self.provider_name}")
 
     def pull_activities(self, date_filter: str | None = None) -> list["FileActivity"]:

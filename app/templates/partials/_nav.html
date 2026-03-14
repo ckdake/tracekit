@@ -10,7 +10,7 @@
         {% endif %}
         <a href="#card-{{ month.year_month }}"
            class="timeline-month{% if month.year_month == (current_month or '') %} active{% endif %}"
-           onclick="document.getElementById('card-{{ month.year_month }}').scrollIntoView({behavior:'smooth',block:'start'}); return false;">
+           onclick="const _c=document.getElementById('card-{{ month.year_month }}'); _c.classList.add('expanded'); _c.scrollIntoView({behavior:'smooth',block:'start'}); return false;">
             <div class="tl-dot pending"></div>
             {{ month.month_name }}
         </a>

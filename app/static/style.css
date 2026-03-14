@@ -205,6 +205,14 @@ h2 { color: #34495e; margin-top: 30px; }
 .auth-alt a:hover { text-decoration: underline; }
 
 /* ── Header auth ─────────────────────────────────────────────────────────────── */
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 4px;
+    padding-left: 12px;
+    border-left: 1px solid rgba(255,255,255,0.12);
+}
 .header-user-email {
     font-size: 0.8rem;
     color: rgba(255,255,255,.45);
@@ -689,14 +697,24 @@ select#timezone:focus {
     letter-spacing: -0.5px;
 }
 
-/* Fallback text label for logo-less providers */
+/* Provider name label — shown at top of chiclet */
 .provider-name-label {
-    font-size: 0.6rem;
+    font-size: 0.68rem;
     font-weight: 600;
     opacity: 0.85;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-top: auto;
+}
+
+/* Sync timestamp in provider footer */
+.pcs-sync-time {
+    font-size: 9px;
+    color: rgba(255,255,255,0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
 }
 
 /* Provider logo */
@@ -1488,21 +1506,19 @@ select#timezone:focus {
     box-shadow: var(--shadow-md);
 }
 
-/* Sync status badge — shared base, used on both dashboard cards and the month header */
-.month-sync-badge {
+/* Sync status badge — month review page header only */
+#month-sync-badge {
     display: inline-flex;
     align-items: center;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
-    padding: 2px 7px;
+    padding: 3px 10px;
     border-radius: 10px;
     vertical-align: middle;
     letter-spacing: 0.01em;
 }
 .month-sync-synced { background: #d4edda; color: #155724; }
 .month-sync-action { background: #fff3cd; color: #7a5800; }
-/* Larger variant in the sync-review page header */
-#month-sync-badge { font-size: 13px; padding: 3px 10px; }
 
 .btn-refresh {
     padding: 6px 14px;
@@ -1810,6 +1826,7 @@ body { background: var(--page-bg); font-family: 'DM Sans', -apple-system, BlinkM
     cursor: pointer;
     user-select: none;
     background: none;
+    text-align: left;
     border: none;
     width: 100%;
 }

@@ -16,7 +16,10 @@ def _get_ridewithgps_client_credentials(rwgps_cfg: dict) -> tuple[str, str]:
     precedence, falling back to any value the user has stored.
     """
     if rwgps_cfg.get("use_personal_credentials"):
-        return rwgps_cfg.get("client_id", "").strip(), rwgps_cfg.get("client_secret", "").strip()
+        return (
+            rwgps_cfg.get("client_id", "").strip(),
+            rwgps_cfg.get("client_secret", "").strip(),
+        )
     client_id = os.environ.get("RIDEWITHGPS_CLIENT_ID", "").strip() or rwgps_cfg.get("client_id", "").strip()
     client_secret = (
         os.environ.get("RIDEWITHGPS_CLIENT_SECRET", "").strip() or rwgps_cfg.get("client_secret", "").strip()

@@ -14,7 +14,7 @@
         </div>
 
         {% for month in initial_months %}
-        <div class="month-card expanded{% if month.year_month == current_month %} current{% endif %}"
+        <div class="month-card{% if loop.first %} expanded{% endif %}{% if month.year_month == current_month %} current{% endif %}"
              id="card-{{ month.year_month }}">
             <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
                 <div class="month-status-ring pending" id="ring-{{ month.year_month }}">
@@ -46,8 +46,10 @@
 </div>
 
 <script>
-const PROVIDER_CONFIG = {{ (config.providers or {})|tojson }};
-const INITIAL_OLDEST  = {{ (initial_months[-1].year_month if initial_months else '')|tojson }};
+const PROVIDER_CONFIG          = {{ (config.providers or {})|tojson }};
+const INITIAL_OLDEST           = {{ (initial_months[-1].year_month if initial_months else '')|tojson }};
+const OLDEST_ACTIVITY_MONTH    = {{ (oldest_activity_month or '')|tojson }};
+const HOME_TIMEZONE            = {{ (config.home_timezone or 'UTC')|tojson }};
 </script>
 <script src="{{ url_for('static', filename='calendar.js') }}"></script>
 {% endblock %}

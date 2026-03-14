@@ -277,7 +277,11 @@ class TestFileUpload:
             from io import BytesIO
 
             data_payload = {"file": (BytesIO(buf.read()), "activities.zip", "application/zip")}
-            resp = c.post("/api/file/upload", data=data_payload, content_type="multipart/form-data")
+            resp = c.post(
+                "/api/file/upload",
+                data=data_payload,
+                content_type="multipart/form-data",
+            )
 
         data = resp.get_json()
         assert resp.status_code == 200
@@ -308,7 +312,11 @@ class TestFileUpload:
             from io import BytesIO
 
             data_payload = {"file": (BytesIO(buf.read()), "bundle.zip", "application/zip")}
-            resp = c.post("/api/file/upload", data=data_payload, content_type="multipart/form-data")
+            resp = c.post(
+                "/api/file/upload",
+                data=data_payload,
+                content_type="multipart/form-data",
+            )
 
         data = resp.get_json()
         assert "ride.gpx" in data["skipped"]

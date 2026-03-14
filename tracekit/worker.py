@@ -84,14 +84,21 @@ def pull_month(self, year_month: str, user_id: int = 0):
 
     try:
         from tracekit.core import tracekit as tracekit_class
-        from tracekit.provider_status import PULL_STATUS_QUEUED, is_pull_active, set_pull_status
+        from tracekit.provider_status import (
+            PULL_STATUS_QUEUED,
+            is_pull_active,
+            set_pull_status,
+        )
 
         with tracekit_class() as tk:
             tk.delete_month_activities(year_month)
             providers = tk.enabled_providers
 
         with contextlib.suppress(Exception):
-            from tracekit.provider_status import MONTH_SYNC_UNKNOWN, set_month_sync_status
+            from tracekit.provider_status import (
+                MONTH_SYNC_UNKNOWN,
+                set_month_sync_status,
+            )
 
             set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)
 
@@ -147,22 +154,37 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
         except Exception:
             pass
     except Exception as exc:
-        from tracekit.provider_status import RATE_LIMIT_SHORT_TERM, ProviderRateLimitError
+        from tracekit.provider_status import (
+            RATE_LIMIT_SHORT_TERM,
+            ProviderRateLimitError,
+        )
 
         if isinstance(exc, ProviderRateLimitError):
             if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
                 # Short-term: re-queue status (same task ID on retry), notify, then retry
                 try:
-                    from tracekit.provider_status import PULL_STATUS_QUEUED, set_pull_status
+                    from tracekit.provider_status import (
+                        PULL_STATUS_QUEUED,
+                        set_pull_status,
+                    )
 
-                    set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=self.request.id)
+                    set_pull_status(
+                        year_month,
+                        provider_name,
+                        PULL_STATUS_QUEUED,
+                        job_id=self.request.id,
+                    )
                 except Exception:
                     pass
                 raise self.retry(countdown=exc.retry_after, exc=exc)
             else:
                 # Long-term: fail immediately without retry
                 try:
-                    from tracekit.provider_status import PULL_STATUS_ERROR, record_rate_limit, set_pull_status
+                    from tracekit.provider_status import (
+                        PULL_STATUS_ERROR,
+                        record_rate_limit,
+                        set_pull_status,
+                    )
 
                     set_pull_status(year_month, provider_name, PULL_STATUS_ERROR, message=str(exc))
                     record_rate_limit(
@@ -277,7 +299,10 @@ def apply_sync_change(self, change_dict: dict, year_month: str, user_id: int = 0
             except Exception:
                 pass
             with contextlib.suppress(Exception):
-                from tracekit.provider_status import MONTH_SYNC_UNKNOWN, set_month_sync_status
+                from tracekit.provider_status import (
+                    MONTH_SYNC_UNKNOWN,
+                    set_month_sync_status,
+                )
 
                 set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)
             return {"success": True, "message": msg}
@@ -293,7 +318,10 @@ def apply_sync_change(self, change_dict: dict, year_month: str, user_id: int = 0
             return {"success": False, "message": msg}
 
     except Exception as exc:
-        from tracekit.provider_status import RATE_LIMIT_SHORT_TERM, ProviderRateLimitError
+        from tracekit.provider_status import (
+            RATE_LIMIT_SHORT_TERM,
+            ProviderRateLimitError,
+        )
 
         if isinstance(exc, ProviderRateLimitError):
             if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
@@ -420,7 +448,11 @@ def reset_provider(self, provider_name: str, user_id: int = 0):
             .where((ProviderSync.provider == provider_name) & (ProviderSync.user_id == user_id))
             .execute()
         )
-        return {"provider": provider_name, "activities_deleted": deleted, "sync_records_deleted": sync_deleted}
+        return {
+            "provider": provider_name,
+            "activities_deleted": deleted,
+            "sync_records_deleted": sync_deleted,
+        }
     except Exception as exc:
         try:
             from tracekit.notification import create_notification

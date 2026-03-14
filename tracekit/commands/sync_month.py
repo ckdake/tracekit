@@ -13,7 +13,12 @@ from collections import defaultdict
 from tabulate import tabulate
 
 from tracekit.core import tracekit as tracekit_class
-from tracekit.sync import ChangeType, apply_change, build_comparison_rows, compute_month_changes
+from tracekit.sync import (
+    ChangeType,
+    apply_change,
+    build_comparison_rows,
+    compute_month_changes,
+)
 
 # ---------------------------------------------------------------------------
 # ANSI colour helpers

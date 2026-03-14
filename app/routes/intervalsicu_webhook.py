@@ -46,7 +46,11 @@ def _find_user(athlete_id) -> int | None:
         _init_db()
         return find_user_id_by_intervalsicu_athlete_id(str(athlete_id))
     except Exception as e:
-        log.error("Intervals.icu webhook: error looking up user for athlete_id=%s: %s", athlete_id, e)
+        log.error(
+            "Intervals.icu webhook: error looking up user for athlete_id=%s: %s",
+            athlete_id,
+            e,
+        )
         return None
 
 
@@ -103,7 +107,10 @@ def _handle_event(payload: dict) -> None:
 
     user_id = _find_user(athlete_id)
     if user_id is None:
-        log.warning("Intervals.icu webhook: no local user found for athlete_id=%s — ignoring", athlete_id)
+        log.warning(
+            "Intervals.icu webhook: no local user found for athlete_id=%s — ignoring",
+            athlete_id,
+        )
         _notify_admin(
             f"Intervals.icu webhook: {action} event for unknown athlete {athlete_id} (activity {activity_id})",
             "error",
@@ -122,12 +129,22 @@ def _handle_event(payload: dict) -> None:
             return
         _notify_admin(f"Intervals.icu webhook: activity {action} — id={activity_id} user={user_id}")
     except Exception as e:
-        log.error("Intervals.icu webhook: error handling %s for activity %s: %s", action, activity_id, e)
-        _notify_admin(f"Intervals.icu webhook: error on activity {action} (id={activity_id}): {e}", "error")
+        log.error(
+            "Intervals.icu webhook: error handling %s for activity %s: %s",
+            action,
+            activity_id,
+            e,
+        )
+        _notify_admin(
+            f"Intervals.icu webhook: error on activity {action} (id={activity_id}): {e}",
+            "error",
+        )
 
 
 def _delete_local_activity(activity_id, user_id: int) -> None:
-    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import (
+        IntervalsICUActivity,
+    )
 
     deleted = (
         IntervalsICUActivity.delete()
@@ -144,19 +161,27 @@ def _delete_local_activity(activity_id, user_id: int) -> None:
 
 def _sync_local_activity(activity_id, user_id: int) -> None:
     from tracekit.appconfig import AppConfig
-    from tracekit.providers.intervalsicu.intervalsicu_provider import IntervalsICUProvider
+    from tracekit.providers.intervalsicu.intervalsicu_provider import (
+        IntervalsICUProvider,
+    )
 
     row = AppConfig.get_or_none((AppConfig.key == "providers") & (AppConfig.user_id == user_id))
     if row is None:
         log.warning("Intervals.icu webhook: no config for user_id=%d", user_id)
-        _notify_admin(f"Intervals.icu webhook: no provider config for user {user_id} (activity {activity_id})", "error")
+        _notify_admin(
+            f"Intervals.icu webhook: no provider config for user {user_id} (activity {activity_id})",
+            "error",
+        )
         return
 
     icu_cfg = json.loads(row.value).get("intervalsicu", {})
     access_token = icu_cfg.get("access_token", "")
     if not access_token:
         log.warning("Intervals.icu webhook: no access token for user_id=%d", user_id)
-        _notify_admin(f"Intervals.icu webhook: no access token for user {user_id} (activity {activity_id})", "error")
+        _notify_admin(
+            f"Intervals.icu webhook: no access token for user {user_id} (activity {activity_id})",
+            "error",
+        )
         return
 
     provider = IntervalsICUProvider(config=icu_cfg)

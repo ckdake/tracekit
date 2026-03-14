@@ -180,7 +180,11 @@ class TestGarminProviderPullActivities:
 
         mock_provider_sync.get_or_none.return_value = None
 
-        raw_activity = {"activityId": 12345, "activityName": "Morning Ride", "activityType": {"typeKey": "cycling"}}
+        raw_activity = {
+            "activityId": 12345,
+            "activityName": "Morning Ride",
+            "activityType": {"typeKey": "cycling"},
+        }
         provider.fetch_activities_for_month = Mock(return_value=[raw_activity])
         provider._get_device_map = Mock(return_value={})
         provider._get_garmin_activities_for_month = Mock(return_value=[])
@@ -324,7 +328,10 @@ class TestGarminProviderGear:
             {"uuid": "uuid-bike", "displayName": "Trek Bike"},
             {"uuid": "uuid-shoes", "displayName": "Running Shoes"},
             {"uuid": "", "displayName": "No UUID"},  # missing uuid should be ignored
-            {"uuid": "uuid-noname", "displayName": ""},  # missing name should be ignored
+            {
+                "uuid": "uuid-noname",
+                "displayName": "",
+            },  # missing name should be ignored
         ]
         provider._get_client = Mock(return_value=mock_client)
 
@@ -405,7 +412,10 @@ class TestGarminProviderGear:
         mock_client = Mock()
         mock_client.get_device_last_used.return_value = {"userProfileNumber": "12345"}
         mock_client.get_gear.return_value = [{"uuid": "uuid-new", "displayName": "New Bike"}]
-        mock_client.get_activity_gear.return_value = {"uuid": "uuid-old", "displayName": "Old Bike"}
+        mock_client.get_activity_gear.return_value = {
+            "uuid": "uuid-old",
+            "displayName": "Old Bike",
+        }
         provider._get_client = Mock(return_value=mock_client)
 
         with patch("tracekit.providers.garmin.garmin_provider.GarminActivity") as mock_act_cls:

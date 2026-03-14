@@ -51,14 +51,20 @@ class IntervalsICUProvider(FitnessProvider):
         url = f"{_BASE_URL}{path}"
         resp = requests.post(url, headers=self._auth_headers(), json=data, timeout=30)
         if not resp.ok:
-            raise requests.HTTPError(f"{resp.status_code} {resp.reason} for url: {url} — {resp.text}", response=resp)
+            raise requests.HTTPError(
+                f"{resp.status_code} {resp.reason} for url: {url} — {resp.text}",
+                response=resp,
+            )
         return resp.json()
 
     def _put(self, path: str, data: dict) -> Any:
         url = f"{_BASE_URL}{path}"
         resp = requests.put(url, headers=self._auth_headers(), json=data, timeout=30)
         if not resp.ok:
-            raise requests.HTTPError(f"{resp.status_code} {resp.reason} for url: {url} — {resp.text}", response=resp)
+            raise requests.HTTPError(
+                f"{resp.status_code} {resp.reason} for url: {url} — {resp.text}",
+                response=resp,
+            )
         return resp.json()
 
     @property
@@ -207,7 +213,10 @@ class IntervalsICUProvider(FitnessProvider):
         # Return all activities for this month from the database
         start = datetime.datetime(year, month, 1, tzinfo=datetime.UTC)
         end = datetime.datetime(
-            year + 1 if month == 12 else year, 1 if month == 12 else month + 1, 1, tzinfo=datetime.UTC
+            year + 1 if month == 12 else year,
+            1 if month == 12 else month + 1,
+            1,
+            tzinfo=datetime.UTC,
         )
         start_ts = int(start.timestamp())
         end_ts = int(end.timestamp())

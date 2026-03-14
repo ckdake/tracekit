@@ -14,7 +14,10 @@ def run() -> None:
         home_timezone = str(home_tz)
 
         from tracekit.provider_status import get_all_statuses
-        from tracekit.stats import get_most_recent_activity, get_provider_activity_counts
+        from tracekit.stats import (
+            get_most_recent_activity,
+            get_provider_activity_counts,
+        )
 
         counts = get_provider_activity_counts()
         statuses = get_all_statuses()

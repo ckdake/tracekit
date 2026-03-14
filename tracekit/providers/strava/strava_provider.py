@@ -258,7 +258,11 @@ class StravaProvider(FitnessProvider):
                     continue
 
             # Mark this month as synced
-            ProviderSync.create(year_month=date_filter, provider=self.provider_name, user_id=get_user_id())
+            ProviderSync.create(
+                year_month=date_filter,
+                provider=self.provider_name,
+                user_id=get_user_id(),
+            )
             print(f"Synced {processed_count} Strava activities")
         else:
             print(f"Month {date_filter} already synced for {self.provider_name}")

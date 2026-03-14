@@ -64,6 +64,21 @@ def get_provider_activity_counts() -> dict[str, int]:
         return {"error": f"Database error: {e}"}  # type: ignore[return-value]
 
 
+def get_oldest_activity_month() -> str | None:
+    """Return the earliest month with any activity as 'YYYY-MM', or None."""
+    if not _init_db():
+        return None
+    try:
+        from tracekit.db import get_db
+        from tracekit.stats import get_oldest_activity_month as _get_oldest
+
+        db = get_db()
+        db.connect(reuse_if_open=True)
+        return _get_oldest()
+    except Exception:
+        return None
+
+
 def get_gear_summary(home_timezone: str = "UTC") -> list[dict]:
     """Return per-gear mileage summary rows, sorted by most-recently used."""
     if not _init_db():

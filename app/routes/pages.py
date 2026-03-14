@@ -7,7 +7,12 @@ import pytz
 from db_init import load_tracekit_config
 from flask import Blueprint, redirect, render_template
 from flask_login import current_user
-from helpers import get_current_date_in_timezone, get_gear_fix_months, get_gear_summary
+from helpers import (
+    get_current_date_in_timezone,
+    get_gear_fix_months,
+    get_gear_summary,
+    get_oldest_activity_month,
+)
 
 pages_bp = Blueprint("pages", __name__)
 
@@ -44,7 +49,10 @@ def settings():
     # Strip disabled providers from config before it becomes INITIAL_CONFIG in the
     # browser. This is the authoritative gate — the client-side ENABLED_PROVIDERS
     # filter is defence-in-depth only.
-    visible_config = {**config, "providers": {k: v for k, v in all_providers.items() if k in enabled_set}}
+    visible_config = {
+        **config,
+        "providers": {k: v for k, v in all_providers.items() if k in enabled_set},
+    }
 
     # Pass hidden provider configs separately so autoSave can round-trip them back
     # to the server unchanged, preserving credentials if a provider is re-enabled.
@@ -133,5 +141,6 @@ def index():
         config=config,
         initial_months=months,
         current_month=current_month,
+        oldest_activity_month=get_oldest_activity_month(),
         page_name="Sync",
     )

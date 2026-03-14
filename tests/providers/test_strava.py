@@ -547,7 +547,10 @@ class TestStravaProviderPullActivities:
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_rate_limit_propagates(self, mock_provider_sync):
         """Test that ProviderRateLimitError propagates out of the activity loop."""
-        from tracekit.provider_status import RATE_LIMIT_LONG_TERM, ProviderRateLimitError
+        from tracekit.provider_status import (
+            RATE_LIMIT_LONG_TERM,
+            ProviderRateLimitError,
+        )
 
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
 

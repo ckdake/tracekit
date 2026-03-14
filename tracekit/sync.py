@@ -706,10 +706,10 @@ def build_comparison_rows(
                     "present": True,
                     "id": str(act["id"]),
                     "name": current_name,
-                    "display_name": current_name if name_status != "missing" else auth_name,
+                    "display_name": (current_name if name_status != "missing" else auth_name),
                     "name_status": name_status,
                     "equipment": act["equipment"],
-                    "display_equipment": act["equipment"] if equip_status != "missing" else auth_equipment,
+                    "display_equipment": (act["equipment"] if equip_status != "missing" else auth_equipment),
                     "equip_status": equip_status,
                 }
             else:
@@ -802,7 +802,9 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
                     else (False, f"Equipment update failed for {change.activity_id}")
                 )
             except Exception as exc:
-                from tracekit.providers.garmin.garmin_provider import GarminGearNotFoundError
+                from tracekit.providers.garmin.garmin_provider import (
+                    GarminGearNotFoundError,
+                )
 
                 if isinstance(exc, GarminGearNotFoundError):
                     return (
@@ -810,7 +812,10 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
                         f"Gear '{exc.gear_name}' not found in Garmin Connect. "
                         f"Add it at connect.garmin.com/modern/gear before syncing.",
                     )
-                return (False, f"Equipment update failed for {change.activity_id}: {exc}")
+                return (
+                    False,
+                    f"Equipment update failed for {change.activity_id}: {exc}",
+                )
 
         elif change_type == ChangeType.UPDATE_METADATA:
             prov = tracekit.get_provider(provider)
@@ -878,7 +883,10 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
             result = file_prov.process_single_file(file_path)
             if result.get("status") in ("ok", "skipped"):
                 return True, f"Downloaded and ingested {result.get('file')}"
-            return False, f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}"
+            return (
+                False,
+                f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}",
+            )
 
         elif change_type == ChangeType.DOWNLOAD_FROM_RIDEWITHGPS:
             rwgps_prov = tracekit.get_provider("ridewithgps")
@@ -899,7 +907,10 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
             result = file_prov.process_single_file(file_path)
             if result.get("status") in ("ok", "skipped"):
                 return True, f"Downloaded and ingested {result.get('file')}"
-            return False, f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}"
+            return (
+                False,
+                f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}",
+            )
 
         elif change_type == ChangeType.DOWNLOAD_FROM_INTERVALSICU:
             icu_prov = tracekit.get_provider("intervalsicu")
@@ -920,7 +931,10 @@ def apply_change(change: ActivityChange, tracekit: Tracekit, grouped: dict | Non
             result = file_prov.process_single_file(file_path)
             if result.get("status") in ("ok", "skipped"):
                 return True, f"Downloaded and ingested {result.get('file')}"
-            return False, f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}"
+            return (
+                False,
+                f"Download succeeded but ingestion failed: {result.get('reason', 'unknown')}",
+            )
 
         else:
             return False, f"Unsupported change type: {change_type}"

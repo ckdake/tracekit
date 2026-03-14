@@ -28,7 +28,9 @@ def _provider_model_map() -> dict[str, Any]:
     """Return {provider_name: model_class} for all known providers."""
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
-    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import (
+        IntervalsICUActivity,
+    )
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
@@ -47,7 +49,9 @@ def get_provider_activity_counts() -> dict[str, int]:
     """Return {provider_name: total_activity_count} for all known providers."""
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
-    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import (
+        IntervalsICUActivity,
+    )
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
@@ -78,7 +82,9 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
 
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
-    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import (
+        IntervalsICUActivity,
+    )
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity
@@ -124,6 +130,49 @@ def get_most_recent_activity(home_timezone: str = "UTC") -> dict[str, Any]:
     return {"timestamp": max_ts, "formatted": formatted}
 
 
+def get_oldest_activity_month() -> str | None:
+    """Return the earliest month with any activity as 'YYYY-MM', or None."""
+    from tracekit.providers.file.file_activity import FileActivity
+    from tracekit.providers.garmin.garmin_activity import GarminActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import (
+        IntervalsICUActivity,
+    )
+    from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
+    from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+    from tracekit.providers.strava.strava_activity import StravaActivity
+    from tracekit.user_context import get_user_id
+
+    models = [
+        StravaActivity,
+        GarminActivity,
+        RideWithGPSActivity,
+        IntervalsICUActivity,
+        SpreadsheetActivity,
+        FileActivity,
+    ]
+    uid = get_user_id()
+    min_ts: int | None = None
+    for model in models:
+        try:
+            row = (
+                model.select(model.start_time)
+                .where(model.start_time.is_null(False) & (model.user_id == uid))
+                .order_by(model.start_time.asc())
+                .first()
+            )
+            if row and row.start_time:
+                ts = int(row.start_time)
+                if min_ts is None or ts < min_ts:
+                    min_ts = ts
+        except Exception:
+            pass
+
+    if min_ts is None:
+        return None
+    dt = datetime.fromtimestamp(min_ts, tz=UTC)
+    return f"{dt.year:04d}-{dt.month:02d}"
+
+
 def get_gear_summary(home_timezone: str = "UTC") -> list[dict[str, Any]]:
     """Return per-gear mileage summary, sorted by most-recently used.
 
@@ -137,7 +186,9 @@ def get_gear_summary(home_timezone: str = "UTC") -> list[dict[str, Any]]:
 
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
-    from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
+    from tracekit.providers.intervalsicu.intervalsicu_activity import (
+        IntervalsICUActivity,
+    )
     from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
     from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
     from tracekit.providers.strava.strava_activity import StravaActivity

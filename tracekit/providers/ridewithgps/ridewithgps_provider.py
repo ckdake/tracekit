@@ -147,7 +147,11 @@ class RideWithGPSProvider(FitnessProvider):
                     print(f"Error processing RideWithGPS activity: {e}")
                     continue
 
-            ProviderSync.create(year_month=date_filter, provider=self.provider_name, user_id=get_user_id())
+            ProviderSync.create(
+                year_month=date_filter,
+                provider=self.provider_name,
+                user_id=get_user_id(),
+            )
             print(f"RideWithGPS Sync complete for {date_filter}")
 
         # Always return all activities for this month from the database
@@ -305,7 +309,15 @@ class RideWithGPSProvider(FitnessProvider):
             (RideWithGPSActivity.ridewithgps_id == str(trip_id)) & (RideWithGPSActivity.user_id == uid)
         )
         if existing:
-            for field in ("name", "distance", "start_time", "city", "state", "equipment", "device_name"):
+            for field in (
+                "name",
+                "distance",
+                "start_time",
+                "city",
+                "state",
+                "equipment",
+                "device_name",
+            ):
                 val = getattr(local, field, None)
                 if val is not None:
                     setattr(existing, field, val)

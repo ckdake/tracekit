@@ -319,7 +319,11 @@ def save_system_providers(providers: dict[str, bool]) -> None:
     """Persist system-level provider visibility settings."""
     try:
         (
-            AppConfig.insert(key=_SYSTEM_PROVIDERS_KEY, value=json.dumps(providers), user_id=_SYSTEM_USER_ID)
+            AppConfig.insert(
+                key=_SYSTEM_PROVIDERS_KEY,
+                value=json.dumps(providers),
+                user_id=_SYSTEM_USER_ID,
+            )
             .on_conflict(
                 conflict_target=[AppConfig.key, AppConfig.user_id],
                 update={AppConfig.value: json.dumps(providers)},
@@ -348,7 +352,11 @@ def save_strava_webhook_config(config: dict) -> None:
     """Persist Strava webhook config (system-level, user_id=0)."""
     try:
         (
-            AppConfig.insert(key=_STRAVA_WEBHOOK_KEY, value=json.dumps(config), user_id=_SYSTEM_USER_ID)
+            AppConfig.insert(
+                key=_STRAVA_WEBHOOK_KEY,
+                value=json.dumps(config),
+                user_id=_SYSTEM_USER_ID,
+            )
             .on_conflict(
                 conflict_target=[AppConfig.key, AppConfig.user_id],
                 update={AppConfig.value: json.dumps(config)},

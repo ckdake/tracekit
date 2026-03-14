@@ -417,8 +417,18 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [act1], "ridewithgps": [act2]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "ridewithgps": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")
@@ -440,8 +450,18 @@ class TestComputeMonthChanges:
         tk = _make_tracekit_mock(
             {"strava": [act1], "ridewithgps": [act2]},
             provider_config={
-                "strava": {"enabled": True, "priority": 1, "sync_name": True, "sync_equipment": True},
-                "ridewithgps": {"enabled": True, "priority": 2, "sync_name": True, "sync_equipment": True},
+                "strava": {
+                    "enabled": True,
+                    "priority": 1,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
+                "ridewithgps": {
+                    "enabled": True,
+                    "priority": 2,
+                    "sync_name": True,
+                    "sync_equipment": True,
+                },
             },
         )
         _, changes = compute_month_changes(tk, "2024-07")

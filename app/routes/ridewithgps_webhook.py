@@ -74,7 +74,11 @@ def _find_user(rwgps_user_id) -> int | None:
         _init_db()
         return find_user_id_by_rwgps_user_id(str(rwgps_user_id))
     except Exception as e:
-        log.error("RideWithGPS webhook: error looking up user for rwgps_user_id=%s: %s", rwgps_user_id, e)
+        log.error(
+            "RideWithGPS webhook: error looking up user for rwgps_user_id=%s: %s",
+            rwgps_user_id,
+            e,
+        )
         return None
 
 
@@ -111,8 +115,15 @@ def webhook_event():
         try:
             _handle_notification(notification)
         except Exception as e:
-            log.error("RideWithGPS webhook: unhandled error for notification %s: %s", notification, e)
-            _notify_admin(f"RideWithGPS webhook: unhandled error processing notification: {e}", "error")
+            log.error(
+                "RideWithGPS webhook: unhandled error for notification %s: %s",
+                notification,
+                e,
+            )
+            _notify_admin(
+                f"RideWithGPS webhook: unhandled error processing notification: {e}",
+                "error",
+            )
 
     # Always return 200 quickly — RWGPS has no retry mechanism.
     return "", 200
@@ -147,7 +158,10 @@ def _handle_notification(notification: dict) -> None:
 
     user_id = _find_user(rwgps_user_id)
     if user_id is None:
-        log.warning("RideWithGPS webhook: no local user found for rwgps_user_id=%s — ignoring", rwgps_user_id)
+        log.warning(
+            "RideWithGPS webhook: no local user found for rwgps_user_id=%s — ignoring",
+            rwgps_user_id,
+        )
         _notify_admin(
             f"RideWithGPS webhook: {action} event for unknown RWGPS user {rwgps_user_id} (trip {item_id})",
             "error",
@@ -166,7 +180,12 @@ def _handle_notification(notification: dict) -> None:
             return
         _notify_admin(f"RideWithGPS webhook: trip {action} — id={item_id} user={user_id}")
     except Exception as e:
-        log.error("RideWithGPS webhook: error handling %s event for trip %s: %s", action, item_id, e)
+        log.error(
+            "RideWithGPS webhook: error handling %s event for trip %s: %s",
+            action,
+            item_id,
+            e,
+        )
         _notify_admin(f"RideWithGPS webhook: error on trip {action} (id={item_id}): {e}", "error")
 
 
@@ -178,7 +197,12 @@ def _delete_local_trip(trip_id, user_id: int) -> None:
         .where((RideWithGPSActivity.ridewithgps_id == str(trip_id)) & (RideWithGPSActivity.user_id == user_id))
         .execute()
     )
-    log.info("RideWithGPS webhook: deleted %d local record(s) for trip_id=%s user_id=%d", deleted, trip_id, user_id)
+    log.info(
+        "RideWithGPS webhook: deleted %d local record(s) for trip_id=%s user_id=%d",
+        deleted,
+        trip_id,
+        user_id,
+    )
 
 
 def _sync_local_trip(trip_id, user_id: int) -> None:
@@ -188,14 +212,20 @@ def _sync_local_trip(trip_id, user_id: int) -> None:
     row = AppConfig.get_or_none((AppConfig.key == "providers") & (AppConfig.user_id == user_id))
     if row is None:
         log.warning("RideWithGPS webhook: no config for user_id=%d", user_id)
-        _notify_admin(f"RideWithGPS webhook: no provider config for user {user_id} (trip {trip_id})", "error")
+        _notify_admin(
+            f"RideWithGPS webhook: no provider config for user {user_id} (trip {trip_id})",
+            "error",
+        )
         return
 
     rwgps_cfg = json.loads(row.value).get("ridewithgps", {})
     access_token = rwgps_cfg.get("access_token", "")
     if not access_token:
         log.warning("RideWithGPS webhook: no access token for user_id=%d", user_id)
-        _notify_admin(f"RideWithGPS webhook: no access token for user {user_id} (trip {trip_id})", "error")
+        _notify_admin(
+            f"RideWithGPS webhook: no access token for user {user_id} (trip {trip_id})",
+            "error",
+        )
         return
 
     provider = RideWithGPSProvider(config=rwgps_cfg)

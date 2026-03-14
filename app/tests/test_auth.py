@@ -76,7 +76,13 @@ def client():
 # ---------------------------------------------------------------------------
 
 
-def _signup(client, email="user@example.com", password="secret", confirm=None, follow_redirects=True):
+def _signup(
+    client,
+    email="user@example.com",
+    password="secret",
+    confirm=None,
+    follow_redirects=True,
+):
     """POST /signup and return the response."""
     return client.post(
         "/signup",

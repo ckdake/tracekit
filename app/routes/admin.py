@@ -32,9 +32,15 @@ def _get_user_activity_counts(user_id: int) -> dict:
     try:
         from tracekit.providers.file.file_activity import FileActivity
         from tracekit.providers.garmin.garmin_activity import GarminActivity
-        from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
-        from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
-        from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
+        from tracekit.providers.intervalsicu.intervalsicu_activity import (
+            IntervalsICUActivity,
+        )
+        from tracekit.providers.ridewithgps.ridewithgps_activity import (
+            RideWithGPSActivity,
+        )
+        from tracekit.providers.spreadsheet.spreadsheet_activity import (
+            SpreadsheetActivity,
+        )
         from tracekit.providers.strava.strava_activity import StravaActivity
 
         models = {
@@ -108,7 +114,11 @@ def toggle_provider(provider: str):
     """Toggle global visibility of a provider. Returns JSON."""
     _require_admin()
 
-    from tracekit.appconfig import ALL_PROVIDERS, get_system_providers, save_system_providers
+    from tracekit.appconfig import (
+        ALL_PROVIDERS,
+        get_system_providers,
+        save_system_providers,
+    )
 
     if provider not in ALL_PROVIDERS:
         return jsonify({"error": "Unknown provider"}), 400

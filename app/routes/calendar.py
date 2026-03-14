@@ -78,17 +78,31 @@ def sync_provider_month(year_month: str, provider_name: str):
     if provider_name not in valid_providers:
         return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
     try:
-        from tracekit.provider_status import PULL_STATUS_QUEUED, is_pull_active, set_pull_status
+        from tracekit.provider_status import (
+            PULL_STATUS_QUEUED,
+            is_pull_active,
+            set_pull_status,
+        )
         from tracekit.worker import pull_provider_month
 
         if is_pull_active(year_month, provider_name):
-            return jsonify({"error": f"A pull is already active for {provider_name}/{year_month}"}), 409
+            return (
+                jsonify({"error": f"A pull is already active for {provider_name}/{year_month}"}),
+                409,
+            )
 
         from tracekit.user_context import get_user_id
 
         task = pull_provider_month.delay(year_month, provider_name, user_id=get_user_id())
         set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
-        return jsonify({"task_id": task.id, "year_month": year_month, "provider": provider_name, "status": "queued"})
+        return jsonify(
+            {
+                "task_id": task.id,
+                "year_month": year_month,
+                "provider": provider_name,
+                "status": "queued",
+            }
+        )
     except Exception as e:
         return jsonify({"error": f"Failed to enqueue task: {e}"}), 503
 

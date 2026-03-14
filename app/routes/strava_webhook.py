@@ -159,7 +159,8 @@ def _handle_activity_event(aspect_type: str, activity_id, owner_id):
     if user_id is None:
         log.warning("Strava webhook: no user found for athlete_id=%s — ignoring", owner_id)
         _notify_admin(
-            f"Strava webhook: {aspect_type} event for unknown athlete {owner_id} (activity {activity_id})", "error"
+            f"Strava webhook: {aspect_type} event for unknown athlete {owner_id} (activity {activity_id})",
+            "error",
         )
         return
 
@@ -172,8 +173,16 @@ def _handle_activity_event(aspect_type: str, activity_id, owner_id):
             _sync_local_activity(activity_id, user_id)
         _notify_admin(f"Strava webhook: activity {aspect_type} — id={activity_id} user={user_id}")
     except Exception as e:
-        log.error("Strava webhook: error handling %s event for activity %s: %s", aspect_type, activity_id, e)
-        _notify_admin(f"Strava webhook: error on activity {aspect_type} (id={activity_id}): {e}", "error")
+        log.error(
+            "Strava webhook: error handling %s event for activity %s: %s",
+            aspect_type,
+            activity_id,
+            e,
+        )
+        _notify_admin(
+            f"Strava webhook: error on activity {aspect_type} (id={activity_id}): {e}",
+            "error",
+        )
 
 
 def _delete_local_activity(activity_id, user_id: int):
@@ -184,7 +193,12 @@ def _delete_local_activity(activity_id, user_id: int):
         .where((StravaActivity.strava_id == str(activity_id)) & (StravaActivity.user_id == user_id))
         .execute()
     )
-    log.info("Strava webhook: deleted %d local record(s) for strava_id=%s user_id=%d", deleted, activity_id, user_id)
+    log.info(
+        "Strava webhook: deleted %d local record(s) for strava_id=%s user_id=%d",
+        deleted,
+        activity_id,
+        user_id,
+    )
 
 
 def _sync_local_activity(activity_id, user_id: int):
@@ -227,7 +241,10 @@ def _handle_deauthorize(owner_id):
 
     user_id = _find_user(owner_id)
     if user_id is None:
-        log.warning("Strava deauth webhook: no user found for athlete_id=%s — ignoring", owner_id)
+        log.warning(
+            "Strava deauth webhook: no user found for athlete_id=%s — ignoring",
+            owner_id,
+        )
         return
 
     set_user_id(user_id)
@@ -241,7 +258,11 @@ def _handle_deauthorize(owner_id):
         tk = Tracekit(config)
         if tk.strava:
             deleted = tk.strava.reset_activities(None)
-            log.info("Strava deauth: deleted %d activity records for user_id=%d", deleted, user_id)
+            log.info(
+                "Strava deauth: deleted %d activity records for user_id=%d",
+                deleted,
+                user_id,
+            )
     except Exception as e:
         log.error("Strava deauth: error deleting activity data for user_id=%d: %s", user_id, e)
 
@@ -311,11 +332,17 @@ def webhook_subscribe():
     """Create a Strava webhook subscription for this app."""
     _require_admin()
 
-    from tracekit.appconfig import get_or_create_strava_webhook_verify_token, save_strava_webhook_subscription_id
+    from tracekit.appconfig import (
+        get_or_create_strava_webhook_verify_token,
+        save_strava_webhook_subscription_id,
+    )
 
     client_id, client_secret = _get_strava_credentials()
     if not client_id or not client_secret:
-        return jsonify({"error": "Strava client_id and client_secret not configured"}), 400
+        return (
+            jsonify({"error": "Strava client_id and client_secret not configured"}),
+            400,
+        )
 
     verify_token = get_or_create_strava_webhook_verify_token()
     scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
@@ -347,11 +374,17 @@ def webhook_unsubscribe():
     """Delete the active Strava webhook subscription."""
     _require_admin()
 
-    from tracekit.appconfig import get_strava_webhook_config, save_strava_webhook_subscription_id
+    from tracekit.appconfig import (
+        get_strava_webhook_config,
+        save_strava_webhook_subscription_id,
+    )
 
     client_id, client_secret = _get_strava_credentials()
     if not client_id or not client_secret:
-        return jsonify({"error": "Strava client_id and client_secret not configured"}), 400
+        return (
+            jsonify({"error": "Strava client_id and client_secret not configured"}),
+            400,
+        )
 
     cfg = get_strava_webhook_config()
     sub_id = cfg.get("subscription_id")

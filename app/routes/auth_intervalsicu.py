@@ -21,7 +21,10 @@ def _get_intervalsicu_client_credentials(icu_cfg: dict) -> tuple[str, str]:
     precedence, falling back to any value the user has stored.
     """
     if icu_cfg.get("use_personal_credentials"):
-        return icu_cfg.get("client_id", "").strip(), icu_cfg.get("client_secret", "").strip()
+        return (
+            icu_cfg.get("client_id", "").strip(),
+            icu_cfg.get("client_secret", "").strip(),
+        )
     client_id = os.environ.get("INTERVALSICU_CLIENT_ID", "").strip() or icu_cfg.get("client_id", "").strip()
     client_secret = os.environ.get("INTERVALSICU_CLIENT_SECRET", "").strip() or icu_cfg.get("client_secret", "").strip()
     return client_id, client_secret
@@ -109,7 +112,11 @@ def api_auth_intervalsicu_callback():
 
     try:
         _init_db()
-        from tracekit.appconfig import load_config, save_intervalsicu_athlete_id, save_intervalsicu_tokens
+        from tracekit.appconfig import (
+            load_config,
+            save_intervalsicu_athlete_id,
+            save_intervalsicu_tokens,
+        )
 
         config = load_config()
         icu_cfg = config.get("providers", {}).get("intervalsicu", {})
