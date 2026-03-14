@@ -2,17 +2,15 @@
 {% block title %}{{ month_name }} {{ year }} — Sync Review — tracekit{% endblock %}
 
 {% block body %}
-<div class="container-wide">
+<div class="inner-page">
 
-  <div class="month-page-header">
-    <div class="month-page-title">
-      <a href="/" class="back-link">← Dashboard</a>
-      <h1>{{ month_name }} {{ year }} <span class="month-page-subtitle">Sync Review</span></h1>
+  <div class="inner-page-header">
+    <a href="/" class="back-link">← Sync</a>
+    <div class="inner-page-header-row">
+      <h1 class="inner-page-title">{{ month_name }} {{ year }} <span class="inner-page-subtitle">Sync Review</span></h1>
       <span id="month-sync-badge" hidden></span>
+      <button class="btn-refresh" id="refresh-btn" onclick="loadChanges()">↻ Refresh</button>
     </div>
-    <button class="btn-refresh" id="refresh-btn" onclick="loadChanges()">
-      ↻ Refresh
-    </button>
   </div>
 
   <!-- Loading / error banner -->
@@ -43,6 +41,7 @@
     <div id="changes-list"></div>
     <p id="no-changes-msg" class="no-changes" hidden>✓ All activities are synchronized — no changes needed.</p>
   </section>
+
 
 </div>
 

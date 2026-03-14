@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TraceKit — Status</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --nav-bg: #0f1419;
+    --nav-text: #8899a6;
+    --nav-active: #ffffff;
+    --page-bg: #f0f2f5;
+    --card-bg: #ffffff;
+    --card-border: #e1e4e8;
+    --text-primary: #1a1f25;
+    --text-secondary: #586069;
+    --text-muted: #8b949e;
+    --status-ok: #2da44e;
+    --status-ok-bg: #dafbe1;
+    --status-warn: #d29922;
+    --status-warn-bg: #fff8c5;
+    --status-error: #cf222e;
+    --status-error-bg: #ffebe9;
+    --status-pending: #6e7781;
+    --status-pending-bg: #eaeef2;
+    --accent: #0969da;
+    --accent-bg: #ddf4ff;
+    --scrubber-bg: #ffffff;
+    --scrubber-track: #e1e4e8;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    /* Provider colors */
+    --p-file: #3a86a8;
+    --p-garmin: #2774a4;
+    --p-intervals: #e63946;
+    --p-ridewithgps: #e8612d;
+    --p-strava: #fc4c02;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--page-bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── TOP NAV ─── */
+  .topnav {
+    background: var(--nav-bg);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 2px;
+  }
+
+  .topnav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 28px;
+    text-decoration: none;
+  }
+
+  .topnav-brand svg { flex-shrink: 0; }
+
+  .topnav-brand span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+
+  .topnav-link {
+    color: var(--nav-text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .topnav-link:hover { color: var(--nav-active); background: rgba(255,255,255,0.06); }
+  .topnav-link.active { color: var(--nav-active); background: rgba(255,255,255,0.1); }
+
+  .topnav-spacer { flex: 1; }
+
+  .topnav-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nav-text);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .topnav-icon:hover { color: var(--nav-active); background: rgba(255,255,255,0.06); }
+
+  .topnav-icon svg { width: 18px; height: 18px; }
+
+  .notif-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 8px;
+    height: 8px;
+    background: var(--status-error);
+    border-radius: 50%;
+    border: 2px solid var(--nav-bg);
+  }
+
+  .topnav-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+    padding-left: 14px;
+    border-left: 1px solid rgba(255,255,255,0.1);
+    color: var(--nav-text);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .topnav-user:hover { color: var(--nav-active); }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  .main-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ─── TIMELINE SCRUBBER (left rail) ─── */
+  .timeline-rail {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--scrubber-bg);
+    border-right: 1px solid var(--card-border);
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 52px);
+    position: sticky;
+    top: 52px;
+  }
+
+  .timeline-header {
+    padding: 16px 16px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .timeline-filter {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    gap: 4px;
+  }
+
+  .filter-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    border: 1px solid var(--card-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover { border-color: var(--text-secondary); }
+  .filter-btn.active {
+    background: var(--text-primary);
+    color: #fff;
+    border-color: var(--text-primary);
+  }
+
+  .timeline-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .timeline-year {
+    padding: 10px 16px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .timeline-month {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    position: relative;
+  }
+
+  .timeline-month:hover { background: rgba(0,0,0,0.03); }
+
+  .timeline-month.active {
+    background: var(--accent-bg);
+    color: var(--accent);
+  }
+
+  .timeline-month.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .tl-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tl-dot.ok { background: var(--status-ok); }
+  .tl-dot.warn { background: var(--status-warn); }
+  .tl-dot.error { background: var(--status-error); }
+  .tl-dot.pending { background: var(--status-pending-bg); border: 2px solid var(--status-pending); }
+
+  .tl-count {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* ─── CONTENT AREA ─── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    height: calc(100vh - 52px);
+    padding: 24px 32px;
+    max-width: 960px;
+  }
+
+  /* ─── MONTH CARD ─── */
+  .month-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+
+  .month-card:hover { box-shadow: var(--shadow-md); }
+
+  .month-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    gap: 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .month-status-ring {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .month-status-ring.ok { background: var(--status-ok-bg); color: var(--status-ok); }
+  .month-status-ring.warn { background: var(--status-warn-bg); color: var(--status-warn); }
+  .month-status-ring.error { background: var(--status-error-bg); color: var(--status-error); }
+
+  .month-status-ring svg { width: 20px; height: 20px; }
+
+  .month-info { flex: 1; min-width: 0; }
+
+  .month-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .month-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .month-meta-item { display: flex; align-items: center; gap: 4px; }
+
+  .provider-pips {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .provider-pip {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .provider-pip svg { width: 12px; height: 12px; }
+
+  .expand-chevron {
+    width: 24px;
+    height: 24px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  .month-card.expanded .expand-chevron { transform: rotate(180deg); }
+
+  /* ─── PROVIDER ROWS (expanded) ─── */
+  .month-body {
+    border-top: 1px solid var(--card-border);
+    padding: 4px 0;
+  }
+
+  .provider-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    gap: 12px;
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+
+  .provider-row:hover { background: rgba(0,0,0,0.015); }
+
+  .provider-color {
+    width: 4px;
+    height: 32px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .provider-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 120px;
+  }
+
+  .provider-device {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #f0f2f5;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .provider-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .provider-sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 80px;
+    justify-content: flex-end;
+  }
+
+  .provider-sync-status.ok { color: var(--status-ok); }
+  .provider-sync-status.warn { color: var(--status-warn); }
+  .provider-sync-status.error { color: var(--status-error); }
+  .provider-sync-status.pending { color: var(--status-pending); }
+
+  .sync-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .provider-arrow {
+    color: var(--text-muted);
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .provider-row:hover .provider-arrow { opacity: 1; }
+
+  /* ─── CALENDAR DOT GRID (drill-down) ─── */
+  .provider-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 16px);
+    gap: 3px;
+    margin-left: 136px;
+    padding: 0 20px 12px;
+  }
+
+  .cal-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    background: var(--page-bg);
+  }
+
+  .cal-dot.active { background: currentColor; opacity: 0.7; }
+  .cal-dot.active:hover { opacity: 1; }
+
+  /* ─── NOTIFICATION DROPDOWN ─── */
+  .notif-dropdown {
+    position: absolute;
+    top: 46px;
+    right: 60px;
+    width: 360px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    overflow: hidden;
+  }
+
+  .notif-dropdown-header {
+    padding: 14px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .notif-dropdown-header a {
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .notif-item {
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--card-border);
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+  }
+
+  .notif-item:last-child { border-bottom: none; }
+
+  .notif-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .notif-icon.warn { background: var(--status-warn-bg); color: var(--status-warn); }
+  .notif-icon.ok { background: var(--status-ok-bg); color: var(--status-ok); }
+  .notif-icon.error { background: var(--status-error-bg); color: var(--status-error); }
+
+  .notif-icon svg { width: 14px; height: 14px; }
+
+  .notif-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .timeline-rail { display: none; }
+    .content { padding: 16px; }
+    .topnav-link.desktop-only { display: none; }
+    .topnav-user span { display: none; }
+    .month-title { font-size: 15px; }
+    .provider-row { flex-wrap: wrap; gap: 8px; padding: 10px 16px; }
+    .provider-count { min-width: auto; }
+    .provider-name { min-width: 100px; }
+    .notif-dropdown { right: 10px; width: calc(100vw - 20px); max-width: 360px; }
+
+    /* Mobile: show a compact month picker */
+    .mobile-scrubber {
+      display: flex;
+      gap: 6px;
+      padding: 12px 16px;
+      overflow-x: auto;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--card-border);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-scrubber::-webkit-scrollbar { display: none; }
+
+    .mobile-pill {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--page-bg);
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mobile-pill.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+    .mobile-pill .tl-dot { width: 6px; height: 6px; }
+  }
+
+  @media (min-width: 769px) {
+    .mobile-scrubber { display: none; }
+  }
+
+  /* ─── PAGE HEADER ─── */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .header-actions { display: flex; gap: 8px; }
+
+  .btn-secondary {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+
+  .btn-secondary:hover { border-color: var(--text-muted); background: var(--page-bg); }
+  .btn-secondary svg { width: 14px; height: 14px; }
+
+  /* ─── SUMMARY BAR ─── */
+  .summary-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .summary-stat {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    flex: 1;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .summary-stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .summary-stat-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 4px;
+    line-height: 1;
+  }
+
+  .summary-stat-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  @media (max-width: 768px) {
+    .summary-bar { flex-wrap: wrap; }
+    .summary-stat { flex: 1 1 45%; }
+  }
+
+  /* ─── SMOOTH ANIMATIONS ─── */
+  .month-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .month-card.expanded .month-body {
+    max-height: 600px;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .month-card {
+    animation: fadeInUp 0.3s ease both;
+  }
+
+  .month-card:nth-child(1) { animation-delay: 0s; }
+  .month-card:nth-child(2) { animation-delay: 0.05s; }
+  .month-card:nth-child(3) { animation-delay: 0.1s; }
+  .month-card:nth-child(4) { animation-delay: 0.15s; }
+  .month-card:nth-child(5) { animation-delay: 0.2s; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP NAV ═══ -->
+<nav class="topnav">
+  <a class="topnav-brand" href="#">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect width="24" height="24" rx="6" fill="#0969da"/>
+      <path d="M7 8h10M7 12h7M7 16h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <span>tracekit</span>
+  </a>
+
+  <a class="topnav-link active" href="#">Status</a>
+  <a class="topnav-link desktop-only" href="#">Admin</a>
+
+  <div class="topnav-spacer"></div>
+
+  <div class="topnav-icon" id="notif-trigger" onclick="document.getElementById('notif-drop').classList.toggle('notif-dropdown')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+    <div class="notif-badge"></div>
+  </div>
+
+  <div class="topnav-icon" title="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+  </div>
+
+  <div class="topnav-user">
+    <div class="avatar">CK</div>
+    <span>ckdake</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+  </div>
+
+  <!-- Notification dropdown (shown) -->
+  <div class="notif-dropdown" id="notif-drop">
+    <div class="notif-dropdown-header">
+      Notifications
+      <a href="#">Mark all read</a>
+    </div>
+    <div class="notif-item">
+      <div class="notif-icon warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div><strong>Strava</strong> — 3 activities missing from Dec 2025</div>
+        <div class="notif-time">2 hours ago</div>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-icon ok">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div>
+        <div><strong>January 2026</strong> fully synced across all providers</div>
+        <div class="notif-time">1 day ago</div>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-icon error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      </div>
+      <div>
+        <div><strong>RideWithGPS</strong> API token expired. Re-authenticate.</div>
+        <div class="notif-time">3 days ago</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ MOBILE SCRUBBER ═══ -->
+<div class="mobile-scrubber">
+  <div class="mobile-pill active"><div class="tl-dot warn"></div> Mar 26</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> Feb 26</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> Jan 26</div>
+  <div class="mobile-pill"><div class="tl-dot warn"></div> Dec 25</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> Nov 25</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> Oct 25</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> Sep 25</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> Aug 25</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> Jul 25</div>
+  <div class="mobile-pill"><div class="tl-dot warn"></div> Jun 25</div>
+  <div class="mobile-pill"><div class="tl-dot ok"></div> May 25</div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main-layout">
+
+  <!-- ═══ TIMELINE RAIL ═══ -->
+  <aside class="timeline-rail">
+    <div class="timeline-header">Timeline</div>
+    <div class="timeline-filter">
+      <button class="filter-btn active">All</button>
+      <button class="filter-btn">Issues</button>
+    </div>
+    <div class="timeline-list">
+      <div class="timeline-year">2026</div>
+      <div class="timeline-month active">
+        <div class="tl-dot warn"></div>
+        March
+        <span class="tl-count">12</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        February
+        <span class="tl-count">28</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        January
+        <span class="tl-count">32</span>
+      </div>
+
+      <div class="timeline-year">2025</div>
+      <div class="timeline-month">
+        <div class="tl-dot warn"></div>
+        December
+        <span class="tl-count">12</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        November
+        <span class="tl-count">12</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        October
+        <span class="tl-count">13</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        September
+        <span class="tl-count">20</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        August
+        <span class="tl-count">23</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        July
+        <span class="tl-count">15</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot warn"></div>
+        June
+        <span class="tl-count">15</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        May
+        <span class="tl-count">19</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        April
+        <span class="tl-count">12</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        March
+        <span class="tl-count">18</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        February
+        <span class="tl-count">14</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        January
+        <span class="tl-count">21</span>
+      </div>
+
+      <div class="timeline-year">2024</div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        December
+        <span class="tl-count">16</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        November
+        <span class="tl-count">18</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        October
+        <span class="tl-count">20</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot warn"></div>
+        September
+        <span class="tl-count">15</span>
+      </div>
+      <div class="timeline-month">
+        <div class="tl-dot ok"></div>
+        August
+        <span class="tl-count">22</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ CONTENT ═══ -->
+  <main class="content">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sync Status</div>
+        <div class="page-subtitle">Last sync: 12 Mar 2026, 18:15 EDT</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Sync All
+        </button>
+        <button class="btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="summary-bar">
+      <div class="summary-stat">
+        <div class="summary-stat-label">Total Activities</div>
+        <div class="summary-stat-value" style="color: var(--text-primary);">2,847</div>
+        <div class="summary-stat-sub">across 5 providers</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-label">Months Synced</div>
+        <div class="summary-stat-value" style="color: var(--status-ok);">24 / 27</div>
+        <div class="summary-stat-sub">3 need attention</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-label">Unresolved</div>
+        <div class="summary-stat-value" style="color: var(--status-warn);">7</div>
+        <div class="summary-stat-sub">differences found</div>
+      </div>
+    </div>
+
+    <!-- ═══ MONTH: March 2026 (EXPANDED, has issues) ═══ -->
+    <div class="month-card expanded">
+      <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
+        <div class="month-status-ring warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="month-info">
+          <div class="month-title">March 2026</div>
+          <div class="month-meta">
+            <span class="month-meta-item">12 activities</span>
+            <span class="month-meta-item" style="color: var(--status-warn);">2 differences</span>
+          </div>
+        </div>
+        <div class="provider-pips">
+          <div class="provider-pip" style="background: var(--p-file); opacity: 0.2;" title="File — synced">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="provider-pip" style="background: var(--p-garmin);" title="Garmin — synced">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="provider-pip" style="background: var(--p-intervals);" title="Intervals.icu — synced">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="provider-pip" style="background: var(--p-ridewithgps);" title="RideWithGPS — 1 difference">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          </div>
+          <div class="provider-pip" style="background: var(--p-strava);" title="Strava — 1 difference">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          </div>
+        </div>
+        <svg class="expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="month-body">
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-file);"></div>
+          <div class="provider-name">File</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">12 activities</div>
+          <div class="provider-sync-status ok">
+            <svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Synced
+          </div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-garmin);"></div>
+          <div class="provider-name">Garmin</div>
+          <div class="provider-device">Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">12 activities</div>
+          <div class="provider-sync-status ok">
+            <svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Synced
+          </div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-intervals);"></div>
+          <div class="provider-name">Intervals.icu</div>
+          <div class="provider-device">Garmin Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">12 activities</div>
+          <div class="provider-sync-status ok">
+            <svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Synced
+          </div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row" style="background: var(--status-warn-bg);">
+          <div class="provider-color" style="background: var(--p-ridewithgps);"></div>
+          <div class="provider-name">RideWithGPS</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">11 activities</div>
+          <div class="provider-sync-status warn">
+            <svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            1 diff
+          </div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row" style="background: var(--status-warn-bg);">
+          <div class="provider-color" style="background: var(--p-strava);"></div>
+          <div class="provider-name">Strava</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">11 activities</div>
+          <div class="provider-sync-status warn">
+            <svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            1 diff
+          </div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MONTH: February 2026 (collapsed, all good) ═══ -->
+    <div class="month-card">
+      <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
+        <div class="month-status-ring ok">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="month-info">
+          <div class="month-title">February 2026</div>
+          <div class="month-meta">
+            <span class="month-meta-item">28 activities</span>
+            <span class="month-meta-item" style="color: var(--status-ok);">All synced</span>
+          </div>
+        </div>
+        <div class="provider-pips">
+          <div class="provider-pip" style="background: var(--p-file); opacity: 0.2;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-garmin);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-intervals);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-ridewithgps);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-strava);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <svg class="expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="month-body">
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-file);"></div>
+          <div class="provider-name">File</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">28 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-garmin);"></div>
+          <div class="provider-name">Garmin</div>
+          <div class="provider-device">Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">28 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-intervals);"></div>
+          <div class="provider-name">Intervals.icu</div>
+          <div class="provider-device">Garmin Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">28 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-ridewithgps);"></div>
+          <div class="provider-name">RideWithGPS</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">28 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-strava);"></div>
+          <div class="provider-name">Strava</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">28 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MONTH: January 2026 (collapsed, all good) ═══ -->
+    <div class="month-card">
+      <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
+        <div class="month-status-ring ok">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="month-info">
+          <div class="month-title">January 2026</div>
+          <div class="month-meta">
+            <span class="month-meta-item">32 activities</span>
+            <span class="month-meta-item" style="color: var(--status-ok);">All synced</span>
+          </div>
+        </div>
+        <div class="provider-pips">
+          <div class="provider-pip" style="background: var(--p-file); opacity: 0.2;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-garmin);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-intervals);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-ridewithgps);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-strava);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <svg class="expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="month-body">
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-file);"></div>
+          <div class="provider-name">File</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">32 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-garmin);"></div>
+          <div class="provider-name">Garmin</div>
+          <div class="provider-device">Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">32 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-intervals);"></div>
+          <div class="provider-name">Intervals.icu</div>
+          <div class="provider-device">Garmin Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">32 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-ridewithgps);"></div>
+          <div class="provider-name">RideWithGPS</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">32 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-strava);"></div>
+          <div class="provider-name">Strava</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">32 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MONTH: December 2025 (collapsed, has issues) ═══ -->
+    <div class="month-card">
+      <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
+        <div class="month-status-ring warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="month-info">
+          <div class="month-title">December 2025</div>
+          <div class="month-meta">
+            <span class="month-meta-item">12 activities</span>
+            <span class="month-meta-item" style="color: var(--status-warn);">3 differences</span>
+          </div>
+        </div>
+        <div class="provider-pips">
+          <div class="provider-pip" style="background: var(--p-file); opacity: 0.2;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-garmin);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-intervals);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-ridewithgps);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-strava);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div>
+        </div>
+        <svg class="expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="month-body">
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-file);"></div>
+          <div class="provider-name">File</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">12 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-garmin);"></div>
+          <div class="provider-name">Garmin</div>
+          <div class="provider-device">Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">12 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-intervals);"></div>
+          <div class="provider-name">Intervals.icu</div>
+          <div class="provider-device">Garmin Enduro 3</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">12 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row">
+          <div class="provider-color" style="background: var(--p-ridewithgps);"></div>
+          <div class="provider-name">RideWithGPS</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">12 activities</div>
+          <div class="provider-sync-status ok"><svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Synced</div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="provider-row" style="background: var(--status-warn-bg);">
+          <div class="provider-color" style="background: var(--p-strava);"></div>
+          <div class="provider-name">Strava</div>
+          <div class="provider-device">—</div>
+          <div style="flex:1"></div>
+          <div class="provider-count">9 activities</div>
+          <div class="provider-sync-status warn">
+            <svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            3 diff
+          </div>
+          <svg class="provider-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MONTH: November 2025 (collapsed, all good) ═══ -->
+    <div class="month-card">
+      <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
+        <div class="month-status-ring ok">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="month-info">
+          <div class="month-title">November 2025</div>
+          <div class="month-meta">
+            <span class="month-meta-item">12 activities</span>
+            <span class="month-meta-item" style="color: var(--status-ok);">All synced</span>
+          </div>
+        </div>
+        <div class="provider-pips">
+          <div class="provider-pip" style="background: var(--p-file); opacity: 0.2;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-garmin);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-intervals);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-ridewithgps);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="provider-pip" style="background: var(--p-strava);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <svg class="expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="month-body">
+        <!-- same pattern, all synced -->
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

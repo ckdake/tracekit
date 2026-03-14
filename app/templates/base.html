@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}tracekit{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% if sentry_dsn %}
     <script src="https://browser.sentry-cdn.com/8.38.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
@@ -26,7 +29,7 @@
 <body>
 {% include 'partials/_header.html' %}
 {% block body %}{% endblock %}
-<footer class="app-footer">
+{% block footer %}<footer class="app-footer">
     &copy; 2026 <a href="https://tracekit.app">tracekit</a>
     <span class="footer-sep">&middot;</span>
     <a href="https://github.com/ckdake/tracekit" target="_blank" rel="noopener">GitHub</a>
@@ -49,7 +52,7 @@
             <img src="{{ url_for('static', filename='powered_by_strava.svg') }}" alt="Powered by Strava" class="footer-logo">
         </a>
     </span>
-</footer>
+</footer>{% endblock %}
 <script>
 fetch('/api/recent-activity')
     .then(r => r.json())

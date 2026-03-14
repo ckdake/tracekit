@@ -290,8 +290,7 @@ class TestWebRoutes:
 
         assert response.status_code == 200
         assert b"calendar-grid" in response.data
-        assert b"Status" in response.data
-        assert b"load-more-btn" in response.data
+        assert b"Sync" in response.data
 
     def test_index_route_no_db_still_serves(self, client):
         """Index always responds 200 even with no external config — uses defaults."""

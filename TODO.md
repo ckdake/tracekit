@@ -5,23 +5,21 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
+- [ ] feat: trigger sync whenever new data is collected, for the month. use the Activity table as Source Of Truth for "matching", and ensure it stays update to date with a provider id for each activity. Update / page to show summary stats.
+- [ ] feat: only users with active subscription, or admin, can go back further than current month.  all other users: data expires out at start of new month.
+- [ ] feat: except admin, "full provider sync" is only allowed once per day.
 - [ ] data: 2024-02-29 19:20 gamrin shows up on march 2024 review
 - [ ] feat: "year by year" status, so can zoom in to months
 - [ ] bug: worker logs are only on stdout, not in sentry logs
 - [ ] feat: spreadsheet: ability to add
-- [ ] feat: on sync, use Activty table to link up to all provider activities
 - [ ] feat: garmin: ability to create gear
 - [ ] bug: pulling provider in ui for a month doesn't get new activites in the month
 - [ ] bug: worker is running migrations
 - [ ] bug: js error on toggle sync equipment for intervals.icu
 - [ ] bug: strava: gear update sometimes not workign due to running shoe naming
 - [ ] feat: as syncs are applied, update the visible table on /month/YYYY-MM to show as it updates
-- [ ] for web app, require subscription to be active for providers to sync
 - [ ] refactor all the web/sync stuff to use list of providers from code/admin, not hardcoded individually
-- [ ] discord?
-- [ ] file provider should have an upload button that uploads a new file. dont overwrite existing files! (check filename on clientside and server side). if its a zip, extrct safely
-
-later
+- [ ] file provider upload button shouldn't overwrite existing files! (check filename on clientside and server side). if its a zip, extrct safely
 - [ ] better top/right nav UI
 - [ ] better "month status" UI and logic
 - [ ] allow exporting all files

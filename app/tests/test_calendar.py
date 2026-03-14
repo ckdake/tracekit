@@ -369,7 +369,6 @@ class TestCalendarIntegration:
         response = client.get("/")
         assert response.status_code == 200
         assert b"calendar-grid" in response.data
-        assert b"load-more-btn" in response.data
 
     def test_calendar_page_with_timezone(self, client, temp_database):
         """Test calendar page with a specific timezone seeded in the DB."""

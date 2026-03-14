@@ -1,6 +1,19 @@
-{# Shared site nav — included by index and calendar pages. #}
-<nav class="site-nav">
-    <a href="/" class="nav-link">🏠 Dashboard</a>
-    <a href="/calendar" class="nav-link">📅 Calendar</a>
-    <a href="/settings" class="nav-link secondary">⚙️ Settings</a>
-</nav>
+{# Timeline rail — included by index.html. Expects `initial_months` context var. #}
+<aside class="timeline-rail">
+    <div class="timeline-header">Timeline</div>
+    <div class="timeline-list">
+        {% set ns = namespace(last_year=None) %}
+        {% for month in (initial_months or []) %}
+        {% if month.year != ns.last_year %}
+        <div class="timeline-year">{{ month.year }}</div>
+        {% set ns.last_year = month.year %}
+        {% endif %}
+        <a href="#card-{{ month.year_month }}"
+           class="timeline-month{% if month.year_month == (current_month or '') %} active{% endif %}"
+           onclick="document.getElementById('card-{{ month.year_month }}').scrollIntoView({behavior:'smooth',block:'start'}); return false;">
+            <div class="tl-dot pending"></div>
+            {{ month.month_name }}
+        </a>
+        {% endfor %}
+    </div>
+</aside>

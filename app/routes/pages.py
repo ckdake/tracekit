@@ -133,5 +133,5 @@ def index():
         config=config,
         initial_months=months,
         current_month=current_month,
-        page_name="Status",
+        page_name="Sync",
     )

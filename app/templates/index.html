@@ -1,36 +1,47 @@
 {% extends "base.html" %}
-{% block title %}tracekit{% endblock %}
+{% block title %}tracekit — Sync{% endblock %}
+{% block footer %}{% endblock %}
 
 {% block body %}
-<div class="container-wide">
-    <div class="calendar-grid" id="calendar-grid">
+<div class="sync-layout">
+    {% include 'partials/_nav.html' %}
+    <main class="sync-content" id="calendar-grid">
+        <div class="sync-page-header">
+            <div>
+                <div class="sync-page-title">Sync</div>
+                <div class="sync-page-subtitle" id="recent-activity-time-sync">—</div>
+            </div>
+        </div>
+
         {% for month in initial_months %}
-        <div class="month-card {% if month.year_month == current_month %}current{% endif %}"
+        <div class="month-card expanded{% if month.year_month == current_month %} current{% endif %}"
              id="card-{{ month.year_month }}">
-            <div class="month-header">
-                <div class="month-title-row">
-                    <span>{{ month.month_name }} {{ month.year }}</span>
-                    <div class="month-btn-group">
-                        <a class="sync-review-link" href="/month/{{ month.year_month }}" title="Sync Review">⇄</a>
-                        <button class="pull-btn" data-month="{{ month.year_month }}"
-                                onclick="pullMonth(this)" title="Pull">⬇</button>
-                        <button class="reset-btn" data-month="{{ month.year_month }}"
-                                onclick="resetMonth(this)" title="Reset month data">↺</button>
-                    </div>
+            <div class="month-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <div class="month-status-ring pending" id="ring-{{ month.year_month }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 </div>
-                <div class="total-label" id="total-{{ month.year_month }}"></div>
+                <div class="month-info">
+                    <div class="month-title">{{ month.month_name }} {{ month.year }}</div>
+                    <div class="month-meta" id="total-{{ month.year_month }}"></div>
+                </div>
+                <div class="month-btn-group">
+                    <a class="sync-review-link month-action-btn" href="/month/{{ month.year_month }}" title="Sync Review" onclick="event.stopPropagation()">⇄</a>
+                    <button class="pull-btn month-action-btn" data-month="{{ month.year_month }}"
+                            onclick="event.stopPropagation(); pullMonth(this)" title="Pull">⬇</button>
+                    <button class="reset-btn month-action-btn" data-month="{{ month.year_month }}"
+                            onclick="event.stopPropagation(); resetMonth(this)" title="Reset month data">↺</button>
+                </div>
+                <svg class="expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div class="provider-grid" id="grid-{{ month.year_month }}">
-                <div class="card-loading">Loading…</div>
+            <div class="month-body">
+                <div class="provider-grid" id="grid-{{ month.year_month }}">
+                    <div class="card-loading">Loading…</div>
+                </div>
+                <div class="pull-status" id="status-{{ month.year_month }}"></div>
             </div>
-            <div class="pull-status" id="status-{{ month.year_month }}"></div>
         </div>
         {% endfor %}
-    </div>
-
-    <div class="load-more-bar">
-        <button class="btn-load-more" id="load-more-btn" onclick="loadMoreMonths()">Load 12 more months</button>
-    </div>
+    </main>
 </div>
 
 <script>
