@@ -46,9 +46,10 @@ def _file_exists_in_folder(data_folder: str, filename: str) -> bool:
 @files_bp.route("/api/file/download")
 def api_file_download():
     """Serve a file activity as a download, verifying user ownership."""
-    filename = request.args.get("name", "").strip()
-    # Reject any path traversal attempts
-    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+    raw_name = request.args.get("name", "").strip()
+    # Normalize to a secure, base-name-only filename
+    filename = secure_filename(raw_name)
+    if not filename:
         return "Invalid filename", 400
 
     user_id = get_user_id()
@@ -67,7 +68,13 @@ def api_file_download():
     if not matches:
         return "File not found on disk", 404
 
-    return send_file(matches[0], as_attachment=True, download_name=filename)
+    # Ensure the resolved path is contained within the user's data folder
+    data_folder_real = os.path.realpath(data_folder)
+    match_path = os.path.realpath(matches[0])
+    if not match_path.startswith(data_folder_real + os.path.sep):
+        return "File not found on disk", 404
+
+    return send_file(match_path, as_attachment=True, download_name=filename)
 
 
 @files_bp.route("/api/file/upload", methods=["POST"])
