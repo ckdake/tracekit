@@ -299,18 +299,15 @@ class TestGarminProviderFetchActivities:
         mock_client.get_activities_by_date.assert_called_once_with("2021-12-01", "2021-12-31")
 
     def test_fetch_activities_api_error(self):
-        """Test handling of API errors during fetch."""
+        """Test that connection errors propagate so the worker can surface them."""
         provider = GarminProvider()
 
-        # Mock client to raise a Garmin-specific exception
         mock_client = Mock()
         mock_client.get_activities_by_date.side_effect = GarminConnectConnectionError("API Error")
         provider._get_client = Mock(return_value=mock_client)
 
-        result = provider.fetch_activities_for_month("2021-01")
-
-        # Should return empty list on error
-        assert result == []
+        with pytest.raises(GarminConnectConnectionError):
+            provider.fetch_activities_for_month("2021-01")
 
 
 class TestGarminProviderGear:
