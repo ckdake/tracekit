@@ -3,8 +3,18 @@ name: verify-devcontainer
 on:
   push:
     branches: [ main ]
+    paths:
+      - '.devcontainer/**'
+      - 'pyproject.toml'
+      - 'site/package.json'
+      - 'site/package-lock.json'
   pull_request:
     branches: [ main ]
+    paths:
+      - '.devcontainer/**'
+      - 'pyproject.toml'
+      - 'site/package.json'
+      - 'site/package-lock.json'
   # Allow manual triggering
   workflow_dispatch:
 
