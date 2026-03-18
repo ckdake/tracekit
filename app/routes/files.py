@@ -47,6 +47,9 @@ def _file_exists_in_folder(data_folder: str, filename: str) -> bool:
 def api_file_download():
     """Serve a file activity as a download, verifying user ownership."""
     raw_name = request.args.get("name", "").strip()
+    # Reject path traversal attempts before secure_filename can silently strip them
+    if ".." in raw_name or "/" in raw_name or "\\" in raw_name:
+        return "Invalid filename", 400
     # Normalize to a secure, base-name-only filename
     filename = secure_filename(raw_name)
     if not filename:

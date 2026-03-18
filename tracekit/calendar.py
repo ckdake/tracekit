@@ -112,7 +112,7 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
     import pytz
 
     from tracekit.provider_status import get_month_pull_statuses, get_month_sync_status
-    from tracekit.provider_sync import ProviderSync
+    from tracekit.provider_sync import ProviderSync, SyncStatus
     from tracekit.providers.file.file_activity import FileActivity
     from tracekit.providers.garmin.garmin_activity import GarminActivity
     from tracekit.providers.intervalsicu.intervalsicu_activity import (
@@ -127,10 +127,31 @@ def get_single_month_data(year_month: str, home_timezone: str = "UTC") -> dict[s
     month_sync_status = get_month_sync_status(year_month)
 
     uid = get_user_id()
+
+    # Only fully-synced months count as "synced"
     synced_rows = ProviderSync.select(ProviderSync.provider).where(
-        (ProviderSync.year_month == year_month) & (ProviderSync.user_id == uid)
+        (ProviderSync.year_month == year_month)
+        & (ProviderSync.user_id == uid)
+        & (ProviderSync.status == SyncStatus.DONE)
     )
     synced_providers = [r.provider for r in synced_rows]
+
+    # Providers currently in-flight: synthesize pull_statuses entries so the UI
+    # renders spinners and starts polling even after a page reload.
+    in_flight_rows = ProviderSync.select().where(
+        (ProviderSync.year_month == year_month)
+        & (ProviderSync.user_id == uid)
+        & (ProviderSync.status != SyncStatus.DONE)
+    )
+    for row in in_flight_rows:
+        existing = pull_statuses.get(row.provider)
+        if not existing or existing.get("status") not in ("queued", "started"):
+            pull_statuses[row.provider] = {
+                "status": "queued" if row.status == SyncStatus.ENQUEUED else "started",
+                "job_id": None,
+                "message": None,
+                "updated_at": None,
+            }
 
     all_rows = ProviderSync.select(ProviderSync.provider).where(ProviderSync.user_id == uid).distinct()
     providers = sorted({r.provider for r in all_rows})

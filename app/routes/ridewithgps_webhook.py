@@ -229,4 +229,11 @@ def _sync_local_trip(trip_id, user_id: int) -> None:
         return
 
     provider = RideWithGPSProvider(config=rwgps_cfg)
-    provider.sync_single_activity(str(trip_id))
+    activity = provider.sync_single_activity(str(trip_id))
+    if activity and activity.start_time:
+        from datetime import UTC, datetime
+
+        from tracekit.provider_status import MONTH_SYNC_UNKNOWN, set_month_sync_status
+
+        year_month = datetime.fromtimestamp(activity.start_time, tz=UTC).strftime("%Y-%m")
+        set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)

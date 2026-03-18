@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import openpyxl
 from peewee import DoesNotExist
 
-from tracekit.provider_sync import ProviderSync
+from tracekit.provider_sync import ProviderSync, SyncStatus
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.spreadsheet.spreadsheet_activity import SpreadsheetActivity
 from tracekit.user_context import get_user_id
@@ -233,13 +233,8 @@ class SpreadsheetProvider(FitnessProvider):
 
         # Create ProviderSync records for all months (if they don't already exist)
         for year_month in unique_months:
-            existing_sync = ProviderSync.get_or_none(year_month, self.provider_name)
-            if not existing_sync:
-                ProviderSync.create(
-                    year_month=year_month,
-                    provider=self.provider_name,
-                    user_id=get_user_id(),
-                )
+            if not ProviderSync.is_done(year_month, self.provider_name):
+                ProviderSync.upsert_status(year_month, self.provider_name, SyncStatus.DONE)
                 print(f"Marked {year_month} as synced for {self.provider_name}")
 
     def pull_activities(self, date_filter: str | None = None) -> list[SpreadsheetActivity]:
@@ -251,8 +246,7 @@ class SpreadsheetProvider(FitnessProvider):
         if date_filter is None:
             return self._pull_all_activities()
 
-        existing_sync = ProviderSync.get_or_none(date_filter, self.provider_name)
-        if not existing_sync:
+        if not ProviderSync.is_done(date_filter, self.provider_name):
             self._pull_all_activities()
             # For spreadsheet provider, mark ALL months containing activities as synced
             # since we process the entire spreadsheet regardless of date_filter

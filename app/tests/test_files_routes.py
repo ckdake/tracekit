@@ -132,21 +132,21 @@ class TestFileDownload:
         assert resp.status_code == 404
 
     def test_valid_file_returns_200_and_attachment(self, client):
-        c, _ = client
-        with tempfile.NamedTemporaryFile(suffix=".fit", delete=False) as f:
-            f.write(b"FIT file content")
-            tmp_path = f.name
-        try:
+        c, user_id = client
+        with tempfile.TemporaryDirectory() as data_dir:
+            user_dir = os.path.join(data_dir, "activities", str(user_id))
+            os.makedirs(user_dir)
+            tmp_path = os.path.join(user_dir, "activity.fit")
+            with open(tmp_path, "wb") as f:
+                f.write(b"FIT file content")
             with (
                 patch("routes.files.FileActivity") as mock_fa,
-                patch("routes.files._glob.glob", return_value=[tmp_path]),
+                patch("routes.files.os.environ.get", return_value=data_dir),
             ):
                 mock_fa.get_or_none.return_value = MagicMock()
                 resp = c.get("/api/file/download?name=activity.fit")
             assert resp.status_code == 200
             assert "attachment" in resp.headers.get("Content-Disposition", "")
-        finally:
-            os.remove(tmp_path)
 
     def test_ownership_check_uses_user_id(self, client):
         """get_or_none must be called with the logged-in user's ID."""

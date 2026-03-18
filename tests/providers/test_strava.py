@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from tracekit.provider_sync import SyncStatus
 from tracekit.providers.strava.strava_provider import StravaProvider
 
 
@@ -437,8 +438,7 @@ class TestStravaProviderPullActivities:
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
 
         # Mock existing sync record
-        mock_sync = Mock()
-        mock_provider_sync.get_or_none.return_value = mock_sync
+        mock_provider_sync.is_done.return_value = True
 
         # Mock the _get_strava_activities_for_month method
         mock_activities = [Mock(), Mock()]
@@ -448,7 +448,7 @@ class TestStravaProviderPullActivities:
 
         # Should return activities from database without fetching new ones
         assert result == mock_activities
-        mock_provider_sync.get_or_none.assert_called_once_with("2021-01", "strava")
+        mock_provider_sync.is_done.assert_called_once_with("2021-01", "strava")
         provider._get_strava_activities_for_month.assert_called_once_with("2021-01")
 
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
@@ -457,7 +457,7 @@ class TestStravaProviderPullActivities:
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
 
         # Mock no existing sync record
-        mock_provider_sync.get_or_none.return_value = None
+        mock_provider_sync.is_done.return_value = False
 
         # Mock fetching raw activities
         mock_raw_activities = [Mock(), Mock()]
@@ -483,9 +483,9 @@ class TestStravaProviderPullActivities:
 
             # Verify the flow
             assert result == mock_final_activities
-            mock_provider_sync.get_or_none.assert_called_once_with("2021-01", "strava")
+            mock_provider_sync.is_done.assert_called_once_with("2021-01", "strava")
             provider._fetch_strava_activities_for_month.assert_called_once_with("2021-01")
-            mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava", user_id=0)
+            mock_provider_sync.upsert_status.assert_called_once_with("2021-01", "strava", SyncStatus.DONE)
 
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_with_duplicate_activity(self, mock_provider_sync):
@@ -493,7 +493,7 @@ class TestStravaProviderPullActivities:
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
 
         # Mock no existing sync record
-        mock_provider_sync.get_or_none.return_value = None
+        mock_provider_sync.is_done.return_value = False
 
         # Mock fetching raw activities
         mock_raw_activity = Mock()
@@ -517,7 +517,7 @@ class TestStravaProviderPullActivities:
 
             # Verify duplicate was skipped (save not called)
             mock_converted_activity.save.assert_not_called()
-            mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava", user_id=0)
+            mock_provider_sync.upsert_status.assert_called_once_with("2021-01", "strava", SyncStatus.DONE)
 
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_with_error(self, mock_provider_sync):
@@ -525,7 +525,7 @@ class TestStravaProviderPullActivities:
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
 
         # Mock no existing sync record
-        mock_provider_sync.get_or_none.return_value = None
+        mock_provider_sync.is_done.return_value = False
 
         # Mock fetching raw activities
         mock_raw_activity = Mock()
@@ -542,7 +542,7 @@ class TestStravaProviderPullActivities:
 
         # Should handle error gracefully and still mark as synced
         assert result == mock_final_activities
-        mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="strava", user_id=0)
+        mock_provider_sync.upsert_status.assert_called_once_with("2021-01", "strava", SyncStatus.DONE)
 
     @patch("tracekit.providers.strava.strava_provider.ProviderSync")
     def test_pull_activities_rate_limit_propagates(self, mock_provider_sync):
@@ -554,7 +554,7 @@ class TestStravaProviderPullActivities:
 
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
 
-        mock_provider_sync.get_or_none.return_value = None
+        mock_provider_sync.is_done.return_value = False
 
         mock_raw_activity = Mock()
         provider._fetch_strava_activities_for_month = Mock(return_value=[mock_raw_activity])
@@ -574,7 +574,7 @@ class TestStravaProviderPullActivities:
             provider.pull_activities(date_filter="2021-01")
 
         # The month must NOT be marked as synced when a rate-limit aborts the pull.
-        mock_provider_sync.create.assert_not_called()
+        mock_provider_sync.upsert_status.assert_not_called()
 
 
 class TestStravaProviderCreateActivity:

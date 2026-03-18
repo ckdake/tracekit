@@ -20,7 +20,7 @@ from garminconnect import (
 )
 from garth.exc import GarthHTTPError
 
-from tracekit.provider_sync import ProviderSync
+from tracekit.provider_sync import ProviderSync, SyncStatus
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.garmin.garmin_activity import GarminActivity
 from tracekit.user_context import get_user_id
@@ -96,8 +96,7 @@ class GarminProvider(FitnessProvider):
             return []
 
         # Check if this month has already been synced for this provider
-        existing_sync = ProviderSync.get_or_none(date_filter, self.provider_name)
-        if existing_sync:
+        if ProviderSync.is_done(date_filter, self.provider_name):
             print(f"Month {date_filter} already synced for {self.provider_name}")
             # Always return activities for the requested month from database
             return self._get_garmin_activities_for_month(date_filter)
@@ -225,7 +224,7 @@ class GarminProvider(FitnessProvider):
                 continue
 
         # Mark this month as synced
-        ProviderSync.create(year_month=date_filter, provider=self.provider_name, user_id=get_user_id())
+        ProviderSync.upsert_status(date_filter, self.provider_name, SyncStatus.DONE)
 
         print(f"Synced {len(persisted_activities)} Garmin activities to garmin_activities table")
 

@@ -256,7 +256,7 @@ class Tracekit:
         try:
             from tracekit.provider_sync import ProviderSync as _ProviderSync
 
-            _was_cached = _ProviderSync.get_or_none(year_month, provider_name) is not None
+            _was_cached = _ProviderSync.is_done(year_month, provider_name)
         except Exception:
             _was_cached = False
 

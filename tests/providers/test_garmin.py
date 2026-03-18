@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from garminconnect import GarminConnectConnectionError
 
+from tracekit.provider_sync import SyncStatus
 from tracekit.providers.garmin.garmin_provider import GarminProvider
 
 
@@ -114,9 +115,7 @@ class TestGarminProviderPullActivities:
         """Test pull_activities when month is already synced."""
         provider = GarminProvider()
 
-        # Mock existing sync record
-        mock_sync = Mock()
-        mock_provider_sync.get_or_none.return_value = mock_sync
+        mock_provider_sync.is_done.return_value = True
 
         # Mock the _get_garmin_activities_for_month method
         mock_activities = [Mock(), Mock()]
@@ -126,7 +125,7 @@ class TestGarminProviderPullActivities:
 
         # Should return activities from database without fetching new ones
         assert result == mock_activities
-        mock_provider_sync.get_or_none.assert_called_once_with("2021-01", "garmin")
+        mock_provider_sync.is_done.assert_called_once_with("2021-01", "garmin")
         provider._get_garmin_activities_for_month.assert_called_once_with("2021-01")
 
     @pytest.mark.skip(reason="Complex mocking of GarminActivity instantiation in real execution flow")
@@ -178,7 +177,7 @@ class TestGarminProviderPullActivities:
         """Test that pull_activities calls get_activity_gear and sets equipment."""
         provider = GarminProvider()
 
-        mock_provider_sync.get_or_none.return_value = None
+        mock_provider_sync.is_done.return_value = False
 
         raw_activity = {
             "activityId": 12345,
@@ -210,7 +209,7 @@ class TestGarminProviderPullActivities:
         """Test that a gear API error does not prevent the activity from being saved."""
         provider = GarminProvider()
 
-        mock_provider_sync.get_or_none.return_value = None
+        mock_provider_sync.is_done.return_value = False
 
         raw_activity = {"activityId": 12345, "activityName": "Morning Ride"}
         provider.fetch_activities_for_month = Mock(return_value=[raw_activity])
@@ -237,7 +236,7 @@ class TestGarminProviderPullActivities:
         provider = GarminProvider()
 
         # Mock no existing sync record
-        mock_provider_sync.get_or_none.return_value = None
+        mock_provider_sync.is_done.return_value = False
 
         # Mock fetching raw activities
         mock_raw_activity = {"activityId": 12345, "activityName": "Test Activity"}
@@ -261,7 +260,7 @@ class TestGarminProviderPullActivities:
 
                 # Verify duplicate was skipped (save not called)
                 mock_activity.save.assert_not_called()
-                mock_provider_sync.create.assert_called_once_with(year_month="2021-01", provider="garmin", user_id=0)
+                mock_provider_sync.upsert_status.assert_called_once_with("2021-01", "garmin", SyncStatus.DONE)
 
 
 class TestGarminProviderFetchActivities:

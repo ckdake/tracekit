@@ -143,6 +143,9 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
 
     try:
         from tracekit.core import tracekit as tracekit_class
+        from tracekit.provider_sync import ProviderSync, SyncStatus
+
+        ProviderSync.upsert_status(year_month, provider_name, SyncStatus.STARTED)
 
         with tracekit_class() as tk:
             tk.pull_provider_activities(year_month, provider_name)
@@ -491,6 +494,13 @@ def daily():
     except Exception:
         user_ids = set()
     user_ids.add(0)  # always include CLI/unscoped user
+
+    from tracekit.provider_status import MONTH_SYNC_UNKNOWN, set_month_sync_status
+    from tracekit.user_context import set_user_id
+
+    for uid in user_ids:
+        set_user_id(uid)
+        set_month_sync_status(year_month, MONTH_SYNC_UNKNOWN)
 
     for uid in user_ids:
         pull_month.delay(year_month, user_id=uid)

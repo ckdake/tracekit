@@ -409,7 +409,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const res  = await fetch('/api/calendar?from=' + from + '&to=' + to);
         const data = await res.json();
-        months.forEach(ym => renderGrid(ym, data[ym] || { error: 'No data' }));
+        months.forEach(ym => {
+            renderGrid(ym, data[ym] || { error: 'No data' });
+            const statuses = (data[ym] && data[ym].pull_statuses) || {};
+            const anyActive = Object.values(statuses).some(
+                s => s && (s.status === 'queued' || s.status === 'started')
+            );
+            if (anyActive) pollCard(ym, { minElapsed: 0 });
+        });
     } catch (e) {
         months.forEach(ym => {
             const grid = document.getElementById('grid-' + ym);

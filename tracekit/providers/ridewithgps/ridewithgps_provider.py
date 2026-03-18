@@ -14,7 +14,7 @@ from typing import Any
 from dateutil import parser as dt_parser
 from pyrwgps import RideWithGPS
 
-from tracekit.provider_sync import ProviderSync
+from tracekit.provider_sync import ProviderSync, SyncStatus
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.ridewithgps.ridewithgps_activity import RideWithGPSActivity
 from tracekit.user_context import get_user_id
@@ -92,7 +92,7 @@ class RideWithGPSProvider(FitnessProvider):
 
         year, month = map(int, date_filter.split("-"))
 
-        if not ProviderSync.get_or_none(date_filter, self.provider_name):
+        if not ProviderSync.is_done(date_filter, self.provider_name):
             trip_summaries = list(self.client.list(f"/users/{self.userid}/trips.json"))
             print(f"Found {len(trip_summaries)} RideWithGPS trip summaries")
 
@@ -147,11 +147,7 @@ class RideWithGPSProvider(FitnessProvider):
                     print(f"Error processing RideWithGPS activity: {e}")
                     continue
 
-            ProviderSync.create(
-                year_month=date_filter,
-                provider=self.provider_name,
-                user_id=get_user_id(),
-            )
+            ProviderSync.upsert_status(date_filter, self.provider_name, SyncStatus.DONE)
             print(f"RideWithGPS Sync complete for {date_filter}")
 
         # Always return all activities for this month from the database

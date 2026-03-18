@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from tracekit.provider_sync import ProviderSync
+from tracekit.provider_sync import ProviderSync, SyncStatus
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.intervalsicu.intervalsicu_activity import IntervalsICUActivity
 from tracekit.user_context import get_user_id
@@ -157,7 +157,7 @@ class IntervalsICUProvider(FitnessProvider):
 
         year, month = map(int, date_filter.split("-"))
 
-        if not ProviderSync.get_or_none(date_filter, self.provider_name):
+        if not ProviderSync.is_done(date_filter, self.provider_name):
             # Build date range: first day of month → first day of next month (exclusive)
             oldest = f"{year}-{month:02d}-01"
             newest = f"{year + 1}-01-01" if month == 12 else f"{year}-{month + 1:02d}-01"
@@ -207,7 +207,7 @@ class IntervalsICUProvider(FitnessProvider):
                     print(f"Error processing Intervals.icu activity {raw.get('id')}: {e}")
                     continue
 
-            ProviderSync.create(year_month=date_filter, provider=self.provider_name, user_id=uid)
+            ProviderSync.upsert_status(date_filter, self.provider_name, SyncStatus.DONE)
             print(f"Intervals.icu sync complete for {date_filter}")
 
         # Return all activities for this month from the database

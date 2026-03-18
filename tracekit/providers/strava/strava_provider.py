@@ -20,7 +20,7 @@ from tracekit.provider_status import (
     ProviderRateLimitError,
     next_midnight_utc,
 )
-from tracekit.provider_sync import ProviderSync
+from tracekit.provider_sync import ProviderSync, SyncStatus
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.strava.strava_activity import StravaActivity
 from tracekit.user_context import get_user_id
@@ -225,8 +225,7 @@ class StravaProvider(FitnessProvider):
             return []
 
         # Check if already synced
-        existing_sync = ProviderSync.get_or_none(date_filter, self.provider_name)
-        if not existing_sync:
+        if not ProviderSync.is_done(date_filter, self.provider_name):
             # First time processing this month - fetch from Strava API
             raw_activities = self._fetch_strava_activities_for_month(date_filter)
             print(f"Found {len(raw_activities)} Strava activities for {date_filter}")
@@ -257,12 +256,7 @@ class StravaProvider(FitnessProvider):
                     print(f"Error processing Strava activity: {e}")
                     continue
 
-            # Mark this month as synced
-            ProviderSync.create(
-                year_month=date_filter,
-                provider=self.provider_name,
-                user_id=get_user_id(),
-            )
+            ProviderSync.upsert_status(date_filter, self.provider_name, SyncStatus.DONE)
             print(f"Synced {processed_count} Strava activities")
         else:
             print(f"Month {date_filter} already synced for {self.provider_name}")

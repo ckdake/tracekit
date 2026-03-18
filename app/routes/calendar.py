@@ -91,8 +91,10 @@ def sync_provider_month(year_month: str, provider_name: str):
                 409,
             )
 
+        from tracekit.provider_sync import ProviderSync, SyncStatus
         from tracekit.user_context import get_user_id
 
+        ProviderSync.upsert_status(year_month, provider_name, SyncStatus.ENQUEUED)
         task = pull_provider_month.delay(year_month, provider_name, user_id=get_user_id())
         set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
         return jsonify(
