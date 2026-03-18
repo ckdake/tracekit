@@ -20,6 +20,11 @@ from garminconnect import (
 )
 from garth.exc import GarthHTTPError
 
+from tracekit.provider_status import (
+    RATE_LIMIT_SHORT_TERM,
+    ProviderRateLimitError,
+    next_midnight_utc,
+)
 from tracekit.provider_sync import ProviderSync, SyncStatus
 from tracekit.providers.base_provider import FitnessProvider
 from tracekit.providers.garmin.garmin_activity import GarminActivity
@@ -80,6 +85,8 @@ class GarminProvider(FitnessProvider):
                 if device_id and name:
                     device_map[int(device_id)] = name
             return device_map
+        except ProviderRateLimitError:
+            raise
         except Exception as e:
             print(f"Could not fetch Garmin device list: {e}")
             return {}
@@ -254,14 +261,16 @@ class GarminProvider(FitnessProvider):
             print(f"Found {len(activities)} activities from Garmin Connect for {year_month}")
             return activities
 
-        except (
-            GarminConnectAuthenticationError,
-            GarminConnectConnectionError,
-            GarminConnectTooManyRequestsError,
-            GarthHTTPError,
-        ) as err:
-            print(f"Error fetching activities from Garmin: {err}")
-            return []
+        except (GarminConnectTooManyRequestsError, GarthHTTPError) as err:
+            raise ProviderRateLimitError(
+                str(err),
+                provider="garmin",
+                limit_type=RATE_LIMIT_SHORT_TERM,
+                reset_at=next_midnight_utc(),
+                retry_after=None,
+            ) from err
+        except (GarminConnectAuthenticationError, GarminConnectConnectionError):
+            raise
 
     def get_activity_by_id(self, activity_id: str) -> GarminActivity | None:
         """Get a GarminActivity by its provider ID."""
