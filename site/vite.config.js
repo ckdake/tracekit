@@ -13,6 +13,7 @@ export default defineConfig({
                 developer: 'src/developer.html',
                 providers: 'src/providers.html',
                 privacy: 'src/privacy.html',
+                about: 'src/about.html',
             },
         },
     },
