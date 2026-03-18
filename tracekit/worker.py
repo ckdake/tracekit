@@ -42,6 +42,19 @@ if _sentry_dsn := os.environ.get("SENTRY_DSN"):
 from celery import Celery
 from celery.schedules import crontab
 
+
+def _init_db() -> None:
+    """Initialize the database proxy if not already done.
+
+    Must be called at the start of every Celery task before any ORM access.
+    ``configure_db`` is idempotent so calling it multiple times is safe.
+    """
+    from tracekit.core import Tracekit
+    from tracekit.db import configure_db
+
+    configure_db(Tracekit._resolve_db_path())
+
+
 BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 
@@ -81,6 +94,7 @@ def pull_month(self, year_month: str, user_id: int = 0):
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.core import tracekit as tracekit_class
@@ -128,6 +142,7 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.provider_status import PULL_STATUS_STARTED, set_pull_status
@@ -145,9 +160,8 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
         from tracekit.core import tracekit as tracekit_class
         from tracekit.provider_sync import ProviderSync, SyncStatus
 
-        ProviderSync.upsert_status(year_month, provider_name, SyncStatus.STARTED)
-
         with tracekit_class() as tk:
+            ProviderSync.upsert_status(year_month, provider_name, SyncStatus.STARTED)
             tk.pull_provider_activities(year_month, provider_name)
 
         try:
@@ -232,6 +246,7 @@ def reset_month(self, year_month: str, user_id: int = 0):
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.commands.reset import run
@@ -253,6 +268,7 @@ def reset_all(self, user_id: int = 0):
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.commands.reset import run
@@ -280,6 +296,7 @@ def apply_sync_change(self, change_dict: dict, year_month: str, user_id: int = 0
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.core import tracekit as tracekit_class
@@ -366,6 +383,7 @@ def pull_file(self, user_id: int = 0):
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.core import tracekit as tracekit_class
@@ -402,6 +420,7 @@ def process_file(self, file_path: str, user_id: int = 0):
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.core import tracekit as tracekit_class
@@ -435,6 +454,7 @@ def reset_provider(self, provider_name: str, user_id: int = 0):
     from tracekit.user_context import set_user_id
 
     set_user_id(user_id)
+    _init_db()
 
     try:
         from tracekit.core import tracekit as tracekit_class
@@ -482,6 +502,7 @@ def daily():
 
     from tracekit.provider_sync import ProviderSync
 
+    _init_db()
     now = datetime.now(UTC)
     if now.day == 1:
         prev = now.replace(day=1) - timedelta(days=1)
