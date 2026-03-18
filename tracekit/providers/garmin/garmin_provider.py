@@ -21,8 +21,8 @@ from garminconnect import (
 from garth.exc import GarthHTTPError
 
 from tracekit.provider_status import (
-    RATE_LIMIT_SHORT_TERM,
     ProviderRateLimitError,
+    RateLimitType,
     next_midnight_utc,
 )
 from tracekit.provider_sync import ProviderSync, SyncStatus
@@ -265,7 +265,7 @@ class GarminProvider(FitnessProvider):
             raise ProviderRateLimitError(
                 str(err),
                 provider="garmin",
-                limit_type=RATE_LIMIT_SHORT_TERM,
+                limit_type=RateLimitType.SHORT_TERM,
                 reset_at=next_midnight_utc(),
                 retry_after=None,
             ) from err

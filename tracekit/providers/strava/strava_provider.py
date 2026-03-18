@@ -15,9 +15,8 @@ from stravalib import Client
 from stravalib.exc import AccessUnauthorized, RateLimitExceeded, RateLimitTimeout
 
 from tracekit.provider_status import (
-    RATE_LIMIT_LONG_TERM,
-    RATE_LIMIT_SHORT_TERM,
     ProviderRateLimitError,
+    RateLimitType,
     next_midnight_utc,
 )
 from tracekit.provider_sync import ProviderSync, SyncStatus
@@ -54,7 +53,7 @@ class _RaisingRateLimiter:
                 "Strava daily rate limit exceeded — resets at midnight UTC. "
                 "See https://developers.strava.com/docs/rate-limits/",
                 provider="strava",
-                limit_type=RATE_LIMIT_LONG_TERM,
+                limit_type=RateLimitType.LONG_TERM,
                 reset_at=next_midnight_utc(),
                 retry_after=None,
             )
@@ -65,7 +64,7 @@ class _RaisingRateLimiter:
                 f"Strava short-term rate limit hit — retrying in {timeout}s. "
                 "See https://developers.strava.com/docs/rate-limits/",
                 provider="strava",
-                limit_type=RATE_LIMIT_SHORT_TERM,
+                limit_type=RateLimitType.SHORT_TERM,
                 reset_at=int(time.time()) + timeout,
                 retry_after=timeout,
             )
@@ -98,8 +97,8 @@ class StravaProvider(FitnessProvider):
     def _raise_rate_limit(self, exc: RateLimitExceeded, operation: str) -> None:
         """Convert a stravalib rate-limit exception into a ProviderRateLimitError.
 
-        RateLimitTimeout (short-term, has a wait timeout) → RATE_LIMIT_SHORT_TERM.
-        RateLimitExceeded without a short timeout      → RATE_LIMIT_LONG_TERM.
+        RateLimitTimeout (short-term, has a wait timeout) → RateLimitType.SHORT_TERM.
+        RateLimitExceeded without a short timeout      → RateLimitType.LONG_TERM.
         """
         timeout = getattr(exc, "timeout", None)
         if isinstance(exc, RateLimitTimeout) and timeout and timeout <= 920:
@@ -107,7 +106,7 @@ class StravaProvider(FitnessProvider):
                 f"Strava short-term rate limit hit during {operation} — retrying in {timeout}s. "
                 f"See https://developers.strava.com/docs/rate-limits/",
                 provider="strava",
-                limit_type=RATE_LIMIT_SHORT_TERM,
+                limit_type=RateLimitType.SHORT_TERM,
                 reset_at=int(__import__("time").time()) + int(timeout),
                 retry_after=int(timeout),
             ) from exc
@@ -115,7 +114,7 @@ class StravaProvider(FitnessProvider):
             f"Strava daily rate limit exceeded during {operation} — resets at midnight UTC. "
             f"See https://developers.strava.com/docs/rate-limits/",
             provider="strava",
-            limit_type=RATE_LIMIT_LONG_TERM,
+            limit_type=RateLimitType.LONG_TERM,
             reset_at=next_midnight_utc(),
             retry_after=None,
         ) from exc

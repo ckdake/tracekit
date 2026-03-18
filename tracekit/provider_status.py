@@ -10,16 +10,20 @@ queued / started / success / error state for each calendar cell.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 
 from peewee import BooleanField, CharField, IntegerField, Model
 
 from tracekit.db import db
 from tracekit.user_context import get_user_id
 
-# ---- constants ---------------------------------------------------------------
+# ---- enums -------------------------------------------------------------------
 
-RATE_LIMIT_SHORT_TERM = "short_term"  # 15-minute Strava window
-RATE_LIMIT_LONG_TERM = "long_term"  # daily Strava window (resets midnight UTC)
+
+class RateLimitType(StrEnum):
+    SHORT_TERM = "short_term"  # e.g. Strava 15-minute window
+    LONG_TERM = "long_term"  # e.g. daily limit (resets midnight UTC)
+
 
 PULL_STATUS_QUEUED = "queued"
 PULL_STATUS_STARTED = "started"
@@ -43,7 +47,7 @@ class ProviderRateLimitError(RuntimeError):
         self,
         message: str,
         provider: str,
-        limit_type: str,
+        limit_type: RateLimitType,
         reset_at: int,
         retry_after: int | None = None,
     ) -> None:
@@ -65,8 +69,7 @@ class ProviderStatus(Model):
     last_operation_at = IntegerField(null=True)  # Unix timestamp
     last_success = BooleanField(null=True)  # True / False / None (never run)
     last_message = CharField(null=True, max_length=1024)
-    # Rate-limit fields (Strava-specific but generic enough for others)
-    rate_limit_type = CharField(null=True)  # RATE_LIMIT_SHORT_TERM | RATE_LIMIT_LONG_TERM
+    rate_limit_type = CharField(null=True)  # RateLimitType value
     rate_limit_reset_at = IntegerField(null=True)  # Unix timestamp when limit clears
     user_id = IntegerField(default=0)
 

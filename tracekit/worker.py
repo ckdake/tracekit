@@ -172,12 +172,12 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
             pass
     except Exception as exc:
         from tracekit.provider_status import (
-            RATE_LIMIT_SHORT_TERM,
             ProviderRateLimitError,
+            RateLimitType,
         )
 
         if isinstance(exc, ProviderRateLimitError):
-            if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
+            if exc.limit_type == RateLimitType.SHORT_TERM and exc.retry_after:
                 # Short-term: re-queue status (same task ID on retry), notify, then retry
                 try:
                     from tracekit.provider_status import (
@@ -217,8 +217,8 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
                     from tracekit.notification import create_notification
 
                     create_notification(
-                        f"Strava daily rate limit exceeded — {provider_name} pull for {year_month} will not be retried. "
-                        f"Limit resets at midnight UTC. See https://developers.strava.com/docs/rate-limits/",
+                        f"{exc.provider} rate limit exceeded — {provider_name} pull for {year_month} will not be retried. "
+                        f"Limit resets at midnight UTC.",
                         category="error",
                     )
                 except Exception:
@@ -339,20 +339,19 @@ def apply_sync_change(self, change_dict: dict, year_month: str, user_id: int = 0
 
     except Exception as exc:
         from tracekit.provider_status import (
-            RATE_LIMIT_SHORT_TERM,
             ProviderRateLimitError,
+            RateLimitType,
         )
 
         if isinstance(exc, ProviderRateLimitError):
-            if exc.limit_type == RATE_LIMIT_SHORT_TERM and exc.retry_after:
+            if exc.limit_type == RateLimitType.SHORT_TERM and exc.retry_after:
                 raise self.retry(countdown=exc.retry_after, exc=exc)
             else:
                 try:
                     from tracekit.notification import create_notification
 
                     create_notification(
-                        "Strava daily rate limit exceeded — sync change not applied. "
-                        "Resets at midnight UTC. See https://developers.strava.com/docs/rate-limits/",
+                        f"{exc.provider} rate limit exceeded — sync change not applied. Limit resets at midnight UTC.",
                         category="error",
                     )
                 except Exception:

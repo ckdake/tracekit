@@ -548,8 +548,8 @@ class TestStravaProviderPullActivities:
     def test_pull_activities_rate_limit_propagates(self, mock_provider_sync):
         """Test that ProviderRateLimitError propagates out of the activity loop."""
         from tracekit.provider_status import (
-            RATE_LIMIT_LONG_TERM,
             ProviderRateLimitError,
+            RateLimitType,
         )
 
         provider = StravaProvider(token="test_token", refresh_token="test_refresh", token_expires="999999999")
@@ -563,7 +563,7 @@ class TestStravaProviderPullActivities:
         rate_limit_exc = ProviderRateLimitError(
             "Daily limit exceeded",
             provider="strava",
-            limit_type=RATE_LIMIT_LONG_TERM,
+            limit_type=RateLimitType.LONG_TERM,
             reset_at=9999999999,
         )
         provider._convert_to_strava_activity = Mock(side_effect=rate_limit_exc)
