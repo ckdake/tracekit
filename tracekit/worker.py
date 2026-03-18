@@ -99,7 +99,7 @@ def pull_month(self, year_month: str, user_id: int = 0):
     try:
         from tracekit.core import tracekit as tracekit_class
         from tracekit.provider_status import (
-            PULL_STATUS_QUEUED,
+            PullStatus,
             is_pull_active,
             set_pull_status,
         )
@@ -121,7 +121,7 @@ def pull_month(self, year_month: str, user_id: int = 0):
                 continue  # already queued or running — skip to avoid duplicates
             task = pull_provider_month.delay(year_month, provider_name, user_id=user_id)
             with contextlib.suppress(Exception):
-                set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
+                set_pull_status(year_month, provider_name, PullStatus.QUEUED, job_id=task.id)
     except Exception as exc:
         try:
             from tracekit.notification import create_notification
@@ -145,9 +145,9 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
     _init_db()
 
     try:
-        from tracekit.provider_status import PULL_STATUS_STARTED, set_pull_status
+        from tracekit.provider_status import PullStatus, set_pull_status
 
-        set_pull_status(year_month, provider_name, PULL_STATUS_STARTED, job_id=self.request.id)
+        set_pull_status(year_month, provider_name, PullStatus.STARTED, job_id=self.request.id)
     except Exception:
         pass
 
@@ -165,9 +165,9 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
             tk.pull_provider_activities(year_month, provider_name)
 
         try:
-            from tracekit.provider_status import PULL_STATUS_SUCCESS, set_pull_status
+            from tracekit.provider_status import PullStatus, set_pull_status
 
-            set_pull_status(year_month, provider_name, PULL_STATUS_SUCCESS)
+            set_pull_status(year_month, provider_name, PullStatus.SUCCESS)
         except Exception:
             pass
     except Exception as exc:
@@ -180,15 +180,12 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
             if exc.limit_type == RateLimitType.SHORT_TERM and exc.retry_after:
                 # Short-term: re-queue status (same task ID on retry), notify, then retry
                 try:
-                    from tracekit.provider_status import (
-                        PULL_STATUS_QUEUED,
-                        set_pull_status,
-                    )
+                    from tracekit.provider_status import PullStatus, set_pull_status
 
                     set_pull_status(
                         year_month,
                         provider_name,
-                        PULL_STATUS_QUEUED,
+                        PullStatus.QUEUED,
                         job_id=self.request.id,
                     )
                 except Exception:
@@ -197,13 +194,11 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
             else:
                 # Long-term: fail immediately without retry
                 try:
-                    from tracekit.provider_status import (
-                        PULL_STATUS_ERROR,
-                        record_rate_limit,
-                        set_pull_status,
-                    )
+                    from tracekit.provider_status import PullStatus, record_rate_limit, set_pull_status
+                    from tracekit.provider_sync import ProviderSync, SyncStatus
 
-                    set_pull_status(year_month, provider_name, PULL_STATUS_ERROR, message=str(exc))
+                    set_pull_status(year_month, provider_name, PullStatus.ERROR, message=str(exc))
+                    ProviderSync.upsert_status(year_month, provider_name, SyncStatus.ERROR)
                     record_rate_limit(
                         provider=exc.provider,
                         limit_type=exc.limit_type,
@@ -226,9 +221,11 @@ def pull_provider_month(self, year_month: str, provider_name: str, user_id: int 
                 raise
 
         try:
-            from tracekit.provider_status import PULL_STATUS_ERROR, set_pull_status
+            from tracekit.provider_status import PullStatus, set_pull_status
+            from tracekit.provider_sync import ProviderSync, SyncStatus
 
-            set_pull_status(year_month, provider_name, PULL_STATUS_ERROR, message=str(exc))
+            set_pull_status(year_month, provider_name, PullStatus.ERROR, message=str(exc))
+            ProviderSync.upsert_status(year_month, provider_name, SyncStatus.ERROR)
         except Exception:
             pass
         try:

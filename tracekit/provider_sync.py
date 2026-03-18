@@ -10,6 +10,7 @@ class SyncStatus(StrEnum):
     ENQUEUED = "enqueued"
     STARTED = "started"
     DONE = "done"
+    ERROR = "error"
 
 
 class ProviderSync(Model):
@@ -18,7 +19,7 @@ class ProviderSync(Model):
     year_month = CharField()  # Format: YYYY-MM
     provider = CharField()  # e.g., 'strava', 'spreadsheet', 'ridewithgps'
     user_id = IntegerField(default=0)
-    status = CharField(default=SyncStatus.DONE)  # enqueued | started | done
+    status = CharField(default=SyncStatus.DONE)  # enqueued | started | done | error
 
     class Meta:
         database = db

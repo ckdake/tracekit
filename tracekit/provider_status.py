@@ -25,12 +25,14 @@ class RateLimitType(StrEnum):
     LONG_TERM = "long_term"  # e.g. daily limit (resets midnight UTC)
 
 
-PULL_STATUS_QUEUED = "queued"
-PULL_STATUS_STARTED = "started"
-PULL_STATUS_SUCCESS = "success"
-PULL_STATUS_ERROR = "error"
+class PullStatus(StrEnum):
+    QUEUED = "queued"
+    STARTED = "started"
+    SUCCESS = "success"
+    ERROR = "error"
 
-_PULL_ACTIVE_STATUSES = {PULL_STATUS_QUEUED, PULL_STATUS_STARTED}
+
+_PULL_ACTIVE_STATUSES = {PullStatus.QUEUED, PullStatus.STARTED}
 
 
 # ---- typed exception ---------------------------------------------------------
@@ -200,7 +202,7 @@ class ProviderPullStatus(Model):
 def set_pull_status(
     year_month: str,
     provider: str,
-    status: str,
+    status: PullStatus,
     job_id: str | None = None,
     message: str | None = None,
 ) -> None:
@@ -220,7 +222,7 @@ def set_pull_status(
         )
         row.status = status
         row.updated_at = now
-        if status in (PULL_STATUS_SUCCESS, PULL_STATUS_ERROR):
+        if status in (PullStatus.SUCCESS, PullStatus.ERROR):
             row.job_id = None  # done — no need to track the job any more
         elif job_id is not None:
             row.job_id = job_id

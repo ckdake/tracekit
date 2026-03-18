@@ -5,6 +5,7 @@ Tracked here for visibility. PRs and issues welcome.
 ## Overall capabilitites
 
 next:
+- [ ] tech debt: why do we have provider_pull_status and providersync?
 - [ ] feat: trigger sync whenever new data is collected, for the month. use the Activity table as Source Of Truth for "matching", and ensure it stays update to date with a provider id for each activity. Update / page to show summary stats. Allow "link" when different device was used to record.
 - [ ] feat: only users with active subscription, or admin, can go back further than current month.  all other users: data expires out at start of new month.
 - [ ] feat: except admin, "full provider sync" is only allowed once per day.

@@ -136,20 +136,22 @@ function renderGrid(yearMonth, data) {
         const nameHtml = '<div class="provider-name-label">' + (info.label || p) + '</div>';
 
         // Status label shown in the chiclet footer
+        const isError = pullStatus && pullStatus.status === 'error';
+        const errorMsg = isError
+            ? (pullStatus.message || 'error').replace(/"/g, '&quot;').substring(0, 120) : '';
         let statusHtml = '';
         if (pullStatus) {
             if (pullStatus.status === 'queued') {
                 statusHtml = '<span class="pcs pcs-active"><span class="pcs-spinner"></span>queued</span>';
             } else if (pullStatus.status === 'started') {
                 statusHtml = '<span class="pcs pcs-active"><span class="pcs-spinner"></span>syncing</span>';
-            } else if (pullStatus.status === 'error') {
-                const msg = (pullStatus.message || 'error').replace(/"/g, '&quot;').substring(0, 120);
-                statusHtml = '<span class="pcs pcs-error" title="' + msg + '">⚠ error</span>';
+            } else if (isError) {
+                statusHtml = '<span class="pcs pcs-error" title="' + errorMsg + '">⚠ ' + errorMsg.substring(0, 40) + '</span>';
             }
         }
 
         // Sync timestamp shown in footer when not actively syncing
-        const syncTime = (!isActive && pullStatus && pullStatus.updated_at)
+        const syncTime = (!isActive && !isError && pullStatus && pullStatus.updated_at)
             ? formatSyncTime(pullStatus.updated_at) : '';
         const syncTimeHtml = syncTime
             ? '<span class="pcs-sync-time">' + syncTime + '</span>' : '';
@@ -158,13 +160,18 @@ function renderGrid(yearMonth, data) {
         const isSuccess = pullStatus && pullStatus.status === 'success';
         const btnContent = isActive   ? '<span class="spinner spinner-sm"></span>'
                          : isSuccess  ? '<span class="btn-icon-check">✓</span><span class="btn-icon-pull">⬇</span>'
-                         : pullStatus && pullStatus.status === 'error' ? '✗'
+                         : isError    ? '<span class="btn-icon-err">⚠</span><span class="btn-icon-pull">↺</span>'
                          : '⬇';
-        const btnClass = 'provider-pull-btn' + (isSuccess ? ' pull-btn-success' : '');
+        const btnClass = 'provider-pull-btn'
+            + (isSuccess ? ' pull-btn-success' : '')
+            + (isError   ? ' pull-btn-error'   : '');
         const btnDisabled = isActive ? ' disabled' : '';
+        const btnTitle = isError
+            ? 'Error: ' + errorMsg + ' — click to retry'
+            : 'Pull ' + (info.label || p);
         const pullBtn = '<button class="' + btnClass + '"' + btnDisabled
             + ' data-month="' + yearMonth + '" data-provider="' + p
-            + '" onclick="pullProviderMonth(this)" title="Pull ' + (info.label || p) + '">'
+            + '" onclick="pullProviderMonth(this)" title="' + btnTitle + '">'
             + btnContent + '</button>';
         const footerHtml = '<div class="provider-footer">'
             + (statusHtml || syncTimeHtml) + pullBtn + '</div>';

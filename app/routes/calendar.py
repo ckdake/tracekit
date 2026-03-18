@@ -79,7 +79,7 @@ def sync_provider_month(year_month: str, provider_name: str):
         return jsonify({"error": f"Unknown provider: {provider_name}"}), 400
     try:
         from tracekit.provider_status import (
-            PULL_STATUS_QUEUED,
+            PullStatus,
             is_pull_active,
             set_pull_status,
         )
@@ -96,7 +96,7 @@ def sync_provider_month(year_month: str, provider_name: str):
 
         ProviderSync.upsert_status(year_month, provider_name, SyncStatus.ENQUEUED)
         task = pull_provider_month.delay(year_month, provider_name, user_id=get_user_id())
-        set_pull_status(year_month, provider_name, PULL_STATUS_QUEUED, job_id=task.id)
+        set_pull_status(year_month, provider_name, PullStatus.QUEUED, job_id=task.id)
         return jsonify(
             {
                 "task_id": task.id,

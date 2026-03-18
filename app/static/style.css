@@ -658,6 +658,12 @@ select#timezone:focus {
 .provider-pull-btn.pull-btn-success .btn-icon-pull { display: none; }
 .provider-pull-btn.pull-btn-success:hover:not(:disabled) .btn-icon-check { display: none; }
 .provider-pull-btn.pull-btn-success:hover:not(:disabled) .btn-icon-pull { display: inline; }
+/* Error state: show ⚠ by default, swap to ↺ on hover to indicate retry */
+.provider-pull-btn.pull-btn-error { color: rgba(255,200,200,0.95); }
+.provider-pull-btn.pull-btn-error .btn-icon-pull { display: none; }
+.provider-pull-btn.pull-btn-error:hover:not(:disabled) { color: white; }
+.provider-pull-btn.pull-btn-error:hover:not(:disabled) .btn-icon-err { display: none; }
+.provider-pull-btn.pull-btn-error:hover:not(:disabled) .btn-icon-pull { display: inline; }
 /* Spinner inside provider pull button should use white tones */
 .provider-pull-btn .spinner-sm {
     border-color: rgba(255,255,255,.25);
