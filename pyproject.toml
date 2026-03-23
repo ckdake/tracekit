@@ -23,7 +23,7 @@ dependencies = [
     "flask>=3.0.0,<4.0.0",
     "flask-login>=0.6.0,<1.0.0",
     "tabulate==0.10.0",
-    "garminconnect==0.2.38",
+    "garminconnect==0.2.40",
     "stripe>=10.0.0",
 ]
 
