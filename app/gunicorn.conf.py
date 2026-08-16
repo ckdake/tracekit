@@ -8,6 +8,10 @@ workers = 2
 timeout = 120
 worker_tmp_dir = "/dev/shm"
 
+# The runtime container user (host TRACEKIT_UID/GID) doesn't own /app/app,
+# so gunicorn can't create its control socket there. Unused feature — disable it.
+control_socket_disable = True
+
 # Load the app in the master process before forking workers so that
 # _db_initialized is True in all workers (inherited via fork) and
 # migrations never run inside a worker.
